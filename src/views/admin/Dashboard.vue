@@ -1,12 +1,12 @@
 <template>
-  <div class="dashboard-vendedor">
+  <div class="dashboard-admin">
     <!-- Header -->
     <div class="dashboard-header">
       <div class="header-content">
         <h1>
-          Bienvenido, {{ nombreVendedor }}
+          Bienvenido, {{ nombreAdmin }}
         </h1>
-        
+      
       </div>
       <div class="header-date">
         <i class="fas fa-calendar-day"></i>
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <!-- Tarjetas de estadísticas -->
+    <!-- Tarjetas de estadísticas generales -->
     <div class="stats-grid">
       <div class="stat-card pendiente">
         <div class="stat-icon">
@@ -23,7 +23,7 @@
         <div class="stat-info">
           <h3>{{ estadisticas.pendientes }}</h3>
           <p>Cotizaciones Pendientes</p>
-          <small>En proceso de revisión</small>
+          <small>Todas las cotizaciones en proceso</small>
         </div>
       </div>
 
@@ -34,7 +34,7 @@
         <div class="stat-info">
           <h3>{{ estadisticas.esperandoAprobacion }}</h3>
           <p>Esperando Aprobación</p>
-          <small>Requieren supervisión</small>
+          <small>Requieren revisión de supervisor</small>
         </div>
       </div>
 
@@ -45,7 +45,7 @@
         <div class="stat-info">
           <h3>{{ estadisticas.efectivas }}</h3>
           <p>Cotizaciones Efectivas</p>
-          <small>Aceptadas por clientes</small>
+          <small>Cerradas exitosamente</small>
         </div>
       </div>
 
@@ -56,23 +56,34 @@
         <div class="stat-info">
           <h3>{{ estadisticas.canceladas }}</h3>
           <p>Cotizaciones Canceladas</p>
-          <small>Rechazadas por clientes</small>
+          <small>No prosperaron</small>
         </div>
       </div>
+
+      <div class="stat-card colaboradores">
+        <div class="stat-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ estadisticas.colaboradoresActivos }}</h3>
+          <p>Colaboradores Activos</p>
+          <small>Vendedores trabajando este momento</small>
+        </div>
+      </div>
+      
     </div>
 
-    <!-- Gráficos y métricas -->
+    <!-- Gráficos principales -->
     <div class="charts-section">
       <div class="chart-container">
         <div class="chart-header">
           <h3>
             
-            Ventas Efectivas vs Rechazadas (Últimos 7 días)
+            Cotizaciones Efectivas por Colaborador
           </h3>
         </div>
-        <!-- Contenedor con altura fija para el gráfico -->
         <div class="chart-wrapper">
-          <canvas ref="ventasChart"></canvas>
+          <canvas ref="colaboradoresChart"></canvas>
         </div>
       </div>
 
@@ -80,80 +91,75 @@
         <div class="chart-header">
           <h3>
             
-            Distribución de Estados
+            Servicios Más Cotizados
           </h3>
         </div>
-        <!-- Contenedor con altura fija para el gráfico -->
         <div class="chart-wrapper">
-          <canvas ref="estadosChart"></canvas>
+          <canvas ref="serviciosChart"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- Resumen de Ventas -->
+    <!-- Resumen mensual de ventas -->
     <div class="sales-summary">
       <div class="summary-header">
         <h3>
           
-          Resumen de Ventas Aprobadas
+          Resumen Mensual de Ventas
         </h3>
-        <div class="period-selector">
-          <select v-model="periodoVentas" @change="actualizarResumenVentas" class="period-select">
-            <option value="semana">Esta Semana</option>
-            <option value="quincena">Esta Quincena</option>
-            <option value="mes">Este Mes</option>
+        <div class="month-selector">
+          <select v-model="mesSeleccionado" @change="actualizarResumenMensual" class="month-select">
+            <option value="actual">Mes Actual</option>
+            <option value="anterior">Mes Anterior</option>
+            <option value="hace2">Hace 2 Meses</option>
           </select>
         </div>
       </div>
       
       <div class="summary-cards">
-        <div class="summary-card total-sales">
+        <div class="summary-card total-ventas">
           <div class="summary-icon">
             <i class="fas fa-chart-line"></i>
           </div>
           <div class="summary-info">
-            <h4>Total de Ventas</h4>
-            <div class="summary-amount">${{ formatearMoneda(resumenVentas.totalVentas) }}</div>
-            <small>{{ getDescripcionPeriodo() }}</small>
+            <h4>Ventas Totales</h4>
+            <div class="summary-amount">${{ formatearMoneda(resumenMensual.ventasTotales) }}</div>
+            <small>{{ getDescripcionMes() }}</small>
           </div>
         </div>
 
-        <div class="summary-card total-quotes">
+        <div class="summary-card mejor-vendedor">
           <div class="summary-icon">
-            <i class="fas fa-file-invoice-dollar"></i>
+            <i class="fas fa-trophy"></i>
           </div>
           <div class="summary-info">
-            <h4>Cotizaciones Aprobadas</h4>
-            <div class="summary-amount">{{ resumenVentas.cotizacionesAprobadas }}</div>
-            <small>{{ getDescripcionPeriodo() }}</small>
+            <h4>Mejor Vendedor</h4>
+            <div class="summary-amount">{{ resumenMensual.mejorVendedor.nombre }}</div>
+            <small>${{ formatearMoneda(resumenMensual.mejorVendedor.ventas) }} en ventas</small>
+          </div>
+          <div class="best-seller-badge">
+            <i class="fas fa-star"></i>
           </div>
         </div>
-
-
       </div>
     </div>
 
-    <!-- Últimas cotizaciones creadas -->
-    <div class="recent-quotes">
+    <!-- Actividad reciente del sistema -->
+    <div class="system-activity">
       <h3>
-        
-        Últimas Cotizaciones Creadas
+        Actividad Reciente del Sistema
       </h3>
-      <div class="quotes-list">
-        <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
-          <div class="quote-icon" :class="cotizacion.estado">
-            <i class="fas fa-file-alt"></i>
+      <div class="activity-list">
+        <div v-for="actividad in actividadSistema" :key="actividad.id" class="activity-item">
+          <div class="activity-icon" :class="actividad.tipo">
+            <i class="fas" :class="getActivityIcon(actividad.tipo)"></i>
           </div>
-          <div class="quote-content">
-            <div class="quote-header">
-              <h4 class="quote-code">{{ cotizacion.codigo }}</h4>
-              <span class="quote-amount">${{ formatearMoneda(cotizacion.monto) }}</span>
-            </div>
-            <p class="quote-client">{{ cotizacion.cliente }}</p>
-            <small class="quote-date">Creada {{ formatearTiempo(cotizacion.fechaCreacion) }}</small>
+          <div class="activity-content">
+            <p class="activity-description">{{ actividad.descripcion }}</p>
+            <small class="activity-time">{{ formatearTiempo(actividad.fecha) }}</small>
           </div>
-          <div class="quote-status" :class="cotizacion.estado">
-            {{ getEstadoTexto(cotizacion.estado) }}
+          <div class="activity-status" :class="actividad.prioridad">
+            {{ actividad.prioridad }}
           </div>
         </div>
       </div>
@@ -174,7 +180,8 @@ import {
   Legend,
   ArcElement,
   BarElement,
-  DoughnutController
+  DoughnutController,
+  BarController
 } from 'chart.js'
 
 Chart.register(
@@ -188,111 +195,104 @@ Chart.register(
   Legend,
   ArcElement,
   BarElement,
-  DoughnutController
+  DoughnutController,
+  BarController
 )
 
 export default {
-  name: 'VendedorDashboard',
+  name: 'AdminDashboard',
   data() {
     return {
-      nombreVendedor: 'Carlos Mendoza',
-      ventasChart: null,
-      estadosChart: null,
-      periodoVentas: 'mes',
+      nombreAdmin: 'Juan Pérez',
+      colaboradoresChart: null,
+      serviciosChart: null,
+      mesSeleccionado: 'actual',
       estadisticas: {
-        pendientes: 8,
-        esperandoAprobacion: 3,
-        efectivas: 15,
-        canceladas: 5
+        pendientes: 24,
+        esperandoAprobacion: 8,
+        efectivas: 45,
+        canceladas: 12,
+        colaboradoresActivos: 8,
+        tasaConversion: 72
       },
-      metricas: {
-        ingresosMes: 125000,
-        cambioMes: 12.5,
-        tasaConversion: 65,
-        tiempoRespuesta: 2.3
-      },
-      resumenVentas: {
-        totalVentas: 1250000,
-        cotizacionesAprobadas: 15,
-        promedioVenta: 83333,
-        tasaConversion: 68,
-        cambioVentas: 12.5,
-        cambioCotizaciones: 8.3,
-        cambioPromedio: 15.2,
-        cambioConversion: 5.1
-      },
-      datosVentasPorPeriodo: {
-        semana: {
-          totalVentas: 285000,
-          cotizacionesAprobadas: 4,
-          promedioVenta: 71250,
-          tasaConversion: 72,
-          cambioVentas: 18.2,
-          cambioCotizaciones: 12.5,
-          cambioPromedio: 22.3,
-          cambioConversion: 8.7
-        },
-        quincena: {
-          totalVentas: 620000,
-          cotizacionesAprobadas: 8,
-          promedioVenta: 77500,
-          tasaConversion: 70,
-          cambioVentas: 15.8,
-          cambioCotizaciones: 10.2,
-          cambioPromedio: 18.5,
-          cambioConversion: 6.9
-        },
-        mes: {
-          totalVentas: 1250000,
-          cotizacionesAprobadas: 15,
-          promedioVenta: 83333,
-          tasaConversion: 68,
-          cambioVentas: 12.5,
-          cambioCotizaciones: 8.3,
-          cambioPromedio: 15.2,
-          cambioConversion: 5.1
+      resumenMensual: {
+        ventasTotales: 3750000,
+        metaMensual: 4000000,
+        porcentajeMeta: 94,
+        promedioColaborador: 468750,
+        cambioVentas: 18.5,
+        cambioPromedio: 12.3,
+        mejorVendedor: {
+          nombre: 'Carlos Mendoza',
+          ventas: 850000
         }
       },
-      ultimasCotizaciones: [
+      datosMensuales: {
+        actual: {
+          ventasTotales: 3750000,
+          metaMensual: 4000000,
+          porcentajeMeta: 94,
+          promedioColaborador: 468750,
+          cambioVentas: 18.5,
+          cambioPromedio: 12.3,
+          mejorVendedor: {
+            nombre: 'Carlos Mendoza',
+            ventas: 850000
+          }
+        },
+        anterior: {
+          ventasTotales: 3200000,
+          metaMensual: 3500000,
+          porcentajeMeta: 91,
+          promedioColaborador: 400000,
+          cambioVentas: 8.2,
+          cambioPromedio: 5.7,
+          mejorVendedor: {
+            nombre: 'Ana García',
+            ventas: 720000
+          }
+        },
+        hace2: {
+          ventasTotales: 2950000,
+          metaMensual: 3500000,
+          porcentajeMeta: 84,
+          promedioColaborador: 368750,
+          cambioVentas: -2.1,
+          cambioPromedio: -1.8,
+          mejorVendedor: {
+            nombre: 'Luis Rodríguez',
+            ventas: 680000
+          }
+        }
+      },
+      actividadSistema: [
         {
           id: 1,
-          codigo: 'COT-2025-018',
-          cliente: 'Empresa ABC S.A.',
-          monto: 125000,
-          fechaCreacion: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          estado: 'pendiente'
+          tipo: 'aprobacion',
+          descripcion: 'Cotización COT-2025-024 requiere aprobación - Monto: $180,000',
+          fecha: new Date(Date.now() - 30 * 60 * 1000),
+          prioridad: 'alta'
         },
         {
           id: 2,
-          codigo: 'COT-2025-017',
-          cliente: 'TechCorp Solutions',
-          monto: 45000,
-          fechaCreacion: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          estado: 'esperando'
+          tipo: 'venta',
+          descripcion: 'Nueva venta confirmada por María López - $95,000',
+          fecha: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          prioridad: 'normal'
         },
         {
           id: 3,
-          codigo: 'COT-2025-016',
-          cliente: 'Innovaciones del Norte',
-          monto: 78500,
-          fechaCreacion: new Date(Date.now() - 6 * 60 * 60 * 1000),
-          estado: 'efectiva'
+          tipo: 'meta',
+          descripcion: 'El equipo alcanzó el 94% de la meta mensual',
+          fecha: new Date(Date.now() - 4 * 60 * 60 * 1000),
+          prioridad: 'baja'
         },
         {
           id: 4,
-          codigo: 'COT-2025-015',
-          cliente: 'Comercial Sur Ltda.',
-          monto: 32000,
-          fechaCreacion: new Date(Date.now() - 8 * 60 * 60 * 1000),
-          estado: 'cancelada'
-        },
-        {
-          id: 5,
-          codigo: 'COT-2025-014',
-          cliente: 'Grupo Empresarial XYZ',
-          monto: 156000,
-          fechaCreacion: new Date(Date.now() - 12 * 60 * 60 * 1000),
-          estado: 'efectiva'
+          tipo: 'sistema',
+          descripcion: 'Backup automático del sistema completado exitosamente',
+          fecha: new Date(Date.now() - 6 * 60 * 60 * 1000),
+          prioridad: 'baja'
         }
       ]
     }
@@ -313,61 +313,60 @@ export default {
     });
   },
   beforeUnmount() {
-    if (this.ventasChart) {
-      this.ventasChart.destroy();
+    if (this.colaboradoresChart) {
+      this.colaboradoresChart.destroy();
     }
-    if (this.estadosChart) {
-      this.estadosChart.destroy();
+    if (this.serviciosChart) {
+      this.serviciosChart.destroy();
     }
   },
   methods: {
     initCharts() {
       try {
-        this.createVentasChart();
-        this.createEstadosChart();
+        this.createColaboradoresChart();
+        this.createServiciosChart();
       } catch (error) {
         console.error('Error al inicializar gráficos:', error);
       }
     },
     
-    createVentasChart() {
-      const ctx = this.$refs.ventasChart?.getContext('2d');
+    createColaboradoresChart() {
+      const ctx = this.$refs.colaboradoresChart?.getContext('2d');
       if (!ctx) {
         console.error('No se pudo obtener el contexto del canvas');
         return;
       }
       
-      const labels = this.generateDateLabels();
-      const ventasEfectivas = [12, 8, 15, 10, 18, 14, 20];
-      const ventasNegativas = [3, 5, 2, 7, 4, 6, 3];
+      const colaboradores = ['Carlos M.', 'Ana G.', 'Luis R.', 'María L.', 'Pedro S.', 'Laura T.', 'José F.', 'Carmen D.'];
+      const cotizacionesEfectivas = [25, 22, 19, 18, 16, 15, 12, 8];
       
-      this.ventasChart = new Chart(ctx, {
-        type: 'line',
+      this.colaboradoresChart = new Chart(ctx, {
+        type: 'bar',
         data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Ventas Efectivas',
-              data: ventasEfectivas,
-              borderColor: '#27ae60',
-              backgroundColor: 'rgba(39, 174, 96, 0.1)',
-              tension: 0.4
-            },
-            {
-              label: 'Ventas Rechazadas',
-              data: ventasNegativas,
-              borderColor: '#e74c3c',
-              backgroundColor: 'rgba(231, 76, 60, 0.1)',
-              tension: 0.4
-            }
-          ]
+          labels: colaboradores,
+          datasets: [{
+            label: 'Cotizaciones Efectivas',
+            data: cotizacionesEfectivas,
+            backgroundColor: [
+              '#27ae60',
+              '#2ecc71',
+              '#3498db',
+              '#9b59b6',
+              '#f39c12',
+              '#e67e22',
+              '#e74c3c',
+              '#95a5a6'
+            ],
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              position: 'top',
+              display: false
             },
             title: {
               display: false
@@ -382,7 +381,7 @@ export default {
             },
             x: {
               grid: {
-                color: 'rgba(0, 0, 0, 0.1)'
+                display: false
               }
             }
           }
@@ -390,29 +389,26 @@ export default {
       });
     },
     
-    createEstadosChart() {
-      const ctx = this.$refs.estadosChart?.getContext('2d');
+    createServiciosChart() {
+      const ctx = this.$refs.serviciosChart?.getContext('2d');
       if (!ctx) {
         console.error('No se pudo obtener el contexto del canvas');
         return;
       }
       
-      this.estadosChart = new Chart(ctx, {
+      this.serviciosChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Pendientes', 'Esperando Aprobación', 'Efectivas', 'Canceladas'],
+          labels: ['Desarrollo Web', 'Marketing Digital', 'Consultoría', 'Diseño Gráfico', 'E-commerce', 'Otros'],
           datasets: [{
-            data: [
-              this.estadisticas.pendientes,
-              this.estadisticas.esperandoAprobacion,
-              this.estadisticas.efectivas,
-              this.estadisticas.canceladas
-            ],
+            data: [35, 25, 18, 12, 8, 2],
             backgroundColor: [
-              '#f39c12',
-              '#e67e22',
+              '#3498db',
               '#27ae60',
-              '#e74c3c'
+              '#f39c12',
+              '#9b59b6',
+              '#e74c3c',
+              '#95a5a6'
             ],
             borderWidth: 2,
             borderColor: '#fff'
@@ -425,8 +421,11 @@ export default {
             legend: {
               position: 'bottom',
               labels: {
-                padding: 20,
-                usePointStyle: true
+                padding: 15,
+                usePointStyle: true,
+                font: {
+                  size: 11
+                }
               }
             }
           }
@@ -434,30 +433,17 @@ export default {
       });
     },
     
-    generateDateLabels() {
-      const labels = [];
-      
-      // Fijo en 7 días
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }));
-      }
-      
-      return labels;
+    actualizarResumenMensual() {
+      this.resumenMensual = { ...this.datosMensuales[this.mesSeleccionado] };
     },
     
-    actualizarResumenVentas() {
-      this.resumenVentas = { ...this.datosVentasPorPeriodo[this.periodoVentas] };
-    },
-    
-    getDescripcionPeriodo() {
+    getDescripcionMes() {
       const descripciones = {
-        semana: 'en esta semana',
-        quincena: 'en esta quincena',
-        mes: 'en este mes'
+        actual: 'este mes',
+        anterior: 'mes anterior', 
+        hace2: 'hace 2 meses'
       };
-      return descripciones[this.periodoVentas];
+      return descripciones[this.mesSeleccionado];
     },
     
     formatearMoneda(cantidad) {
@@ -467,39 +453,34 @@ export default {
     formatearTiempo(fecha) {
       const ahora = new Date();
       const diferencia = ahora - fecha;
+      const minutos = Math.floor(diferencia / (1000 * 60));
       const horas = Math.floor(diferencia / (1000 * 60 * 60));
       
-      if (horas < 1) {
-        return 'hace menos de una hora';
-      } else if (horas === 1) {
-        return 'hace 1 hora';
+      if (minutos < 60) {
+        return `hace ${minutos} minuto${minutos !== 1 ? 's' : ''}`;
       } else if (horas < 24) {
-        return `hace ${horas} horas`;
+        return `hace ${horas} hora${horas !== 1 ? 's' : ''}`;
       } else {
         const dias = Math.floor(horas / 24);
-        return `hace ${dias} día${dias > 1 ? 's' : ''}`;
+        return `hace ${dias} día${dias !== 1 ? 's' : ''}`;
       }
     },
     
-    getEstadoTexto(estado) {
-      const estados = {
-        pendiente: 'Pendiente',
-        esperando: 'Esperando Aprobación',
-        efectiva: 'Efectiva',
-        cancelada: 'Cancelada'
+    getActivityIcon(tipo) {
+      const iconos = {
+        aprobacion: 'fa-exclamation-triangle',
+        venta: 'fa-handshake',
+        meta: 'fa-target',
+        sistema: 'fa-server'
       };
-      return estados[estado] || estado;
-    },
-    
-    generarReporte() {
-      alert('Funcionalidad de reporte en desarrollo');
+      return iconos[tipo] || 'fa-info-circle';
     }
   }
 }
 </script>
 
 <style scoped>
-.dashboard-vendedor {
+.dashboard-admin {
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -601,6 +582,14 @@ export default {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
+.stat-card.colaboradores .stat-icon {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.stat-card.conversion .stat-icon {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
 .stat-info h3 {
   font-size: 2rem;
   font-weight: 700;
@@ -655,93 +644,10 @@ export default {
   color: #3498db;
 }
 
-/* Contenedor con altura fija para los gráficos */
 .chart-wrapper {
   position: relative;
   height: 300px;
   width: 100%;
-}
-
-/* Quick Actions */
-.quick-actions h3 {
-  color: #2c3e50;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.quick-actions h3 i {
-  color: #3498db;
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.action-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-  text-decoration: none;
-  color: inherit;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  cursor: pointer;
-}
-
-.action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  text-decoration: none;
-  color: inherit;
-}
-
-.action-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  color: white;
-  flex-shrink: 0;
-}
-
-.nueva-cotizacion .action-icon {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.ver-cotizaciones .action-icon {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.generar-reporte .action-icon {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-}
-
-.configuracion .action-icon {
-  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-}
-
-.action-content h4 {
-  color: #2c3e50;
-  margin: 0 0 0.25rem 0;
-  font-size: 1.1rem;
-}
-
-.action-content p {
-  color: #7f8c8d;
-  margin: 0;
-  font-size: 0.9rem;
 }
 
 /* Sales Summary */
@@ -768,7 +674,7 @@ export default {
   color: #27ae60;
 }
 
-.period-selector .period-select {
+.month-selector .month-select {
   padding: 0.5rem 1rem;
   border: 1px solid #ddd;
   border-radius: 0.5rem;
@@ -779,7 +685,7 @@ export default {
   transition: border-color 0.3s ease;
 }
 
-.period-selector .period-select:focus {
+.month-selector .month-select:focus {
   outline: none;
   border-color: #3498db;
 }
@@ -819,20 +725,20 @@ export default {
   flex-shrink: 0;
 }
 
-.total-sales .summary-icon {
+.total-ventas .summary-icon {
   background: linear-gradient(135deg, #27ae60, #229954);
 }
 
-.total-quotes .summary-icon {
+.meta-mensual .summary-icon {
   background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-.average-sale .summary-icon {
+.promedio-colaborador .summary-icon {
   background: linear-gradient(135deg, #f39c12, #e67e22);
 }
 
-.conversion-rate .summary-icon {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+.mejor-vendedor .summary-icon {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .summary-info {
@@ -847,42 +753,173 @@ export default {
 }
 
 .summary-amount {
- font-size: 1.8rem;
- font-weight: 700;
- color: #2c3e50;
- margin-bottom: 0.25rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
 }
 
 .summary-info small {
- color: #7f8c8d;
- font-size: 0.85rem;
+  color: #7f8c8d;
+  font-size: 0.85rem;
 }
 
 .summary-change {
- position: absolute;
- top: 1rem;
- right: 1rem;
- padding: 0.25rem 0.5rem;
- border-radius: 0.5rem;
- font-size: 0.8rem;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.25rem;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .summary-change.positive {
- background: #d4edda;
- color: #155724;
+  background: #d4edda;
+  color: #155724;
 }
 
 .summary-change.negative {
- background: #f8d7da;
- color: #721c24;
+  background: #f8d7da;
+  color: #721c24;
 }
 
-/* Recent Quotes */
-.recent-quotes h3 {
+.meta-progress {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 80px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  transition: width 0.3s ease;
+}
+
+.best-seller-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: #f39c12;
+  font-size: 1.2rem;
+}
+
+/* Admin Actions */
+.admin-actions {
+  margin-bottom: 2rem;
+}
+
+.admin-actions h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-actions h3 i {
+  color: #3498db;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.action-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  position: relative;
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.action-icon {
+ width: 50px;
+ height: 50px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 1.3rem;
+ color: white;
+ flex-shrink: 0;
+}
+
+.supervisar .action-icon {
+ background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.reportes .action-icon {
+ background: linear-gradient(135deg, #27ae60, #229954);
+}
+
+.colaboradores-manage .action-icon {
+ background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.configuracion .action-icon {
+ background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+.action-content {
+ flex: 1;
+}
+
+.action-content h4 {
+ color: #2c3e50;
+ margin: 0 0 0.25rem 0;
+ font-size: 1.1rem;
+}
+
+.action-content p {
+ color: #7f8c8d;
+ margin: 0;
+ font-size: 0.9rem;
+}
+
+.action-badge {
+ position: absolute;
+ top: -5px;
+ right: -5px;
+ background: #e74c3c;
+ color: white;
+ border-radius: 50%;
+ width: 25px;
+ height: 25px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+/* System Activity */
+.system-activity h3 {
  color: #2c3e50;
  margin-bottom: 1rem;
  display: flex;
@@ -890,11 +927,11 @@ export default {
  gap: 0.5rem;
 }
 
-.recent-quotes h3 i {
+.system-activity h3 i {
  color: #3498db;
 }
 
-.quotes-list {
+.activity-list {
  background: white;
  border-radius: 1rem;
  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -902,7 +939,7 @@ export default {
  overflow: hidden;
 }
 
-.quote-item {
+.activity-item {
  display: flex;
  align-items: center;
  padding: 1rem 1.5rem;
@@ -911,15 +948,15 @@ export default {
  transition: background-color 0.3s ease;
 }
 
-.quote-item:hover {
+.activity-item:hover {
  background-color: #f8f9fa;
 }
 
-.quote-item:last-child {
+.activity-item:last-child {
  border-bottom: none;
 }
 
-.quote-icon {
+.activity-icon {
  width: 45px;
  height: 45px;
  border-radius: 50%;
@@ -931,59 +968,39 @@ export default {
  flex-shrink: 0;
 }
 
-.quote-icon.pendiente {
- background: #f39c12;
-}
-
-.quote-icon.esperando {
- background: #e67e22;
-}
-
-.quote-icon.efectiva {
- background: #27ae60;
-}
-
-.quote-icon.cancelada {
+.activity-icon.aprobacion {
  background: #e74c3c;
 }
 
-.quote-content {
+.activity-icon.venta {
+ background: #27ae60;
+}
+
+.activity-icon.meta {
+ background: #3498db;
+}
+
+.activity-icon.sistema {
+ background: #95a5a6;
+}
+
+.activity-content {
  flex: 1;
 }
 
-.quote-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.25rem;
-}
-
-.quote-code {
+.activity-description {
  color: #2c3e50;
- margin: 0;
- font-size: 1rem;
- font-weight: 600;
-}
-
-.quote-amount {
- color: #27ae60;
- font-weight: 700;
- font-size: 1rem;
-}
-
-.quote-client {
- color: #34495e;
  margin: 0 0 0.25rem 0;
  font-weight: 500;
  font-size: 0.95rem;
 }
 
-.quote-date {
+.activity-time {
  color: #7f8c8d;
  font-size: 0.85rem;
 }
 
-.quote-status {
+.activity-status {
  padding: 0.25rem 0.75rem;
  border-radius: 15px;
  font-size: 0.8rem;
@@ -992,24 +1009,19 @@ export default {
  white-space: nowrap;
 }
 
-.quote-status.pendiente {
+.activity-status.alta {
+ background: #f8d7da;
+ color: #721c24;
+}
+
+.activity-status.normal {
  background: #fff3cd;
  color: #856404;
 }
 
-.quote-status.esperando {
- background: #fdeaa7;
- color: #8b5a00;
-}
-
-.quote-status.efectiva {
+.activity-status.baja {
  background: #d4edda;
  color: #155724;
-}
-
-.quote-status.cancelada {
- background: #f8d7da;
- color: #721c24;
 }
 
 /* Responsive */
@@ -1024,7 +1036,7 @@ export default {
 }
 
 @media (max-width: 768px) {
- .dashboard-vendedor {
+ .dashboard-admin {
    padding: 1rem;
  }
 
@@ -1062,25 +1074,31 @@ export default {
    margin-top: 0.5rem;
  }
 
+ .meta-progress {
+   position: static;
+   margin-top: 0.5rem;
+   width: 100%;
+ }
+
+ .best-seller-badge {
+   position: static;
+   align-self: flex-end;
+   margin-top: 0.5rem;
+ }
+
  .summary-card {
    flex-direction: column;
    align-items: flex-start;
    gap: 1rem;
  }
 
- .quote-item {
+ .activity-item {
    flex-direction: column;
    align-items: flex-start;
    gap: 0.75rem;
  }
 
- .quote-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.25rem;
- }
-
- .quote-status {
+ .activity-status {
    align-self: flex-end;
  }
 

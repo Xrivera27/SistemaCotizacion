@@ -3,8 +3,13 @@
   <div v-if="mostrar" class="modal-overlay" @click.self="cerrar">
     <div class="modal-container">
       <div class="modal-header">
-        <h3>{{ modoEdicion ? 'Editar Cliente' : 'Buscar/Agregar Cliente' }}</h3>
-        <button @click="cerrar" class="btn-cerrar">✕</button>
+        <h3>
+          <i class="fas" :class="modoEdicion ? 'fa-user-edit' : 'fa-users'"></i>
+          {{ modoEdicion ? 'Editar Cliente' : 'Buscar/Agregar Cliente' }}
+        </h3>
+        <button @click="cerrar" class="btn-cerrar">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
       <div class="modal-content">
@@ -15,25 +20,30 @@
             :class="['tab-btn', { active: tabActiva === 'buscar' }]"
             v-if="!modoEdicion"
           >
-            🔍 Buscar Cliente
+            <i class="fas fa-search"></i>
+            Buscar Cliente
           </button>
           <button 
             @click="tabActiva = 'agregar'" 
             :class="['tab-btn', { active: tabActiva === 'agregar' }]"
           >
-            {{ modoEdicion ? '✏️ Editar Cliente' : '➕ Nuevo Cliente' }}
+            <i class="fas" :class="modoEdicion ? 'fa-user-edit' : 'fa-user-plus'"></i>
+            {{ modoEdicion ? 'Editar Cliente' : 'Nuevo Cliente' }}
           </button>
         </div>
 
         <!-- Tab de Buscar -->
         <div v-if="tabActiva === 'buscar' && !modoEdicion" class="tab-content">
           <div class="buscar-section">
-            <input 
-              v-model="terminoBusqueda" 
-              type="text" 
-              placeholder="Buscar por nombre, empresa o RTN..."
-              class="input-buscar"
-            >
+            <div class="search-container">
+              <i class="fas fa-search search-icon"></i>
+              <input 
+                v-model="terminoBusqueda" 
+                type="text" 
+                placeholder="Buscar por nombre, empresa o RTN..."
+                class="input-buscar"
+              >
+            </div>
           </div>
 
           <div class="clientes-lista">
@@ -44,18 +54,34 @@
               @click="seleccionarCliente(cliente)"
             >
               <div class="cliente-info">
-                <strong>{{ cliente.nombreEncargado }}</strong>
-                <p>{{ cliente.nombreEmpresa }}</p>
-                <small>RTN: {{ cliente.rtn }}</small>
+                <strong>
+                  <i class="fas fa-user"></i>
+                  {{ cliente.nombreEncargado }}
+                </strong>
+                <p>
+                  <i class="fas fa-building"></i>
+                  {{ cliente.nombreEmpresa }}
+                </p>
+                <small>
+                  <i class="fas fa-id-card"></i>
+                  RTN: {{ cliente.rtn }}
+                </small>
               </div>
               <div class="cliente-contacto">
-                <small>{{ cliente.correoEmpresa }}</small>
-                <small>{{ cliente.telefonoEmpresa }}</small>
+                <small>
+                  <i class="fas fa-envelope"></i>
+                  {{ cliente.correoEmpresa }}
+                </small>
+                <small>
+                  <i class="fas fa-phone"></i>
+                  {{ cliente.telefonoEmpresa }}
+                </small>
               </div>
             </div>
             
             <div v-if="clientesFiltrados.length === 0" class="no-clientes">
-              No se encontraron clientes
+              <i class="fas fa-users-slash"></i>
+              <p>No se encontraron clientes</p>
             </div>
           </div>
         </div>
@@ -64,7 +90,10 @@
         <div v-if="tabActiva === 'agregar'" class="tab-content">
           <form @submit.prevent="guardarCliente" class="form-cliente">
             <div class="form-group">
-              <label>Nombre del Encargado *</label>
+              <label>
+                <i class="fas fa-user"></i>
+                Nombre del Encargado *
+              </label>
               <input 
                 v-model="clienteForm.nombreEncargado" 
                 type="text" 
@@ -75,7 +104,10 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label>Teléfono Personal</label>
+                <label>
+                  <i class="fas fa-mobile-alt"></i>
+                  Teléfono Personal
+                </label>
                 <input 
                   v-model="clienteForm.telefonoPersonal" 
                   type="tel" 
@@ -84,7 +116,10 @@
                 >
               </div>
               <div class="form-group">
-                <label>Teléfono Empresa</label>
+                <label>
+                  <i class="fas fa-phone"></i>
+                  Teléfono Empresa
+                </label>
                 <input 
                   v-model="clienteForm.telefonoEmpresa" 
                   type="tel" 
@@ -95,7 +130,10 @@
             </div>
 
             <div class="form-group">
-              <label>Nombre de la Empresa *</label>
+              <label>
+                <i class="fas fa-building"></i>
+                Nombre de la Empresa *
+              </label>
               <input 
                 v-model="clienteForm.nombreEmpresa" 
                 type="text" 
@@ -105,7 +143,10 @@
             </div>
 
             <div class="form-group">
-              <label>RTN *</label>
+              <label>
+                <i class="fas fa-id-card"></i>
+                RTN *
+              </label>
               <input 
                 v-model="clienteForm.rtn" 
                 type="text" 
@@ -117,7 +158,10 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label>Correo Personal</label>
+                <label>
+                  <i class="fas fa-envelope"></i>
+                  Correo Personal
+                </label>
                 <input 
                   v-model="clienteForm.correoPersonal" 
                   type="email" 
@@ -125,7 +169,10 @@
                 >
               </div>
               <div class="form-group">
-                <label>Correo Empresa</label>
+                <label>
+                  <i class="fas fa-envelope-open"></i>
+                  Correo Empresa
+                </label>
                 <input 
                   v-model="clienteForm.correoEmpresa" 
                   type="email" 
@@ -136,9 +183,11 @@
 
             <div class="form-actions">
               <button type="button" @click="cancelarFormulario" class="btn-cancelar">
+                
                 Cancelar
               </button>
               <button type="submit" class="btn-guardar">
+               
                 {{ modoEdicion ? 'Actualizar' : 'Agregar' }} Cliente
               </button>
             </div>
@@ -317,6 +366,13 @@ export default {
 .modal-header h3 {
   margin: 0;
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h3 i {
+  font-size: 1.1em;
 }
 
 .btn-cerrar {
@@ -338,6 +394,10 @@ export default {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.btn-cerrar i {
+  font-size: 1rem;
+}
+
 .modal-content {
   max-height: calc(90vh - 100px);
   overflow-y: auto;
@@ -357,6 +417,10 @@ export default {
   font-weight: 500;
   transition: all 0.2s;
   border-bottom: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .tab-btn:hover {
@@ -369,6 +433,10 @@ export default {
   color: #667eea;
 }
 
+.tab-btn i {
+  font-size: 1em;
+}
+
 .tab-content {
   padding: 1.5rem;
 }
@@ -377,18 +445,37 @@ export default {
   margin-bottom: 1rem;
 }
 
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 1rem;
+  z-index: 1;
+}
+
 .input-buscar {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
   border: 2px solid #e9ecef;
   border-radius: 0.5rem;
   font-size: 1rem;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .input-buscar:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.input-buscar:focus + .search-icon {
+  color: #667eea;
 }
 
 .clientes-lista {
@@ -416,7 +503,9 @@ export default {
 
 .cliente-info strong {
   color: #2c3e50;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-bottom: 0.25rem;
 }
 
@@ -424,13 +513,19 @@ export default {
   color: #667eea;
   margin: 0.25rem 0;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .cliente-info small,
 .cliente-contacto small {
   color: #6c757d;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.85rem;
+  margin: 0.1rem 0;
 }
 
 .cliente-contacto {
@@ -442,6 +537,19 @@ export default {
   padding: 2rem;
   color: #6c757d;
   font-style: italic;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.no-clientes i {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.no-clientes p {
+  margin: 0;
 }
 
 .form-cliente {
@@ -459,10 +567,19 @@ export default {
 }
 
 .form-group label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: #2c3e50;
+}
+
+.form-group label i {
+  color: #667eea;
+  font-size: 0.9em;
+  width: 16px;
+  text-align: center;
 }
 
 .form-input {
@@ -495,15 +612,20 @@ export default {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-cancelar {
-  background: #6c757d;
+  background: linear-gradient(135deg, #dc3545, #c82333);
   color: white;
 }
 
 .btn-cancelar:hover {
-  background: #5a6268;
+  background: linear-gradient(135deg, #c82333, #a71e2a);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
 }
 
 .btn-guardar {
@@ -513,6 +635,8 @@ export default {
 
 .btn-guardar:hover {
   background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 @media (max-width: 768px) {
@@ -533,6 +657,27 @@ export default {
   
   .cliente-contacto {
     text-align: left;
+    width: 100%;
+  }
+
+  .tab-btn {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .cliente-info strong,
+  .cliente-info p,
+  .cliente-info small,
+  .cliente-contacto small {
+    font-size: 0.9rem;
   }
 }
 </style>

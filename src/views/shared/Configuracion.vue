@@ -13,7 +13,7 @@
       <div class="config-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="section-icon">👤</span>
+           <i class="fa fa-id-card section-icon" aria-hidden="true"></i>
             Información Personal
           </h2>
           <p class="section-description">Actualiza tu información personal y de contacto</p>
@@ -24,7 +24,10 @@
             <!-- Nombre Completo -->
             <div class="form-group">
               <label for="nombre" class="form-label">
-                <span class="label-text">Nombre Completo</span>
+                <span class="label-text">
+                 <i class="fas fa-user label-icon"></i>
+                  Nombre Completo
+                </span>
                 <span class="label-required">*</span>
               </label>
               <input
@@ -36,13 +39,19 @@
                 placeholder="Ingresa tu nombre completo"
                 required
               />
-              <span v-if="errors.nombre" class="error-message">{{ errors.nombre }}</span>
+              <span v-if="errors.nombre" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.nombre }}
+              </span>
             </div>
 
             <!-- Email -->
             <div class="form-group">
               <label for="email" class="form-label">
-                <span class="label-text">Correo Electrónico</span>
+                <span class="label-text">
+                  <i class="fas fa-envelope label-icon"></i>
+                  Correo Electrónico
+                </span>
                 <span class="label-required">*</span>
               </label>
               <input
@@ -54,13 +63,19 @@
                 placeholder="tu@email.com"
                 required
               />
-              <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
+              <span v-if="errors.email" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.email }}
+              </span>
             </div>
 
             <!-- Usuario -->
             <div class="form-group">
               <label for="usuario" class="form-label">
-                <span class="label-text">Nombre de Usuario</span>
+                <span class="label-text">
+                  <i class="fas fa-at label-icon"></i>
+                  Nombre de Usuario
+                </span>
                 <span class="label-required">*</span>
               </label>
               <input
@@ -72,13 +87,19 @@
                 placeholder="Nombre de usuario único"
                 required
               />
-              <span v-if="errors.usuario" class="error-message">{{ errors.usuario }}</span>
+              <span v-if="errors.usuario" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.usuario }}
+              </span>
             </div>
 
             <!-- Teléfono -->
             <div class="form-group">
               <label for="telefono" class="form-label">
-                <span class="label-text">Teléfono</span>
+                <span class="label-text">
+                  <i class="fas fa-phone label-icon"></i>
+                  Teléfono
+                </span>
               </label>
               <input
                 id="telefono"
@@ -88,15 +109,18 @@
                 :class="{ 'error': errors.telefono }"
                 placeholder="+504 0000-0000"
               />
-              <span v-if="errors.telefono" class="error-message">{{ errors.telefono }}</span>
+              <span v-if="errors.telefono" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.telefono }}
+              </span>
             </div>
           </div>
 
           <!-- Mensaje de éxito/error -->
           <div v-if="mensajePersonal.texto" class="alert" :class="mensajePersonal.tipo">
-            <span class="alert-icon">
-              {{ mensajePersonal.tipo === 'success' ? '✅' : '⚠️' }}
-            </span>
+            <i class="fas alert-icon" 
+               :class="mensajePersonal.tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'">
+            </i>
             {{ mensajePersonal.texto }}
           </div>
 
@@ -104,18 +128,20 @@
           <div class="form-actions">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-danger"
               @click="cancelarCambiosPersonales"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              class="btn btn-primary"
+              class="btn btn-success"
               :disabled="isLoadingPersonal"
               :class="{ 'loading': isLoadingPersonal }"
             >
-              <span v-if="!isLoadingPersonal">Guardar Cambios</span>
+              <span v-if="!isLoadingPersonal">
+                Guardar Cambios
+              </span>
               <span v-else class="loading-spinner"></span>
             </button>
           </div>
@@ -126,7 +152,7 @@
       <div class="config-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="section-icon">🔒</span>
+            <i class="fas fa-lock section-icon"></i>
             Cambiar Contraseña
           </h2>
           <p class="section-description">Actualiza tu contraseña para mantener tu cuenta segura</p>
@@ -137,7 +163,10 @@
             <!-- Contraseña Actual -->
             <div class="form-group">
               <label for="currentPassword" class="form-label">
-                <span class="label-text">Contraseña Actual</span>
+                <span class="label-text">
+                  <i class="fas fa-key label-icon"></i>
+                  Contraseña Actual
+                </span>
                 <span class="label-required">*</span>
               </label>
               <div class="input-container">
@@ -155,16 +184,22 @@
                   class="toggle-password"
                   @click="showPasswords.actual = !showPasswords.actual"
                 >
-                  {{ showPasswords.actual ? '🙈' : '👁️' }}
+                  <i class="fas" :class="showPasswords.actual ? 'fa-eye-slash' : 'fa-eye'"></i>
                 </button>
               </div>
-              <span v-if="errors.currentPassword" class="error-message">{{ errors.currentPassword }}</span>
+              <span v-if="errors.currentPassword" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.currentPassword }}
+              </span>
             </div>
 
             <!-- Nueva Contraseña -->
             <div class="form-group">
               <label for="newPassword" class="form-label">
-                <span class="label-text">Nueva Contraseña</span>
+                <span class="label-text">
+                  <i class="fas fa-lock label-icon"></i>
+                  Nueva Contraseña
+                </span>
                 <span class="label-required">*</span>
               </label>
               <div class="input-container">
@@ -182,16 +217,22 @@
                   class="toggle-password"
                   @click="showPasswords.nueva = !showPasswords.nueva"
                 >
-                  {{ showPasswords.nueva ? '🙈' : '👁️' }}
+                  <i class="fas" :class="showPasswords.nueva ? 'fa-eye-slash' : 'fa-eye'"></i>
                 </button>
               </div>
-              <span v-if="errors.newPassword" class="error-message">{{ errors.newPassword }}</span>
+              <span v-if="errors.newPassword" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.newPassword }}
+              </span>
             </div>
 
             <!-- Confirmar Nueva Contraseña -->
             <div class="form-group">
               <label for="confirmPassword" class="form-label">
-                <span class="label-text">Confirmar Nueva Contraseña</span>
+                <span class="label-text">
+                  <i class="fas fa-shield-alt label-icon"></i>
+                  Confirmar Nueva Contraseña
+                </span>
                 <span class="label-required">*</span>
               </label>
               <div class="input-container">
@@ -209,31 +250,45 @@
                   class="toggle-password"
                   @click="showPasswords.confirmar = !showPasswords.confirmar"
                 >
-                  {{ showPasswords.confirmar ? '🙈' : '👁️' }}
+                  <i class="fas" :class="showPasswords.confirmar ? 'fa-eye-slash' : 'fa-eye'"></i>
                 </button>
               </div>
-              <span v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</span>
+              <span v-if="errors.confirmPassword" class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.confirmPassword }}
+              </span>
             </div>
           </div>
 
           <!-- Requisitos de contraseña -->
           <div class="password-requirements">
-            <h4 class="requirements-title">Requisitos de la contraseña:</h4>
+            <h4 class="requirements-title">
+              <i class="fas fa-info-circle"></i>
+              Requisitos de la contraseña:
+            </h4>
             <ul class="requirements-list">
               <li :class="{ 'valid': passwordValidation.length }">
-                <span class="requirement-icon">{{ passwordValidation.length ? '✅' : '❌' }}</span>
+                <i class="fas requirement-icon" 
+                   :class="passwordValidation.length ? 'fa-check-circle' : 'fa-times-circle'">
+                </i>
                 Mínimo 6 caracteres
               </li>
               <li :class="{ 'valid': passwordValidation.uppercase }">
-                <span class="requirement-icon">{{ passwordValidation.uppercase ? '✅' : '❌' }}</span>
+                <i class="fas requirement-icon" 
+                   :class="passwordValidation.uppercase ? 'fa-check-circle' : 'fa-times-circle'">
+                </i>
                 Al menos una letra mayúscula
               </li>
               <li :class="{ 'valid': passwordValidation.lowercase }">
-                <span class="requirement-icon">{{ passwordValidation.lowercase ? '✅' : '❌' }}</span>
+                <i class="fas requirement-icon" 
+                   :class="passwordValidation.lowercase ? 'fa-check-circle' : 'fa-times-circle'">
+                </i>
                 Al menos una letra minúscula
               </li>
               <li :class="{ 'valid': passwordValidation.number }">
-                <span class="requirement-icon">{{ passwordValidation.number ? '✅' : '❌' }}</span>
+                <i class="fas requirement-icon" 
+                   :class="passwordValidation.number ? 'fa-check-circle' : 'fa-times-circle'">
+                </i>
                 Al menos un número
               </li>
             </ul>
@@ -241,9 +296,9 @@
 
           <!-- Mensaje de éxito/error -->
           <div v-if="mensajePassword.texto" class="alert" :class="mensajePassword.tipo">
-            <span class="alert-icon">
-              {{ mensajePassword.tipo === 'success' ? '✅' : '⚠️' }}
-            </span>
+            <i class="fas alert-icon" 
+               :class="mensajePassword.tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'">
+            </i>
             {{ mensajePassword.texto }}
           </div>
 
@@ -251,18 +306,20 @@
           <div class="form-actions">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-danger"
               @click="cancelarCambiosPassword"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              class="btn btn-primary"
+              class="btn btn-success"
               :disabled="isLoadingPassword || !isPasswordValid"
               :class="{ 'loading': isLoadingPassword }"
             >
-              <span v-if="!isLoadingPassword">Cambiar Contraseña</span>
+              <span v-if="!isLoadingPassword">
+                Cambiar Contraseña
+              </span>
               <span v-else class="loading-spinner"></span>
             </button>
           </div>
@@ -593,6 +650,7 @@ export default {
 
 .section-icon {
   font-size: 2rem;
+  color: #3498db;
 }
 
 .section-description {
@@ -625,13 +683,22 @@ export default {
 .form-label {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: #2c3e50;
 }
 
 .label-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: 1;
+}
+
+.label-icon {
+  font-size: 0.9rem;
+  color: #7f8c8d;
 }
 
 .label-required {
@@ -677,15 +744,17 @@ export default {
   right: 1rem;
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  color: #7f8c8d;
 }
 
 .toggle-password:hover {
   background: rgba(0, 0, 0, 0.05);
+  color: #3498db;
 }
 
 .form-help {
@@ -700,6 +769,9 @@ export default {
   color: #e74c3c;
   font-size: 0.85rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .password-requirements {
@@ -714,6 +786,13 @@ export default {
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.requirements-title i {
+  color: #3498db;
 }
 
 .requirements-list {
@@ -738,7 +817,17 @@ export default {
 }
 
 .requirement-icon {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
+  width: 16px;
+  text-align: center;
+}
+
+.requirements-list li:not(.valid) .requirement-icon {
+  color: #e74c3c;
+}
+
+.requirements-list li.valid .requirement-icon {
+  color: #27ae60;
 }
 
 .alert {
@@ -747,7 +836,7 @@ export default {
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   font-weight: 500;
 }
 
@@ -764,7 +853,8 @@ export default {
 }
 
 .alert-icon {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .form-actions {
@@ -789,30 +879,32 @@ export default {
   min-height: 48px;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #3498db, #2980b9);
+.btn-success {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
   color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #219a52, #27ae60);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
 }
 
-.btn-primary:disabled {
+.btn-success:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
 
-.btn-secondary {
-  background: #95a5a6;
+.btn-danger {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
 }
 
-.btn-secondary:hover {
-  background: #7f8c8d;
+.btn-danger:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226);
   transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
 }
 
 .loading-spinner {
@@ -861,10 +953,15 @@ export default {
   .section-title {
     flex-direction: column;
     gap: 0.5rem;
+    text-align: center;
   }
   
   .password-requirements {
     padding: 1rem;
+  }
+  
+  .form-actions {
+    gap: 0.75rem;
   }
 }
 </style>

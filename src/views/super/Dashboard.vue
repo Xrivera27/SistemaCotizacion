@@ -4,7 +4,7 @@
     <div class="dashboard-header">
       <div class="header-content">
         <h1>
-          Bienvenido, {{ nombreVendedor }}
+          Bienvenido, {{ nombreSuper }}
         </h1>
         
       </div>
@@ -195,7 +195,7 @@ export default {
   name: 'VendedorDashboard',
   data() {
     return {
-      nombreVendedor: 'Carlos Mendoza',
+      nombreSuper: 'Roberto Fernández',
       ventasChart: null,
       estadosChart: null,
       periodoVentas: 'mes',

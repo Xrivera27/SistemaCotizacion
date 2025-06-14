@@ -30,7 +30,7 @@
 
     <div class="contrato-info">
       <div class="contrato-años">
-        <span class="años-label">📅 Contrato:</span>
+        <i class="fas fa-calendar-alt"></i>
         <span class="años-valor">{{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</span>
       </div>
       <div class="precio-total">

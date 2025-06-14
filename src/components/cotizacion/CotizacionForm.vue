@@ -3,9 +3,14 @@
     <!-- Selector de años global -->
     <div class="años-selector">
       <div class="años-container">
-        <label for="años-contrato">Duración del contrato (años):</label>
+        <label for="años-contrato">
+          <i class="fas fa-calendar-alt"></i>
+          Duración del contrato (años):
+        </label>
         <div class="años-controls">
-          <button @click="decrementarAños" :disabled="añosContrato <= 1" class="btn-años">-</button>
+          <button @click="decrementarAños" :disabled="añosContrato <= 1" class="btn-años">
+            <i class="fas fa-minus"></i>
+          </button>
           <input 
             v-model.number="añosContrato" 
             type="number" 
@@ -14,9 +19,12 @@
             class="input-años"
             @input="validarAños"
           >
-          <button @click="incrementarAños" :disabled="añosContrato >= 10" class="btn-años">+</button>
+          <button @click="incrementarAños" :disabled="añosContrato >= 10" class="btn-años">
+            <i class="fas fa-plus"></i>
+          </button>
         </div>
         <small class="años-info">
+          <i class="fas fa-info-circle"></i>
           Todos los servicios se contratarán por {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
         </small>
       </div>
@@ -38,10 +46,12 @@
 
     <div class="form-actions">
       <button @click="calcularCotizacion" class="btn-calcular" :disabled="!hayServicios">
-        🧮 Calcular Cotización
+        <i class="fas fa-calculator"></i>
+        Calcular Cotización
       </button>
       <button @click="limpiarFormulario" class="btn-limpiar">
-        🗑️ Limpiar Todo
+        <i class="fas fa-trash-alt"></i>
+        Limpiar Todo
       </button>
     </div>
 
@@ -178,11 +188,19 @@ export default {
 }
 
 .años-container label {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   color: #2c3e50;
   font-size: clamp(1rem, 3vw, 1.2rem);
   font-weight: 600;
   margin-bottom: 1rem;
+}
+
+.años-container label i {
+  color: #3498db;
+  font-size: 1.1em;
 }
 
 .años-controls {
@@ -198,10 +216,10 @@ export default {
   height: 3rem;
   border: 2px solid #3498db;
   background: rgba(52, 152, 219, 0.1);
-  color: #2c3e50;
+  color: #3498db;
   border-radius: 0.75rem;
   cursor: pointer;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -220,6 +238,7 @@ export default {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  color: #95a5a6;
 }
 
 .input-años {
@@ -244,6 +263,15 @@ export default {
   color: #34495e;
   font-size: clamp(0.85rem, 2.5vw, 1rem);
   font-style: italic;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.años-info i {
+  color: #3498db;
+  font-size: 0.9em;
 }
 
 .servicios-grid {
@@ -276,6 +304,10 @@ export default {
   min-width: 150px;
   flex: 1;
   max-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .btn-calcular {
@@ -296,6 +328,10 @@ export default {
   box-shadow: none;
 }
 
+.btn-calcular:disabled i {
+  color: #7f8c8d;
+}
+
 .btn-limpiar {
   background: linear-gradient(135deg, #fc4a1a, #f7b733);
   color: white;
@@ -305,6 +341,11 @@ export default {
 .btn-limpiar:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(252, 74, 26, 0.6);
+}
+
+.btn-calcular i,
+.btn-limpiar i {
+  font-size: 1.1em;
 }
 
 /* Responsive */
@@ -373,13 +414,28 @@ export default {
   .btn-años {
     width: 2.5rem;
     height: 2.5rem;
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   
   .input-años {
     width: 3.5rem;
     height: 2.5rem;
     font-size: 1.1rem;
+  }
+  
+  .años-info {
+    font-size: 0.8rem;
+  }
+  
+  .btn-calcular, .btn-limpiar {
+    min-width: 120px;
+    font-size: 0.85rem;
+    gap: 0.4rem;
+  }
+  
+  .btn-calcular i,
+  .btn-limpiar i {
+    font-size: 1em;
   }
 }
 

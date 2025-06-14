@@ -11,6 +11,10 @@ import Configuracion from '@/views/shared/Configuracion.vue';
 // Vistas por Rol
 import VendedorDashboard from '@/views/vendedor/Dashboard.vue';
 
+import AdminDashboard from '@/views/admin/Dashboard.vue';
+
+import SuperDashboard from '@/views/super/Dashboard.vue';
+
 //Vistas Para Vendedor
 import MisCotizaciones from '@/views/vendedor/MisCotizaciones.vue';
 
@@ -64,6 +68,13 @@ const routes = [
       },
       
       // Rutas de Admin
+
+      {
+        path: '/admin/dashboard',
+        name: 'AdminDashboard',
+        component: AdminDashboard
+      },
+
       {
         path: 'admin/configuracion',
         name: 'AdminConfiguracion',
@@ -71,6 +82,12 @@ const routes = [
       },
       
       // Rutas de SuperUsuario
+      {
+        path: '/super/dashboard',
+        name: 'SuperDashboard',
+        component: SuperDashboard
+      },
+
       {
         path: 'super/configuracion',
         name: 'SuperConfiguracion',

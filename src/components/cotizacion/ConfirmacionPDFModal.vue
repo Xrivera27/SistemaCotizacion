@@ -3,8 +3,13 @@
   <div v-if="mostrar" class="modal-overlay" @click.self="cerrar">
     <div class="modal-container">
       <div class="modal-header">
-        <h3>🎯 Confirmar Generación de PDF</h3>
-        <button @click="cerrar" class="btn-cerrar">✕</button>
+        <h3>
+          
+          Confirmar Generación de PDF
+        </h3>
+        <button @click="cerrar" class="btn-cerrar">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
       <div class="modal-content">
@@ -19,20 +24,24 @@
             <!-- Botones para gestionar cliente -->
             <div class="cliente-actions">
               <button @click="editarCliente" class="btn-editar" title="Editar cliente">
-                ✏️ Editar
+                <i class="fas fa-edit"></i>
+                Editar
               </button>
               <button @click="cambiarCliente" class="btn-cambiar" title="Cambiar cliente">
-                🔄 Cambiar
+                <i class="fas fa-exchange-alt"></i>
+                Cambiar
               </button>
               <button @click="removerCliente" class="btn-remover" title="Quitar cliente">
-                ❌ Quitar
+                <i class="fas fa-times"></i>
+                Quitar
               </button>
             </div>
           </div>
           <div v-else class="sin-cliente">
             <p>No hay cliente seleccionado</p>
             <button @click="buscarCliente" class="btn-buscar-cliente">
-              🔍 Buscar/Agregar Cliente
+              <i class="fas fa-search"></i>
+              Buscar/Agregar Cliente
             </button>
           </div>
         </div>
@@ -40,7 +49,8 @@
         <!-- Validación de precios -->
         <div v-if="preciosPorDebajoMinimo.length > 0" class="alerta-precios">
           <div class="alerta-header">
-            ⚠️ <strong>Precios por debajo del mínimo detectados</strong>
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Precios por debajo del mínimo detectados</strong>
           </div>
           <div class="servicios-problematicos">
             <div v-for="item in preciosPorDebajoMinimo" :key="item.servicio.id" class="servicio-problema">
@@ -126,7 +136,8 @@
         <!-- Acciones -->
         <div class="modal-actions">
           <button @click="cancelar" class="btn-cancelar">
-            ❌ Cancelar
+            
+            Cancelar
           </button>
 
           <button 
@@ -134,7 +145,8 @@
             @click="guardarCotizacion"
             class="btn-guardar"
           >
-            💾 Guardar para Aprobación
+           
+            Guardar para Aprobación
           </button>
 
           <button 
@@ -143,7 +155,8 @@
             class="btn-generar"
             :disabled="!hayInformacionSeleccionada"
           >
-            📄 Generar PDF
+            <i class="fas fa-file-pdf"></i>
+            Generar PDF
           </button>
 
           <button 
@@ -151,7 +164,8 @@
             @click="buscarCliente"
             class="btn-buscar"
           >
-            🔍 Seleccionar Cliente
+           
+            Seleccionar Cliente
           </button>
         </div>
       </div>
@@ -364,6 +378,13 @@ export default {
 .modal-header h3 {
   margin: 0;
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h3 i {
+  font-size: 1.1em;
 }
 
 .btn-cerrar {
@@ -383,6 +404,10 @@ export default {
 
 .btn-cerrar:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-cerrar i {
+  font-size: 1rem;
 }
 
 .modal-content {
@@ -501,6 +526,10 @@ export default {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
 }
 
 .btn-buscar-cliente:hover {
@@ -523,6 +552,10 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.alerta-header i {
+  font-size: 1.2em;
 }
 
 .servicios-problematicos {
@@ -630,14 +663,15 @@ export default {
 }
 
 .checkbox-option input:checked ~ .checkmark:after {
-  content: '✓';
+  content: '';
   position: absolute;
-  color: white;
-  font-size: 0.8rem;
-  font-weight: bold;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  left: 0.3rem;
+  top: 0.1rem;
+  width: 0.3rem;
+  height: 0.6rem;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .resumen-cotizacion {
@@ -698,13 +732,14 @@ export default {
 }
 
 .btn-cancelar {
-  background: #6c757d;
+  background: linear-gradient(135deg, #dc3545, #c82333);
   color: white;
 }
 
 .btn-cancelar:hover {
-  background: #5a6268;
+  background: linear-gradient(135deg, #c82333, #a71e2a);
   transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
 }
 
 .btn-guardar {
@@ -731,6 +766,10 @@ export default {
   background: #6c757d;
   cursor: not-allowed;
   transform: none;
+}
+
+.btn-generar:disabled i {
+  color: #adb5bd;
 }
 
 .btn-buscar {
@@ -783,6 +822,14 @@ export default {
   .btn-remover {
     font-size: 0.8rem;
     padding: 0.4rem 0.6rem;
+  }
+
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .btn-buscar-cliente {
+    font-size: 0.9rem;
   }
 }
 </style>

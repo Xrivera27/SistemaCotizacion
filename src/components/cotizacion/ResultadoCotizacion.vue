@@ -1,10 +1,16 @@
 <template>
   <div v-if="mostrarResultados" class="resultados-container" id="cotizacion-pdf">
     <div class="resultados-header">
-      <h2>📋 Cotización de Servicios Cloud</h2>
+      <h2>
+        <i class="fas fa-file-invoice"></i>
+        Cotización de Servicios Cloud
+      </h2>
       <p class="fecha">Fecha: {{ fechaActual }}</p>
       <div class="contrato-global">
-        <span class="contrato-duracion">📅 Duración del contrato: {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</span>
+        <span class="contrato-duracion">
+          <i class="fas fa-calendar-alt"></i>
+          Duración del contrato: {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+        </span>
       </div>
     </div>
 
@@ -21,11 +27,17 @@
             </div>
             <div class="cantidades-info">
               <div class="cantidad-item">
-                <span class="cantidad-label">🖥️ Servidores:</span>
+                <span class="cantidad-label">
+                  <i class="fas fa-server"></i>
+                  Servidores:
+                </span>
                 <span class="cantidad-valor">{{ item.cantidadServidores }}</span>
               </div>
               <div class="cantidad-item">
-                <span class="cantidad-label">⚙️ Equipos:</span>
+                <span class="cantidad-label">
+                  <i class="fas fa-cogs"></i>
+                  Equipos:
+                </span>
                 <span class="cantidad-valor">{{ item.cantidadEquipos }}</span>
               </div>
             </div>
@@ -47,14 +59,20 @@
 
     <div class="opciones-precio">
       <div class="precio-option minimo">
-        <h4>🔴 Precio Mínimo</h4>
+        <h4>
+          <i class="fas fa-circle text-danger"></i>
+          Precio Mínimo
+        </h4>
         <div class="precio-valor">${{ precioMinimoAnual }}/año</div>
         <div class="precio-total-contrato">${{ precioMinimoTotal.toLocaleString() }} total</div>
         <p>Precio mínimo para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
       </div>
 
       <div class="precio-option venta">
-        <h4>🟢 Precio de Venta</h4>
+        <h4>
+          <i class="fas fa-circle text-success"></i>
+          Precio de Venta
+        </h4>
         <div class="precio-valor">${{ precioVentaAnual }}/año</div>
         <div class="precio-total-contrato">${{ precioVentaTotal.toLocaleString() }} total</div>
         <p>Precio final para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
@@ -63,7 +81,10 @@
     </div>
 
     <div class="resumen-financiero">
-      <h3>📊 Resumen Financiero ({{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }})</h3>
+      <h3>
+        <i class="fas fa-chart-bar"></i>
+        Resumen Financiero ({{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }})
+      </h3>
       <div class="metricas">
         <div class="metrica">
           <span class="metrica-label">Total de Servidores:</span>
@@ -89,7 +110,10 @@
     </div>
 
     <div class="selector-precio-pdf">
-      <h3>🎯 Precio para la cotización del cliente</h3>
+      <h3>
+         
+        Precio para la cotización del cliente
+      </h3>
       <div class="opciones-precio-pdf">
         <label class="precio-radio-option">
           <input 
@@ -125,10 +149,12 @@
 
     <div class="acciones">
      <button @click="exportarPDF" class="btn-exportar" :disabled="!precioSeleccionadoPDF">
-       📄 Generar PDF para Cliente
+       <i class="fas fa-file-pdf"></i>
+       Generar PDF para Cliente
      </button>
      <button @click="reiniciar" class="btn-reiniciar">
-       🔄 Nueva Cotización
+       <i class="fas fa-redo-alt"></i>
+       Nueva Cotización
      </button>
    </div>
 
@@ -350,7 +376,7 @@ export default {
 </script>
 
 <style scoped>
-/* MISMO CSS DEL ANTERIOR - No cambió */
+/* MISMO CSS DEL ANTERIOR - Con pequeños ajustes para iconos */
 .resultados-container {
  background: white;
  border-radius: 0.75rem;
@@ -373,6 +399,15 @@ export default {
  margin-bottom: 0.5rem;
  font-size: clamp(1.2rem, 4vw, 1.8rem);
  line-height: 1.2;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+}
+
+.resultados-header h2 i {
+ color: #3498db;
+ font-size: 1.1em;
 }
 
 .fecha {
@@ -393,6 +428,13 @@ export default {
  color: #e65100;
  font-weight: bold;
  font-size: clamp(0.9rem, 2.5vw, 1rem);
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.contrato-duracion i {
+ color: #ff9800;
 }
 
 .servicios-seleccionados {
@@ -485,6 +527,13 @@ export default {
  font-size: clamp(0.75rem, 2vw, 0.8rem);
  color: #27ae60;
  font-weight: 600;
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
+}
+
+.cantidad-label i {
+ font-size: 0.9em;
 }
 
 .cantidad-valor {
@@ -591,6 +640,18 @@ export default {
  margin-bottom: 0.75rem;
  font-size: clamp(1rem, 3vw, 1.1rem);
  line-height: 1.2;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+}
+
+.text-danger {
+ color: #e74c3c;
+}
+
+.text-success {
+ color: #27ae60;
 }
 
 .precio-valor {
@@ -634,6 +695,14 @@ export default {
  margin-bottom: 1rem;
  font-size: clamp(1rem, 3vw, 1.2rem);
  text-align: center;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+}
+
+.resumen-financiero h3 i {
+ color: #3498db;
 }
 
 .metricas {
@@ -696,6 +765,14 @@ export default {
  margin-bottom: 1rem;
  font-size: clamp(1rem, 3vw, 1.2rem);
  text-align: center;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+}
+
+.selector-precio-pdf h3 i {
+ color: #007bff;
 }
 
 .opciones-precio-pdf {
@@ -754,245 +831,270 @@ export default {
 
 .precio-info {
  flex: 1;
- display: flex;
- flex-direction: column;
+display: flex;
+flex-direction: column;
 }
 
 .precio-info strong {
- color: #495057;
- font-size: 1rem;
- margin-bottom: 0.25rem;
+color: #495057;
+font-size: 1rem;
+margin-bottom: 0.25rem;
 }
 
 .precio-cantidad {
- color: #007bff;
- font-weight: bold;
- font-size: 1.1rem;
- margin-bottom: 0.25rem;
+color: #007bff;
+font-weight: bold;
+font-size: 1.1rem;
+margin-bottom: 0.25rem;
 }
 
 .precio-info small {
- color: #6c757d;
- font-size: 0.85rem;
+color: #6c757d;
+font-size: 0.85rem;
 }
 
 .acciones {
- display: flex;
- gap: 1rem;
- justify-content: center;
- flex-wrap: wrap;
+display: flex;
+gap: 1rem;
+justify-content: center;
+flex-wrap: wrap;
 }
 
 .btn-exportar, .btn-reiniciar, .btn-guardar {
- padding: 0.75rem 1.5rem;
- border: none;
- border-radius: 0.5rem;
- font-size: clamp(0.9rem, 2.5vw, 1rem);
- font-weight: 600;
- cursor: pointer;
- transition: all 0.2s ease;
- flex: 1;
- min-width: 150px;
- max-width: 200px;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.5rem;
+padding: 0.75rem 1.5rem;
+border: none;
+border-radius: 0.5rem;
+font-size: clamp(0.9rem, 2.5vw, 1rem);
+font-weight: 600;
+cursor: pointer;
+transition: all 0.2s ease;
+flex: 1;
+min-width: 150px;
+max-width: 200px;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
 }
 
 .btn-guardar {
- background: #28a745;
- color: white;
+background: #28a745;
+color: white;
 }
 
 .btn-guardar:hover {
- background: #218838;
- transform: translateY(-2px);
+background: #218838;
+transform: translateY(-2px);
 }
 
 .btn-exportar {
- background: #3498db;
- color: white;
+background: #3498db;
+color: white;
 }
 
 .btn-exportar:hover:not(:disabled) {
- background: #2980b9;
- transform: translateY(-2px);
+background: #2980b9;
+transform: translateY(-2px);
 }
 
 .btn-exportar:disabled {
- background: #6c757d;
- cursor: not-allowed;
- transform: none;
- box-shadow: none;
+background: #6c757d;
+cursor: not-allowed;
+transform: none;
+box-shadow: none;
+}
+
+.btn-exportar:disabled i {
+color: #adb5bd;
 }
 
 .btn-reiniciar {
- background: #95a5a6;
- color: white;
+background: #95a5a6;
+color: white;
 }
 
 .btn-reiniciar:hover {
- background: #7f8c8d;
- transform: translateY(-2px);
+background: #7f8c8d;
+transform: translateY(-2px);
+}
+
+.btn-exportar i,
+.btn-reiniciar i,
+.btn-guardar i {
+font-size: 1.1em;
 }
 
 /* Responsive */
 @media (min-width: 480px) {
- .resultados-container {
-   padding: 1.5rem;
- }
- 
- .opciones-precio {
-   gap: 1.5rem;
- }
- 
- .servicio-seleccionado {
-   padding: 1.25rem;
- }
- 
- .metricas {
-   gap: 1rem;
- }
- 
- .cantidades-info {
-   gap: 1.5rem;
- }
- 
- .opciones-precio-pdf {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 1.5rem;
- }
+.resultados-container {
+  padding: 1.5rem;
+}
+
+.opciones-precio {
+  gap: 1.5rem;
+}
+
+.servicio-seleccionado {
+  padding: 1.25rem;
+}
+
+.metricas {
+  gap: 1rem;
+}
+
+.cantidades-info {
+  gap: 1.5rem;
+}
+
+.opciones-precio-pdf {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
 }
 
 @media (min-width: 768px) {
- .resultados-container {
-   padding: 2rem;
- }
- 
- .opciones-precio {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 1.5rem;
- }
- 
- .servicio-seleccionado {
-   align-items: center;
- }
- 
- .acciones {
-   gap: 1.5rem;
- }
- 
- .btn-exportar, .btn-reiniciar, .btn-guardar {
-   padding: 1rem 2rem;
-   flex: none;
- }
- 
- .metricas {
-   display: grid;
-   grid-template-columns: repeat(2, 1fr);
-   gap: 1rem;
- }
- 
- .metrica:last-child {
-   grid-column: 1 / -1;
- }
+.resultados-container {
+  padding: 2rem;
+}
+
+.opciones-precio {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.servicio-seleccionado {
+  align-items: center;
+}
+
+.acciones {
+  gap: 1.5rem;
+}
+
+.btn-exportar, .btn-reiniciar, .btn-guardar {
+  padding: 1rem 2rem;
+  flex: none;
+}
+
+.metricas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.metrica:last-child {
+  grid-column: 1 / -1;
+}
 }
 
 @media (min-width: 1024px) {
- .opciones-precio {
-   gap: 2rem;
- }
- 
- .precio-option {
-   padding: 1.5rem;
- }
- 
- .resumen-financiero {
-   padding: 2rem;
- }
- 
- .metricas {
-   grid-template-columns: repeat(3, 1fr);
- }
- 
- .metrica:last-child {
-   grid-column: 2 / 3;
- }
+.opciones-precio {
+  gap: 2rem;
+}
+
+.precio-option {
+  padding: 1.5rem;
+}
+
+.resumen-financiero {
+  padding: 2rem;
+}
+
+.metricas {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.metrica:last-child {
+  grid-column: 2 / 3;
+}
 }
 
 @media (max-width: 320px) {
- .resultados-container {
-   padding: 0.75rem;
-   margin-top: 1rem;
- }
- 
- .servicio-seleccionado {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.5rem;
- }
- 
- .servicio-subtotal {
-   text-align: left;
-   align-self: flex-end;
- }
- 
- .acciones {
-   flex-direction: column;
- }
- 
- .btn-exportar, .btn-reiniciar, .btn-guardar {
-   width: 100%;
-   max-width: none;
- }
- 
- .precios-detalle {
-   flex-direction: column;
-   gap: 0.25rem;
- }
- 
- .metrica {
-   flex-direction: column;
-   text-align: center;
- }
- 
- .cantidades-info {
-   flex-direction: column;
-   gap: 0.5rem;
- }
- 
- .precio-radio-option {
-   padding: 0.75rem;
- }
- 
- .precio-info strong {
-   font-size: 0.9rem;
- }
- 
- .precio-cantidad {
-   font-size: 1rem;
- }
+.resultados-container {
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.servicio-seleccionado {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.servicio-subtotal {
+  text-align: left;
+  align-self: flex-end;
+}
+
+.acciones {
+  flex-direction: column;
+}
+
+.btn-exportar, .btn-reiniciar, .btn-guardar {
+  width: 100%;
+  max-width: none;
+}
+
+.precios-detalle {
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metrica {
+  flex-direction: column;
+  text-align: center;
+}
+
+.cantidades-info {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.precio-radio-option {
+  padding: 0.75rem;
+}
+
+.precio-info strong {
+  font-size: 0.9rem;
+}
+
+.precio-cantidad {
+  font-size: 1rem;
+}
+
+.resultados-header h2 {
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.contrato-duracion {
+  font-size: 0.85rem;
+}
+
+.resumen-financiero h3,
+.selector-precio-pdf h3 {
+  flex-direction: column;
+  gap: 0.25rem;
+}
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
- .resultados-header {
-   margin-bottom: 1rem;
-   padding-bottom: 0.5rem;
- }
- 
- .opciones-precio {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 0.75rem;
- }
- 
- .precio-option {
-   padding: 0.75rem;
- }
- 
- .resumen-financiero {
-   padding: 1rem;
-   margin-bottom: 1rem;
- }
+.resultados-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.opciones-precio {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.precio-option {
+  padding: 0.75rem;
+}
+
+.resumen-financiero {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
 }
 </style>

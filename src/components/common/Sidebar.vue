@@ -19,20 +19,20 @@
       <div class="sidebar-header">
         <div class="logo-container">
           <div class="logo" v-if="isOpen">
-            <span class="logo-text">CloudTech</span>
+            <span class="logo-text">Perdomo y Asociados</span>
           </div>
           <span 
             class="logo-mini" 
             v-else
-            :title="'CloudTech - Sistema de Cotización'"
-          >CT</span>
+            :title="'P - Sistema de Cotización'"
+          >P</span>
         </div>
         <button 
           class="btn-toggle"
           @click="toggleSidebar"
           :title="isOpen ? 'Cerrar menú' : 'Abrir menú'"
         >
-          <span class="toggle-icon">{{ isOpen ? '←' : '→' }}</span>
+          <i class="fas" :class="isOpen ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
         </button>
       </div>
 
@@ -62,7 +62,7 @@
               :title="!isOpen ? item.texto : ''"
               @click="cerrarSidebarMobile"
             >
-              <span class="nav-icon">{{ item.icono }}</span>
+              <i class="nav-icon" :class="item.icono"></i>
               <span class="nav-text" v-if="isOpen">{{ item.texto }}</span>
               <span 
                 v-if="item.badge && isOpen" 
@@ -90,7 +90,7 @@
           @click="cerrarSesion"
           :title="isOpen ? 'Cerrar sesión' : 'Cerrar sesión'"
         >
-          <span class="logout-icon">🚪</span>
+          <i class="fas fa-sign-out-alt logout-icon"></i>
           <span class="logout-text" v-if="isOpen">Cerrar Sesión</span>
         </button>
       </div>
@@ -126,50 +126,50 @@ export default {
           {
             id: 'dashboard-admin',
             texto: 'Dashboard',
-            icono: '📊',
+            icono: 'fa fa-home',
             ruta: '/admin/dashboard'
           },
           {
             id: 'usuarios',
             texto: 'Usuarios',
-            icono: '👥',
+            icono: 'fas fa-users',
             ruta: '/admin/usuarios'
           },
           {
             id: 'clientes',
             texto: 'Clientes',
-            icono: '🏢',
+            icono: 'fas fa-building',
             ruta: '/admin/clientes'
           },
           {
             id: 'servicios',
             texto: 'Servicios',
-            icono: '⚙️',
+            icono: 'fas fa-cogs',
             ruta: '/admin/servicios'
           },
           {
             id: 'cotizaciones-admin',
             texto: 'Cotizaciones',
-            icono: '📋',
+            icono: 'fas fa-file-invoice',
             ruta: '/admin/cotizaciones',
-            badge: '12'
+            
           },
           {
             id: 'reportes-admin',
             texto: 'Reportes',
-            icono: '📈',
+            icono: 'fas fa-chart-line',
             ruta: '/admin/reportes'
           },
           {
             id: 'crear-cotizacion-admin',
             texto: 'Crear Cotización',
-            icono: '➕',
+            icono: 'fas fa-plus-circle',
             ruta: '/shared/cotizacion'
           },
           {
             id: 'configuracion-admin',
             texto: 'Configuración',
-            icono: '⚙️',
+            icono: 'fas fa-cog',
             ruta: '/admin/configuracion'
           }
         ],
@@ -177,25 +177,25 @@ export default {
           {
             id: 'dashboard-vendedor',
             texto: 'Dashboard',
-            icono: '📊',
+            icono: 'fa fa-home',
             ruta: '/vendedor/dashboard'
           },
           {
             id: 'crear-cotizacion',
             texto: 'Crear Cotización',
-            icono: '➕',
+            icono: 'fas fa-plus-circle',
             ruta: '/shared/cotizacion'
           },
           {
             id: 'historial-cotizaciones',
             texto: 'Mis Cotizaciones',
-            icono: '📋',
+            icono: 'fas fa-file-invoice',
             ruta: '/vendedor/cotizaciones',
           },
           {
             id: 'configuracion-vendedor',
             texto: 'Configuración',
-            icono: '⚙️',
+            icono: 'fas fa-cog',
             ruta: '/vendedor/configuracion'
           }
         ],
@@ -203,32 +203,32 @@ export default {
           {
             id: 'dashboard-super',
             texto: 'Dashboard',
-            icono: '📊',
+            icono: 'fa fa-home',
             ruta: '/super/dashboard'
           },
           {
             id: 'cotizaciones-super',
             texto: 'Cotizaciones',
-            icono: '📋',
+            icono: 'fas fa-file-invoice',
             ruta: '/super/cotizaciones',
-            badge: '8'
+            
           },
           {
             id: 'crear-cotizacion-super',
             texto: 'Crear Cotización',
-            icono: '➕',
+            icono: 'fas fa-plus-circle',
             ruta: '/shared/cotizacion'
           },
           {
             id: 'reportes-super',
             texto: 'Reportes',
-            icono: '📈',
+            icono: 'fas fa-chart-line',
             ruta: '/super/reportes'
           },
           {
             id: 'configuracion-super',
             texto: 'Configuración',
-            icono: '⚙️',
+            icono: 'fas fa-cog',
             ruta: '/super/configuracion'
           }
         ]
@@ -270,7 +270,7 @@ export default {
       const roles = {
         1: 'Administrador',
         2: 'Vendedor',
-        3: 'Lic. SuperUsuario'
+        3: 'SuperUsuario'
       };
       return roles[rol] || 'Usuario';
     },
@@ -433,7 +433,7 @@ export default {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  font-size: 1.3rem;
+  font-size: 1rem;
   font-weight: bold;
   box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
   flex-shrink: 0;
@@ -443,7 +443,7 @@ export default {
 .sidebar-cerrado .btn-toggle {
   width: 45px;
   height: 45px;
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   border-width: 3px;
   box-shadow: 0 3px 12px rgba(52, 152, 219, 0.4);
 }
@@ -459,19 +459,11 @@ export default {
   transform: scale(0.95);
 }
 
-.toggle-icon {
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+.btn-toggle i {
   transition: transform 0.2s ease;
 }
 
-.sidebar-cerrado .toggle-icon {
-  font-size: 1.3rem;
-}
-
-.btn-toggle:hover .toggle-icon {
+.btn-toggle:hover i {
   transform: scale(1.1);
 }
 
@@ -592,10 +584,13 @@ export default {
 }
 
 .nav-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   width: 24px;
   text-align: center;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-text {
@@ -735,7 +730,7 @@ export default {
   .btn-toggle {
     width: 38px;
     height: 38px;
-    font-size: 1.2rem;
+    font-size: 0.9rem;
   }
 }
 

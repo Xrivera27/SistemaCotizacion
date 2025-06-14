@@ -289,7 +289,7 @@ export default {
           nombre: 'Roberto Fernández',
           rol: 3,
           iniciales: 'RF',
-          rolTexto: 'Lic. SuperUsuario',
+          rolTexto: 'SuperUsuario',
           departamento: 'Supervisión',
           activo: true
         },
@@ -301,7 +301,7 @@ export default {
           nombre: 'Patricia Vargas',
           rol: 3,
           iniciales: 'PV',
-          rolTexto: 'Lic. Supervisor',
+          rolTexto: 'Supervisor',
           departamento: 'Supervisión',
           activo: true
         },
@@ -313,7 +313,7 @@ export default {
           nombre: 'Miguel Herrera',
           rol: 3,
           iniciales: 'MH',
-          rolTexto: 'Lic. SuperUsuario',
+          rolTexto: 'SuperUsuario',
           departamento: 'Supervisión',
           activo: true
         },
