@@ -144,22 +144,30 @@
       </div>
     </div>
 
-    <!-- Actividad reciente del sistema -->
-    <div class="system-activity">
+    <!-- Últimas cotizaciones creadas -->
+    <div class="recent-quotes">
       <h3>
-        Actividad Reciente del Sistema
+        <i class="fas fa-file-invoice-dollar"></i>
+        Últimas Cotizaciones Creadas (Todos los usuarios)
       </h3>
-      <div class="activity-list">
-        <div v-for="actividad in actividadSistema" :key="actividad.id" class="activity-item">
-          <div class="activity-icon" :class="actividad.tipo">
-            <i class="fas" :class="getActivityIcon(actividad.tipo)"></i>
+      <div class="quotes-list">
+        <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
+          <div class="quote-icon" :class="cotizacion.estado">
+            <i class="fas fa-file-alt"></i>
           </div>
-          <div class="activity-content">
-            <p class="activity-description">{{ actividad.descripcion }}</p>
-            <small class="activity-time">{{ formatearTiempo(actividad.fecha) }}</small>
+          <div class="quote-content">
+            <div class="quote-header">
+              <h4 class="quote-code">{{ cotizacion.codigo }}</h4>
+              <span class="quote-amount">${{ formatearMoneda(cotizacion.monto) }}</span>
+            </div>
+            <p class="quote-client">{{ cotizacion.cliente }}</p>
+            <div class="quote-details">
+              <small class="quote-vendor">Vendedor: {{ cotizacion.vendedor }}</small>
+              <small class="quote-date">{{ formatearTiempo(cotizacion.fechaCreacion) }}</small>
+            </div>
           </div>
-          <div class="activity-status" :class="actividad.prioridad">
-            {{ actividad.prioridad }}
+          <div class="quote-status" :class="cotizacion.estado">
+            {{ getEstadoTexto(cotizacion.estado) }}
           </div>
         </div>
       </div>
@@ -265,34 +273,78 @@ export default {
           }
         }
       },
-      actividadSistema: [
+      ultimasCotizaciones: [
         {
           id: 1,
-          tipo: 'aprobacion',
-          descripcion: 'Cotización COT-2025-024 requiere aprobación - Monto: $180,000',
-          fecha: new Date(Date.now() - 30 * 60 * 1000),
-          prioridad: 'alta'
+          codigo: 'COT-2025-028',
+          cliente: 'TechCorp Internacional',
+          vendedor: 'Carlos Mendoza',
+          monto: 185000,
+          fechaCreacion: new Date(Date.now() - 1 * 60 * 60 * 1000),
+          estado: 'pendiente'
         },
         {
           id: 2,
-          tipo: 'venta',
-          descripcion: 'Nueva venta confirmada por María López - $95,000',
-          fecha: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          prioridad: 'normal'
+          codigo: 'COT-2025-027',
+          cliente: 'Innovación Digital S.A.',
+          vendedor: 'Ana García',
+          monto: 95000,
+          fechaCreacion: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          estado: 'esperando'
         },
         {
           id: 3,
-          tipo: 'meta',
-          descripcion: 'El equipo alcanzó el 94% de la meta mensual',
-          fecha: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          prioridad: 'baja'
+          codigo: 'COT-2025-026',
+          cliente: 'Grupo Empresarial Norte',
+          vendedor: 'Luis Rodríguez',
+          monto: 142000,
+          fechaCreacion: new Date(Date.now() - 3 * 60 * 60 * 1000),
+          estado: 'efectiva'
         },
         {
           id: 4,
-          tipo: 'sistema',
-          descripcion: 'Backup automático del sistema completado exitosamente',
-          fecha: new Date(Date.now() - 6 * 60 * 60 * 1000),
-          prioridad: 'baja'
+          codigo: 'COT-2025-025',
+          cliente: 'Comercial del Sur',
+          vendedor: 'María López',
+          monto: 67000,
+          fechaCreacion: new Date(Date.now() - 4 * 60 * 60 * 1000),
+          estado: 'cancelada'
+        },
+        {
+          id: 5,
+          codigo: 'COT-2025-024',
+          cliente: 'Desarrollo Web Plus',
+          vendedor: 'Pedro Sánchez',
+          monto: 210000,
+          fechaCreacion: new Date(Date.now() - 5 * 60 * 60 * 1000),
+          estado: 'efectiva'
+        },
+        {
+          id: 6,
+          codigo: 'COT-2025-023',
+          cliente: 'Marketing Solutions',
+          vendedor: 'Laura Torres',
+          monto: 89000,
+          fechaCreacion: new Date(Date.now() - 6 * 60 * 60 * 1000),
+          estado: 'pendiente'
+        },
+        {
+          id: 7,
+          codigo: 'COT-2025-022',
+          cliente: 'E-commerce Global',
+          vendedor: 'José Fernández',
+          monto: 156000,
+          fechaCreacion: new Date(Date.now() - 8 * 60 * 60 * 1000),
+          estado: 'esperando'
+        },
+        {
+          id: 8,
+          codigo: 'COT-2025-021',
+          cliente: 'Consultoría Estratégica',
+          vendedor: 'Carmen Díaz',
+          monto: 98000,
+          fechaCreacion: new Date(Date.now() - 10 * 60 * 60 * 1000),
+          estado: 'efectiva'
         }
       ]
     }
@@ -453,27 +505,28 @@ export default {
     formatearTiempo(fecha) {
       const ahora = new Date();
       const diferencia = ahora - fecha;
-      const minutos = Math.floor(diferencia / (1000 * 60));
       const horas = Math.floor(diferencia / (1000 * 60 * 60));
       
-      if (minutos < 60) {
-        return `hace ${minutos} minuto${minutos !== 1 ? 's' : ''}`;
+      if (horas < 1) {
+        return 'hace menos de una hora';
+      } else if (horas === 1) {
+        return 'hace 1 hora';
       } else if (horas < 24) {
-        return `hace ${horas} hora${horas !== 1 ? 's' : ''}`;
+        return `hace ${horas} horas`;
       } else {
         const dias = Math.floor(horas / 24);
-        return `hace ${dias} día${dias !== 1 ? 's' : ''}`;
+        return `hace ${dias} día${dias > 1 ? 's' : ''}`;
       }
     },
     
-    getActivityIcon(tipo) {
-      const iconos = {
-        aprobacion: 'fa-exclamation-triangle',
-        venta: 'fa-handshake',
-        meta: 'fa-target',
-        sistema: 'fa-server'
+    getEstadoTexto(estado) {
+      const estados = {
+        pendiente: 'Pendiente',
+        esperando: 'Esperando Aprobación',
+        efectiva: 'Efectiva',
+        cancelada: 'Cancelada'
       };
-      return iconos[tipo] || 'fa-info-circle';
+      return estados[estado] || estado;
     }
   }
 }
@@ -729,14 +782,6 @@ export default {
   background: linear-gradient(135deg, #27ae60, #229954);
 }
 
-.meta-mensual .summary-icon {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.promedio-colaborador .summary-icon {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-}
-
 .mejor-vendedor .summary-icon {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
@@ -764,50 +809,6 @@ export default {
   font-size: 0.85rem;
 }
 
-.summary-change {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.summary-change.positive {
-  background: #d4edda;
-  color: #155724;
-}
-
-.summary-change.negative {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.meta-progress {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  width: 80px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: #e9ecef;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #3498db, #2980b9);
-  transition: width 0.3s ease;
-}
-
 .best-seller-badge {
   position: absolute;
   top: 1rem;
@@ -816,12 +817,8 @@ export default {
   font-size: 1.2rem;
 }
 
-/* Admin Actions */
-.admin-actions {
-  margin-bottom: 2rem;
-}
-
-.admin-actions h3 {
+/* Recent Quotes */
+.recent-quotes h3 {
   color: #2c3e50;
   margin-bottom: 1rem;
   display: flex;
@@ -829,276 +826,212 @@ export default {
   gap: 0.5rem;
 }
 
-.admin-actions h3 i {
+.recent-quotes h3 i {
   color: #3498db;
 }
 
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.action-card {
+.quotes-list {
   background: white;
-  padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e9ecef;
-  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.quote-item {
   display: flex;
   align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f8f9fa;
   gap: 1rem;
-  cursor: pointer;
-  position: relative;
+  transition: background-color 0.3s ease;
 }
 
-.action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.quote-item:hover {
+  background-color: #f8f9fa;
 }
 
-.action-icon {
- width: 50px;
- height: 50px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.3rem;
- color: white;
- flex-shrink: 0;
+.quote-item:last-child {
+  border-bottom: none;
 }
 
-.supervisar .action-icon {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
+.quote-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: white;
+  flex-shrink: 0;
 }
 
-.reportes .action-icon {
- background: linear-gradient(135deg, #27ae60, #229954);
+.quote-icon.pendiente {
+  background: #f39c12;
 }
 
-.colaboradores-manage .action-icon {
- background: linear-gradient(135deg, #3498db, #2980b9);
+.quote-icon.esperando {
+  background: #e67e22;
 }
 
-.configuracion .action-icon {
- background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+.quote-icon.efectiva {
+  background: #27ae60;
 }
 
-.action-content {
- flex: 1;
+.quote-icon.cancelada {
+  background: #e74c3c;
 }
 
-.action-content h4 {
- color: #2c3e50;
- margin: 0 0 0.25rem 0;
- font-size: 1.1rem;
+.quote-content {
+  flex: 1;
 }
 
-.action-content p {
- color: #7f8c8d;
- margin: 0;
- font-size: 0.9rem;
+.quote-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
 }
 
-.action-badge {
- position: absolute;
- top: -5px;
- right: -5px;
- background: #e74c3c;
- color: white;
- border-radius: 50%;
- width: 25px;
- height: 25px;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 0.8rem;
- font-weight: 600;
+.quote-code {
+  color: #2c3e50;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
-/* System Activity */
-.system-activity h3 {
- color: #2c3e50;
- margin-bottom: 1rem;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+.quote-amount {
+  color: #27ae60;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
-.system-activity h3 i {
- color: #3498db;
+.quote-client {
+  color: #34495e;
+  margin: 0 0 0.25rem 0;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
-.activity-list {
- background: white;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- overflow: hidden;
+.quote-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
 }
 
-.activity-item {
- display: flex;
- align-items: center;
- padding: 1rem 1.5rem;
- border-bottom: 1px solid #f8f9fa;
- gap: 1rem;
- transition: background-color 0.3s ease;
+.quote-vendor {
+  color: #7f8c8d;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-.activity-item:hover {
- background-color: #f8f9fa;
+.quote-date {
+  color: #7f8c8d;
+  font-size: 0.85rem;
 }
 
-.activity-item:last-child {
- border-bottom: none;
+.quote-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.activity-icon {
- width: 45px;
- height: 45px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.2rem;
- color: white;
- flex-shrink: 0;
+.quote-status.pendiente {
+  background: #fff3cd;
+  color: #856404;
 }
 
-.activity-icon.aprobacion {
- background: #e74c3c;
+.quote-status.esperando {
+  background: #fdeaa7;
+  color: #8b5a00;
 }
 
-.activity-icon.venta {
- background: #27ae60;
+.quote-status.efectiva {
+  background: #d4edda;
+  color: #155724;
 }
 
-.activity-icon.meta {
- background: #3498db;
-}
-
-.activity-icon.sistema {
- background: #95a5a6;
-}
-
-.activity-content {
- flex: 1;
-}
-
-.activity-description {
- color: #2c3e50;
- margin: 0 0 0.25rem 0;
- font-weight: 500;
- font-size: 0.95rem;
-}
-
-.activity-time {
- color: #7f8c8d;
- font-size: 0.85rem;
-}
-
-.activity-status {
- padding: 0.25rem 0.75rem;
- border-radius: 15px;
- font-size: 0.8rem;
- font-weight: 600;
- text-transform: uppercase;
- white-space: nowrap;
-}
-
-.activity-status.alta {
- background: #f8d7da;
- color: #721c24;
-}
-
-.activity-status.normal {
- background: #fff3cd;
- color: #856404;
-}
-
-.activity-status.baja {
- background: #d4edda;
- color: #155724;
+.quote-status.cancelada {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
- .charts-section {
-   grid-template-columns: 1fr;
- }
- 
- .summary-cards {
-   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
- }
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-cards {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
- .dashboard-admin {
-   padding: 1rem;
+  .dashboard-admin {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .best-seller-badge {
+    position: static;
+    align-self: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  .summary-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .quote-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
  }
 
- .dashboard-header {
+ .quote-header {
    flex-direction: column;
    align-items: flex-start;
-   gap: 1rem;
+   gap: 0.25rem;
  }
 
- .header-content h1 {
-   font-size: 2rem;
- }
-
- .stats-grid {
-   grid-template-columns: 1fr;
- }
-
- .actions-grid {
-   grid-template-columns: 1fr;
- }
-
- .summary-header {
+ .quote-details {
    flex-direction: column;
    align-items: flex-start;
-   gap: 1rem;
+   gap: 0.25rem;
  }
 
- .summary-cards {
-   grid-template-columns: 1fr;
- }
-
- .summary-change {
-   position: static;
-   align-self: flex-end;
-   margin-top: 0.5rem;
- }
-
- .meta-progress {
-   position: static;
-   margin-top: 0.5rem;
-   width: 100%;
- }
-
- .best-seller-badge {
-   position: static;
-   align-self: flex-end;
-   margin-top: 0.5rem;
- }
-
- .summary-card {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
-
- .activity-item {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.75rem;
- }
-
- .activity-status {
+ .quote-status {
    align-self: flex-end;
  }
 
@@ -1113,17 +1046,16 @@ export default {
    text-align: center;
  }
 
- .action-card {
-   flex-direction: column;
-   text-align: center;
- }
-
  .summary-card {
    text-align: center;
  }
 
  .chart-wrapper {
    height: 200px;
+ }
+
+ .quote-item {
+   text-align: center;
  }
 }
 </style>
