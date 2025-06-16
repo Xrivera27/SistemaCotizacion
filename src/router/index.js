@@ -23,7 +23,8 @@ import MisReportes from '@/views/admin/MisReportes.vue';
 
 // Vistas para SuperUsuario
 import SuperDashboard from '@/views/super/Dashboard.vue';
-
+import MisCotizacionesSuper from '@/views/super/MisCotizaciones.vue';
+import MisReportesSuper from '@/views/super/MisReportes.vue';
 
 
 //Vistas Para Vendedor
@@ -126,6 +127,20 @@ const routes = [
         name: 'SuperDashboard',
         component: SuperDashboard
       },
+
+       {
+        path: '/super/cotizaciones',
+        name: 'MisCotizacionesSuper',
+        component: MisCotizacionesSuper
+      },
+
+      
+       {
+        path: '/super/reportes',
+        name: 'MisReportesSuper',
+        component: MisReportesSuper
+      },
+
 
       {
         path: 'super/configuracion',

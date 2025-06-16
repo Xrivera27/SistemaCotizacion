@@ -6,7 +6,6 @@
         <h1>
          Bienvenido, {{ nombreSuper }}
         </h1>
-        
       </div>
       <div class="header-date">
         <i class="fas fa-calendar-day"></i>
@@ -36,7 +35,6 @@
           <p>Requieren Aprobación</p>
           <small>Acción inmediata requerida</small>
         </div>
-       
       </div>
 
       <div class="stat-card efectiva">
@@ -71,7 +69,6 @@
           <small>Vendedores bajo supervisión</small>
         </div>
       </div>
-
     </div>
 
     <!-- Gráficos principales -->
@@ -79,9 +76,11 @@
       <div class="chart-container large">
         <div class="chart-header">
           <h3>
-            
             Cotizaciones Efectivas vs Canceladas (Últimos 30 días)
           </h3>
+          <button @click="actualizarGraficoComparativo" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="efectivasVsCanceladasChart"></canvas>
@@ -91,9 +90,11 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Efectivas por Colaborador
           </h3>
+          <button @click="actualizarDatosColaboradores" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="colaboradoresChart"></canvas>
@@ -103,9 +104,11 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Servicios Más Cotizados
           </h3>
+          <button @click="actualizarDatosServicios" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="serviciosChart"></canvas>
@@ -117,7 +120,6 @@
     <div class="sales-summary">
       <div class="summary-header">
         <h3>
-          
           Resumen Mensual de Ventas
         </h3>
         <div class="month-selector">
@@ -150,10 +152,7 @@
             <div class="summary-amount">{{ resumenMensual.aprobacionesRealizadas }}</div>
             <small>{{ getDescripcionMes() }}</small>
           </div>
-          
         </div>
-
-       
 
         <div class="summary-card mejor-vendedor">
           <div class="summary-icon">
@@ -178,6 +177,10 @@
           <i class="fas fa-clipboard-check"></i>
           Cotizaciones Pendientes de Aprobación
         </h3>
+        <button @click="actualizarCotizacionesPendientes" class="refresh-btn">
+          <i class="fas fa-sync-alt"></i>
+          Actualizar
+        </button>
       </div>
       
       <div class="quotes-list" v-if="cotizacionesPendientesAprobacion.length > 0">
@@ -223,6 +226,13 @@
         <p>No hay cotizaciones pendientes de aprobación en este momento.</p>
       </div>
     </div>
+
+    <!-- Loading Modal -->
+    <LoadingModal 
+      :is-loading="isLoading" 
+      :message="loadingMessage"
+      :cancellable="false"
+    />
   </div>
 </template>
 
@@ -243,6 +253,8 @@ import {
   BarController
 } from 'chart.js'
 
+import { useLoading } from '@/utils/useLoading'
+
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -260,6 +272,21 @@ Chart.register(
 
 export default {
   name: 'SupervisorDashboard',
+  setup() {
+    const { 
+      isLoading, 
+      loadingMessage, 
+      withLoading,
+      withLoadingKey 
+    } = useLoading()
+
+    return {
+      isLoading,
+      loadingMessage,
+      withLoading,
+      withLoadingKey
+    }
+  },
   data() {
     return {
       nombreSuper: 'Roberto Fernández',
@@ -392,43 +419,52 @@ export default {
       return this.cotizacionesCompletas.filter(cotizacion => cotizacion.estado === 'esperando');
     }
   },
-  mounted() {
-    this.$nextTick(() => {
-      this.initCharts();
-    });
+  async mounted() {
+    // Cargar datos iniciales con loading
+    await this.withLoading(async () => {
+      await this.cargarDatosIniciales()
+      await this.$nextTick()
+      this.initCharts()
+    }, 'Cargando dashboard supervisor...')
   },
   beforeUnmount() {
     if (this.efectivasVsCanceladasChart) {
-      this.efectivasVsCanceladasChart.destroy();
+      this.efectivasVsCanceladasChart.destroy()
     }
     if (this.colaboradoresChart) {
-      this.colaboradoresChart.destroy();
+      this.colaboradoresChart.destroy()
     }
     if (this.serviciosChart) {
-      this.serviciosChart.destroy();
+      this.serviciosChart.destroy()
     }
   },
   methods: {
+    // Simular carga de datos iniciales
+    async cargarDatosIniciales() {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      console.log('Datos iniciales del supervisor cargados')
+    },
+
     initCharts() {
       try {
-        this.createEfectivasVsCanceladasChart();
-        this.createColaboradoresChart();
-        this.createServiciosChart();
+        this.createEfectivasVsCanceladasChart()
+        this.createColaboradoresChart()
+        this.createServiciosChart()
       } catch (error) {
-        console.error('Error al inicializar gráficos:', error);
+        console.error('Error al inicializar gráficos:', error)
       }
     },
     
     createEfectivasVsCanceladasChart() {
-      const ctx = this.$refs.efectivasVsCanceladasChart?.getContext('2d');
+      const ctx = this.$refs.efectivasVsCanceladasChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
-      const labels = this.generate30DayLabels();
-      const efectivas = [8, 12, 6, 15, 9, 18, 11, 14, 7, 16, 13, 10, 19, 8, 12, 15, 11, 17, 9, 13, 16, 8, 14, 12, 18, 10, 15, 11, 13, 16];
-      const canceladas = [3, 5, 2, 4, 6, 3, 7, 2, 5, 4, 3, 6, 2, 5, 3, 4, 6, 2, 7, 3, 4, 5, 2, 6, 3, 4, 5, 3, 2, 4];
+      const labels = this.generate30DayLabels()
+      const efectivas = [8, 12, 6, 15, 9, 18, 11, 14, 7, 16, 13, 10, 19, 8, 12, 15, 11, 17, 9, 13, 16, 8, 14, 12, 18, 10, 15, 11, 13, 16]
+      const canceladas = [3, 5, 2, 4, 6, 3, 7, 2, 5, 4, 3, 6, 2, 5, 3, 4, 6, 2, 7, 3, 4, 5, 2, 6, 3, 4, 5, 3, 2, 4]
       
       this.efectivasVsCanceladasChart = new Chart(ctx, {
         type: 'line',
@@ -478,18 +514,18 @@ export default {
             }
           }
         }
-      });
+      })
     },
     
     createColaboradoresChart() {
-      const ctx = this.$refs.colaboradoresChart?.getContext('2d');
+      const ctx = this.$refs.colaboradoresChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
-      const colaboradores = ['Carlos M.', 'Ana G.', 'Luis R.', 'María L.', 'Pedro S.', 'Laura T.'];
-      const cotizacionesEfectivas = [18, 15, 12, 14, 10, 8];
+      const colaboradores = ['Carlos M.', 'Ana G.', 'Luis R.', 'María L.', 'Pedro S.', 'Laura T.']
+      const cotizacionesEfectivas = [18, 15, 12, 14, 10, 8]
       
       this.colaboradoresChart = new Chart(ctx, {
         type: 'bar',
@@ -532,14 +568,14 @@ export default {
             }
           }
         }
-      });
+      })
     },
     
     createServiciosChart() {
-      const ctx = this.$refs.serviciosChart?.getContext('2d');
+      const ctx = this.$refs.serviciosChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
       this.serviciosChart = new Chart(ctx, {
@@ -576,21 +612,53 @@ export default {
             }
           }
         }
-      });
+      })
+    },
+
+    // Métodos con loading para actualizar datos
+    async actualizarGraficoComparativo() {
+      await this.withLoadingKey('grafico-comparativo', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1200))
+        console.log('Gráfico comparativo actualizado')
+      }, 'Actualizando gráfico comparativo...')
+    },
+
+    async actualizarDatosColaboradores() {
+      await this.withLoadingKey('colaboradores', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Datos de colaboradores actualizados')
+      }, 'Actualizando datos de colaboradores...')
+    },
+
+    async actualizarDatosServicios() {
+      await this.withLoadingKey('servicios', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Datos de servicios actualizados')
+      }, 'Actualizando datos de servicios...')
+    },
+
+    async actualizarCotizacionesPendientes() {
+      await this.withLoadingKey('cotizaciones-pendientes', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        console.log('Cotizaciones pendientes actualizadas')
+      }, 'Actualizando cotizaciones pendientes...')
     },
     
     generate30DayLabels() {
-      const labels = [];
+      const labels = []
       for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }));
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+        labels.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }))
       }
-      return labels;
+      return labels
     },
     
-    actualizarResumenMensual() {
-      this.resumenMensual = { ...this.datosMensuales[this.mesSeleccionado] };
+    async actualizarResumenMensual() {
+      await this.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        this.resumenMensual = { ...this.datosMensuales[this.mesSeleccionado] }
+      }, 'Cargando resumen mensual...')
     },
     
     getDescripcionMes() {
@@ -598,28 +666,28 @@ export default {
         actual: 'este mes',
         anterior: 'mes anterior', 
         hace2: 'hace 2 meses'
-      };
-      return descripciones[this.mesSeleccionado];
+      }
+      return descripciones[this.mesSeleccionado]
     },
     
     formatearMoneda(cantidad) {
-      return cantidad.toLocaleString('es-ES');
+      return cantidad.toLocaleString('es-ES')
     },
     
     formatearTiempo(fecha) {
-      const ahora = new Date();
-      const diferencia = ahora - fecha;
-      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const ahora = new Date()
+      const diferencia = ahora - fecha
+      const horas = Math.floor(diferencia / (1000 * 60 * 60))
       
       if (horas < 1) {
-        return 'hace menos de una hora';
+        return 'hace menos de una hora'
       } else if (horas === 1) {
-        return 'hace 1 hora';
+        return 'hace 1 hora'
       } else if (horas < 24) {
-        return `hace ${horas} horas`;
+        return `hace ${horas} horas`
       } else {
-        const dias = Math.floor(horas / 24);
-        return `hace ${dias} día${dias !== 1 ? 's' : ''}`;
+        const dias = Math.floor(horas / 24)
+        return `hace ${dias} día${dias !== 1 ? 's' : ''}`
       }
     },
     
@@ -628,63 +696,64 @@ export default {
         alta: 'ALTA',
         media: 'MEDIA',
         baja: 'BAJA'
-      };
-      return prioridades[prioridad] || prioridad.toUpperCase();
+      }
+      return prioridades[prioridad] || prioridad.toUpperCase()
     },
     
-    verCotizacion(cotizacion) {
-      // Aquí se abriría un modal o se navegaría a la página de detalles
-      alert(`Viendo detalles de ${cotizacion.codigo}\n\nCliente: ${cotizacion.cliente}\nVendedor: ${cotizacion.vendedor}\nMonto: $${this.formatearMoneda(cotizacion.monto)}`);
+    async verCotizacion(cotizacion) {
+      await this.withLoading(async () => {
+        // Simular carga de detalles
+        await new Promise(resolve => setTimeout(resolve, 800))
+        alert(`Viendo detalles de ${cotizacion.codigo}\n\nCliente: ${cotizacion.cliente}\nVendedor: ${cotizacion.vendedor}\nMonto: $${this.formatearMoneda(cotizacion.monto)}`)
+      }, 'Cargando detalles...')
     },
     
-    aprobarCotizacion(id) {
-      const index = this.cotizacionesCompletas.findIndex(c => c.id === id);
+    async aprobarCotizacion(id) {
+      const index = this.cotizacionesCompletas.findIndex(c => c.id === id)
       if (index !== -1) {
-        const cotizacion = this.cotizacionesCompletas[index];
+        const cotizacion = this.cotizacionesCompletas[index]
         
-        // Confirmación antes de aprobar
         if (confirm(`¿Está seguro de aprobar la cotización ${cotizacion.codigo}?`)) {
-          // Cambiar estado a efectiva
-          cotizacion.estado = 'efectiva';
+          await this.withLoading(async () => {
+            // Simular proceso de aprobación
+            await new Promise(resolve => setTimeout(resolve, 1200))
+            
+            // Cambiar estado a efectiva
+            cotizacion.estado = 'efectiva'
+            
+            // Actualizar estadísticas
+            this.estadisticas.esperandoAprobacion--
+            this.estadisticas.efectivas++
+          }, 'Procesando aprobación...')
           
-          // Actualizar estadísticas
-          this.estadisticas.esperandoAprobacion--;
-          this.estadisticas.efectivas++;
-          
-          // Mostrar mensaje de éxito
-          this.$nextTick(() => {
-            alert(`✅ Cotización ${cotizacion.codigo} aprobada exitosamente`);
-          });
+          alert(`✅ Cotización ${cotizacion.codigo} aprobada exitosamente`)
         }
       }
     },
     
-    rechazarCotizacion(id) {
-      const index = this.cotizacionesCompletas.findIndex(c => c.id === id);
+    async rechazarCotizacion(id) {
+      const index = this.cotizacionesCompletas.findIndex(c => c.id === id)
       if (index !== -1) {
-        const cotizacion = this.cotizacionesCompletas[index];
+        const cotizacion = this.cotizacionesCompletas[index]
         
-        // Solicitar motivo del rechazo
-        const motivo = prompt(`Ingrese el motivo del rechazo para ${cotizacion.codigo}:`);
+        const motivo = prompt(`Ingrese el motivo del rechazo para ${cotizacion.codigo}:`)
         if (motivo && motivo.trim() !== '') {
-          // Cambiar estado a cancelada
-          cotizacion.estado = 'cancelada';
-          cotizacion.motivoRechazo = motivo;
+          await this.withLoading(async () => {
+            // Simular proceso de rechazo
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            // Cambiar estado a cancelada
+            cotizacion.estado = 'cancelada'
+            cotizacion.motivoRechazo = motivo
+            
+            // Actualizar estadísticas
+            this.estadisticas.esperandoAprobacion--
+            this.estadisticas.canceladas++
+          }, 'Procesando rechazo...')
           
-          // Actualizar estadísticas
-          this.estadisticas.esperandoAprobacion--;
-          this.estadisticas.canceladas++;
-          
-          // Mostrar mensaje de confirmación
-          this.$nextTick(() => {
-            alert(`❌ Cotización ${cotizacion.codigo} rechazada`);
-          });
+          alert(`❌ Cotización ${cotizacion.codigo} rechazada`)
         }
       }
-    },
-    
-    mostrarAprobacionesPendientes() {
-      alert('Redirigiendo a la página de aprobaciones pendientes...');
     }
   }
 }
@@ -741,6 +810,49 @@ export default {
   color: #3498db;
 }
 
+/* Refresh Button Styles */
+.refresh-btn {
+  background: #8e44ad;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-btn:hover {
+  background: #7d3f98;
+  transform: translateY(-1px);
+}
+
+.refresh-btn i {
+  font-size: 0.8rem;
+}
+
+.approval-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.approval-header h3 {
+  color: #2c3e50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.approval-header h3 i {
+  color: #e74c3c;
+}
+
 /* Stats Grid */
 .stats-grid {
   display: grid;
@@ -750,791 +862,685 @@ export default {
 }
 
 .stat-card {
- background: white;
- padding: 1.5rem;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- transition: transform 0.3s ease;
- display: flex;
- align-items: center;
- gap: 1rem;
- position: relative;
+background: white;
+padding: 1.5rem;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
+transition: transform 0.3s ease;
+display: flex;
+align-items: center;
+gap: 1rem;
+position: relative;
 }
 
 .stat-card:hover {
- transform: translateY(-2px);
+transform: translateY(-2px);
 }
 
 .stat-icon {
- width: 60px;
- height: 60px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.5rem;
- color: white;
- flex-shrink: 0;
+width: 60px;
+height: 60px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.5rem;
+color: white;
+flex-shrink: 0;
 }
 
 .stat-card.pendiente .stat-icon {
- background: linear-gradient(135deg, #f39c12, #e67e22);
+background: linear-gradient(135deg, #f39c12, #e67e22);
 }
 
 .stat-card.esperando-approval .stat-icon {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
+background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .stat-card.efectiva .stat-icon {
- background: linear-gradient(135deg, #27ae60, #229954);
+background: linear-gradient(135deg, #27ae60, #229954);
 }
 
 .stat-card.cancelada .stat-icon {
- background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+background: linear-gradient(135deg, #95a5a6, #7f8c8d);
 }
 
 .stat-card.equipo .stat-icon {
- background: linear-gradient(135deg, #3498db, #2980b9);
+background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
 .stat-card.rendimiento .stat-icon {
- background: linear-gradient(135deg, #9b59b6, #8e44ad);
+background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
 
 .stat-info h3 {
- font-size: 2rem;
- font-weight: 700;
- color: #2c3e50;
- margin: 0 0 0.25rem 0;
+font-size: 2rem;
+font-weight: 700;
+color: #2c3e50;
+margin: 0 0 0.25rem 0;
 }
 
 .stat-info p {
- font-weight: 600;
- color: #34495e;
- margin: 0 0 0.25rem 0;
+font-weight: 600;
+color: #34495e;
+margin: 0 0 0.25rem 0;
 }
 
 .stat-info small {
- color: #7f8c8d;
- font-size: 0.85rem;
+color: #7f8c8d;
+font-size: 0.85rem;
 }
 
 .action-badge {
- position: absolute;
- top: 1rem;
- right: 1rem;
- background: #e74c3c;
- color: white;
- border-radius: 50%;
- width: 30px;
- height: 30px;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 0.9rem;
- animation: pulse 2s infinite;
+position: absolute;
+top: 1rem;
+right: 1rem;
+background: #e74c3c;
+color: white;
+border-radius: 50%;
+width: 30px;
+height: 30px;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 0.9rem;
+animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
- 0% { transform: scale(1); }
- 50% { transform: scale(1.1); }
- 100% { transform: scale(1); }
+0% { transform: scale(1); }
+50% { transform: scale(1.1); }
+100% { transform: scale(1); }
 }
 
 /* Charts Section */
 .charts-section {
- display: grid;
- grid-template-columns: 2fr 1fr 1fr;
- gap: 2rem;
- margin-bottom: 2rem;
+display: grid;
+grid-template-columns: 2fr 1fr 1fr;
+gap: 2rem;
+margin-bottom: 2rem;
 }
 
 .chart-container {
- background: white;
- padding: 1.5rem;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- height: fit-content;
+background: white;
+padding: 1.5rem;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
+height: fit-content;
 }
 
 .chart-container.large {
- grid-row: span 2;
+grid-row: span 2;
 }
 
 .chart-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1rem;
 }
 
 .chart-header h3 {
- color: #2c3e50;
- margin: 0;
- display: flex;
- align-items: center;
- gap: 0.5rem;
- font-size: 1rem;
+color: #2c3e50;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+font-size: 1rem;
 }
 
 .chart-header h3 i {
- color: #8e44ad;
+color: #8e44ad;
 }
 
 .chart-wrapper {
- position: relative;
- height: 300px;
- width: 100%;
+position: relative;
+height: 300px;
+width: 100%;
 }
 
 .large .chart-wrapper {
- height: 400px;
+height: 400px;
 }
 
 /* Sales Summary */
 .sales-summary {
- margin-bottom: 2rem;
+margin-bottom: 2rem;
 }
 
 .summary-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1.5rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1.5rem;
 }
 
 .summary-header h3 {
- color: #2c3e50;
- margin: 0;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+color: #2c3e50;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 0.5rem;
 }
 
 .summary-header h3 i {
- color: #27ae60;
+color: #27ae60;
 }
 
 .month-selector .month-select {
- padding: 0.5rem 1rem;
- border: 1px solid #ddd;
- border-radius: 0.5rem;
- background: white;
- color: #2c3e50;
- font-weight: 500;
- cursor: pointer;
- transition: border-color 0.3s ease;
+padding: 0.5rem 1rem;
+border: 1px solid #ddd;
+border-radius: 0.5rem;
+background: white;
+color: #2c3e50;
+font-weight: 500;
+cursor: pointer;
+transition: border-color 0.3s ease;
 }
 
 .month-selector .month-select:focus {
- outline: none;
- border-color: #8e44ad;
+outline: none;
+border-color: #8e44ad;
 }
 
 .summary-cards {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
- gap: 1.5rem;
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+gap: 1.5rem;
 }
 
 .summary-card {
- background: white;
- padding: 1.5rem;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- transition: transform 0.3s ease;
- display: flex;
- align-items: center;
- gap: 1rem;
- position: relative;
+background: white;
+padding: 1.5rem;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
+transition: transform 0.3s ease;
+display: flex;
+align-items: center;
+gap: 1rem;
+position: relative;
 }
 
 .summary-card:hover {
- transform: translateY(-2px);
+transform: translateY(-2px);
 }
 
 .summary-icon {
- width: 60px;
- height: 60px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.5rem;
- color: white;
- flex-shrink: 0;
+width: 60px;
+height: 60px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.5rem;
+color: white;
+flex-shrink: 0;
 }
 
 .total-ventas .summary-icon {
- background: linear-gradient(135deg, #27ae60, #229954);
+background: linear-gradient(135deg, #27ae60, #229954);
 }
 
 .aprobaciones .summary-icon {
- background: linear-gradient(135deg, #8e44ad, #9b59b6);
+background: linear-gradient(135deg, #8e44ad, #9b59b6);
 }
 
 .tiempo-respuesta .summary-icon {
- background: linear-gradient(135deg, #3498db, #2980b9);
+background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
 .mejor-vendedor .summary-icon {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
+background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .summary-info {
- flex: 1;
+flex: 1;
 }
 
 .summary-info h4 {
- color: #2c3e50;
- margin: 0 0 0.5rem 0;
- font-size: 1rem;
- font-weight: 600;
+color: #2c3e50;
+margin: 0 0 0.5rem 0;
+font-size: 1rem;
+font-weight: 600;
 }
 
 .summary-amount {
- font-size: 1.8rem;
- font-weight: 700;
- color: #2c3e50;
- margin-bottom: 0.25rem;
+font-size: 1.8rem;
+font-weight: 700;
+color: #2c3e50;
+margin-bottom: 0.25rem;
 }
 
 .summary-info small {
- color: #7f8c8d;
- font-size: 0.85rem;
+color: #7f8c8d;
+font-size: 0.85rem;
 }
 
 .summary-change {
- position: absolute;
- top: 1rem;
- right: 1rem;
- padding: 0.25rem 0.5rem;
- border-radius: 0.5rem;
- font-size: 0.8rem;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.25rem;
+position: absolute;
+top: 1rem;
+right: 1rem;
+padding: 0.25rem 0.5rem;
+border-radius: 0.5rem;
+font-size: 0.8rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+gap: 0.25rem;
 }
 
 .summary-change.positive {
- background: #d4edda;
- color: #155724;
+background: #d4edda;
+color: #155724;
 }
 
 .summary-change.negative {
- background: #f8d7da;
- color: #721c24;
+background: #f8d7da;
+color: #721c24;
 }
 
 .best-seller-badge {
- position: absolute;
- top: 1rem;
- right: 1rem;
- color: #f39c12;
- font-size: 1.2rem;
-}
-
-/* Supervisor Actions */
-.supervisor-actions {
- margin-bottom: 2rem;
-}
-
-.supervisor-actions h3 {
- color: #2c3e50;
- margin-bottom: 1rem;
- display: flex;
- align-items: center;
- gap: 0.5rem;
-}
-
-.supervisor-actions h3 i {
- color: #8e44ad;
-}
-
-.actions-grid {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
- gap: 1.5rem;
-}
-
-.action-card {
- background: white;
- padding: 1.5rem;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- transition: all 0.3s ease;
- display: flex;
- align-items: center;
- gap: 1rem;
- cursor: pointer;
- position: relative;
-}
-
-.action-card:hover {
- transform: translateY(-2px);
- box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.action-icon {
- width: 50px;
- height: 50px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.3rem;
- color: white;
- flex-shrink: 0;
-}
-
-.aprobar-urgente .action-icon {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.revisar-equipo .action-icon {
- background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.generar-reporte .action-icon {
- background: linear-gradient(135deg, #27ae60, #229954);
-}
-
-.configurar .action-icon {
- background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-}
-
-.action-content {
- flex: 1;
-}
-
-.action-content h4 {
- color: #2c3e50;
- margin: 0 0 0.25rem 0;
- font-size: 1.1rem;
-}
-
-.action-content p {
- color: #7f8c8d;
- margin: 0;
- font-size: 0.9rem;
-}
-
-.action-card .action-badge {
- position: absolute;
- top: -5px;
- right: -5px;
- background: #e74c3c;
- color: white;
- border-radius: 50%;
- width: 25px;
- height: 25px;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 0.8rem;
- font-weight: 600;
+position: absolute;
+top: 1rem;
+right: 1rem;
+color: #f39c12;
+font-size: 1.2rem;
 }
 
 /* Approval Quotes Section */
 .approval-quotes {
- margin-bottom: 2rem;
+margin-bottom: 2rem;
 }
 
 .approval-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1rem;
 }
 
 .approval-header h3 {
- color: #2c3e50;
- margin: 0;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+color: #2c3e50;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 0.5rem;
 }
 
 .approval-header h3 i {
- color: #e74c3c;
+color: #e74c3c;
 }
 
 .approval-count {
- display: flex;
- align-items: center;
+display: flex;
+align-items: center;
 }
 
 .count-badge {
- background: #e74c3c;
- color: white;
- padding: 0.25rem 0.75rem;
- border-radius: 15px;
- font-size: 0.9rem;
- font-weight: 600;
- min-width: 25px;
- text-align: center;
+background: #e74c3c;
+color: white;
+padding: 0.25rem 0.75rem;
+border-radius: 15px;
+font-size: 0.9rem;
+font-weight: 600;
+min-width: 25px;
+text-align: center;
 }
 
 .quotes-list {
- background: white;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
- overflow: hidden;
+background: white;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
+overflow: hidden;
 }
 
 .quote-item {
- display: flex;
- align-items: center;
- padding: 1rem 1.5rem;
- border-bottom: 1px solid #f8f9fa;
- gap: 1rem;
- transition: background-color 0.3s ease;
+display: flex;
+align-items: center;
+padding: 1rem 1.5rem;
+border-bottom: 1px solid #f8f9fa;
+gap: 1rem;
+transition: background-color 0.3s ease;
 }
 
 .quote-item:hover {
- background-color: #f8f9fa;
+background-color: #f8f9fa;
 }
 
 .quote-item:last-child {
- border-bottom: none;
+border-bottom: none;
 }
 
 .approval-item {
- border-left: 4px solid #e74c3c;
- background: #fefefe;
+border-left: 4px solid #e74c3c;
+background: #fefefe;
 }
 
 .approval-item:hover {
- background-color: #fff8f8;
- border-left-color: #c0392b;
+background-color: #fff8f8;
+border-left-color: #c0392b;
 }
 
 .quote-icon {
- width: 45px;
- height: 45px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 1.2rem;
- color: white;
- flex-shrink: 0;
+width: 45px;
+height: 45px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.2rem;
+color: white;
+flex-shrink: 0;
 }
 
 .quote-icon.esperando {
- background: #e74c3c;
+background: #e74c3c;
 }
 
 .quote-content {
- flex: 1;
+flex: 1;
 }
 
 .quote-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.25rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 0.25rem;
 }
 
 .quote-code {
- color: #2c3e50;
- margin: 0;
- font-size: 1rem;
- font-weight: 600;
+color: #2c3e50;
+margin: 0;
+font-size: 1rem;
+font-weight: 600;
 }
 
 .quote-amount {
- color: #27ae60;
- font-weight: 700;
- font-size: 1rem;
+color: #27ae60;
+font-weight: 700;
+font-size: 1rem;
 }
 
 .quote-client {
- color: #34495e;
- margin: 0 0 0.25rem 0;
- font-weight: 500;
- font-size: 0.95rem;
+color: #34495e;
+margin: 0 0 0.25rem 0;
+font-weight: 500;
+font-size: 0.95rem;
 }
 
 .quote-details {
- display: flex;
- justify-content: space-between;
- align-items: center;
- gap: 1rem;
- margin-bottom: 0.5rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 1rem;
+margin-bottom: 0.5rem;
 }
 
 .quote-vendor {
- color: #7f8c8d;
- font-size: 0.85rem;
- font-weight: 600;
+color: #7f8c8d;
+font-size: 0.85rem;
+font-weight: 600;
 }
 
 .quote-date {
- color: #7f8c8d;
- font-size: 0.85rem;
+color: #7f8c8d;
+font-size: 0.85rem;
 }
 
 .quote-priority {
- margin-top: 0.5rem;
+margin-top: 0.5rem;
 }
 
 .priority-badge {
- padding: 0.2rem 0.6rem;
- border-radius: 12px;
- font-size: 0.75rem;
- font-weight: 700;
- text-transform: uppercase;
- letter-spacing: 0.5px;
+padding: 0.2rem 0.6rem;
+border-radius: 12px;
+font-size: 0.75rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.5px;
 }
 
 .priority-badge.alta {
- background: #ffebee;
- color: #c62828;
- border: 1px solid #ef5350;
+background: #ffebee;
+color: #c62828;
+border: 1px solid #ef5350;
 }
 
 .priority-badge.media {
- background: #fff3e0;
- color: #ef6c00;
- border: 1px solid #ff9800;
+background: #fff3e0;
+color: #ef6c00;
+border: 1px solid #ff9800;
 }
 
 .priority-badge.baja {
- background: #e8f5e8;
- color: #2e7d32;
- border: 1px solid #4caf50;
+background: #e8f5e8;
+color: #2e7d32;
+border: 1px solid #4caf50;
 }
 
 .quote-actions {
- display: flex;
- gap: 0.5rem;
- align-items: center;
- flex-shrink: 0;
+display: flex;
+gap: 0.5rem;
+align-items: center;
+flex-shrink: 0;
 }
 
 .btn-action {
- width: 42px;
- height: 42px;
- border: none;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- cursor: pointer;
- transition: all 0.3s ease;
- font-size: 1rem;
- box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+width: 42px;
+height: 42px;
+border: none;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: all 0.3s ease;
+font-size: 1rem;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-view {
- background: #3498db;
- color: white;
+background: #3498db;
+color: white;
 }
 
 .btn-view:hover {
- background: #2980b9;
- transform: translateY(-2px);
- box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+background: #2980b9;
+transform: translateY(-2px);
+box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
 }
 
 .btn-approve {
- background: #27ae60;
- color: white;
+background: #27ae60;
+color: white;
 }
 
 .btn-approve:hover {
- background: #229954;
- transform: translateY(-2px);
- box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+background: #229954;
+transform: translateY(-2px);
+box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
 }
 
 .btn-reject {
- background: #e74c3c;
- color: white;
+background: #e74c3c;
+color: white;
 }
 
 .btn-reject:hover {
- background: #c0392b;
- transform: translateY(-2px);
- box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+background: #c0392b;
+transform: translateY(-2px);
+box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 /* Empty State */
 .empty-state {
- text-align: center;
- padding: 3rem 2rem;
- background: white;
- border-radius: 1rem;
- box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
- border: 1px solid #e9ecef;
+text-align: center;
+padding: 3rem 2rem;
+background: white;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
 }
 
 .empty-icon {
- width: 80px;
- height: 80px;
- border-radius: 50%;
- background: linear-gradient(135deg, #27ae60, #229954);
- color: white;
- display: flex;
- align-items: center;
- justify-content: center;
- margin: 0 auto 1rem;
- font-size: 2rem;
+width: 80px;
+height: 80px;
+border-radius: 50%;
+background: linear-gradient(135deg, #27ae60, #229954);
+color: white;
+display: flex;
+align-items: center;
+justify-content: center;
+margin: 0 auto 1rem;
+font-size: 2rem;
 }
 
 .empty-state h4 {
- color: #27ae60;
- margin: 0 0 0.5rem 0;
- font-size: 1.5rem;
+color: #27ae60;
+margin: 0 0 0.5rem 0;
+font-size: 1.5rem;
 }
 
 .empty-state p {
- color: #7f8c8d;
- margin: 0;
- font-size: 1rem;
+color: #7f8c8d;
+margin: 0;
+font-size: 1rem;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
- .charts-section {
-   grid-template-columns: 1fr;
- }
- 
- .summary-cards {
-   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
- }
+.charts-section {
+  grid-template-columns: 1fr;
+}
+
+.summary-cards {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
 }
 
 @media (max-width: 768px) {
- .dashboard-supervisor {
-   padding: 1rem;
- }
+.dashboard-supervisor {
+  padding: 1rem;
+}
 
- .dashboard-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.dashboard-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .header-content h1 {
-   font-size: 2rem;
- }
+.header-content h1 {
+  font-size: 2rem;
+}
 
- .stats-grid {
-   grid-template-columns: 1fr;
- }
+.stats-grid {
+  grid-template-columns: 1fr;
+}
 
- .actions-grid {
-   grid-template-columns: 1fr;
- }
+.summary-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .summary-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.approval-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .approval-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.summary-cards {
+  grid-template-columns: 1fr;
+}
 
- .summary-cards {
-   grid-template-columns: 1fr;
- }
+.summary-change {
+  position: static;
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
 
- .summary-change {
-   position: static;
-   align-self: flex-end;
-   margin-top: 0.5rem;
- }
+.best-seller-badge {
+  position: static;
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
 
- .best-seller-badge {
-   position: static;
-   align-self: flex-end;
-   margin-top: 0.5rem;
- }
+.summary-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .summary-card {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.quote-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
 
- .quote-item {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.75rem;
- }
+.quote-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
 
- .quote-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.25rem;
- }
+.quote-details {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
 
- .quote-details {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.25rem;
- }
+.quote-actions {
+  flex-direction: column;
+  gap: 0.3rem;
+  align-self: flex-end;
+}
 
- .quote-actions {
-   flex-direction: column;
-   gap: 0.3rem;
-   align-self: flex-end;
- }
+.btn-action {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9rem;
+}
 
- .btn-action {
-   width: 38px;
-   height: 38px;
-   font-size: 0.9rem;
- }
+.chart-wrapper {
+  height: 250px;
+}
 
- .chart-wrapper {
-   height: 250px;
- }
+.large .chart-wrapper {
+  height: 300px;
+}
 
- .large .chart-wrapper {
-   height: 300px;
- }
+.refresh-btn {
+  align-self: stretch;
+  justify-content: center;
+}
 }
 
 @media (max-width: 480px) {
- .stat-card {
-   flex-direction: column;
-   text-align: center;
- }
+.stat-card {
+  flex-direction: column;
+  text-align: center;
+}
 
- .action-card {
-   flex-direction: column;
-   text-align: center;
- }
+.summary-card {
+  text-align: center;
+}
 
- .summary-card {
-   text-align: center;
- }
+.quote-actions {
+  flex-direction: row;
+  justify-content: center;
+  width: 100%;
+}
 
- .quote-actions {
-   flex-direction: row;
-   justify-content: center;
-   width: 100%;
- }
+.chart-wrapper {
+  height: 200px;
+}
 
- .chart-wrapper {
-   height: 200px;
- }
-
- .large .chart-wrapper {
-   height: 250px;
- }
+.large .chart-wrapper {
+  height: 250px;
+}
 }
 </style>

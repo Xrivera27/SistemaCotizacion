@@ -21,7 +21,7 @@
 
 <script>
 export default {
-  name: 'AppHeader', // CAMBIADO: nombre multi-palabra
+  name: 'AppHeader',
   data() {
     return {
       notificationCount: 3,
@@ -31,17 +31,28 @@ export default {
   computed: {
     pageTitle() {
       const titles = {
+        // Rutas compartidas
         '/shared/cotizacion': 'Crear Cotización',
+        
+        // Rutas de Administrador
+        '/admin/dashboard': 'Dashboard',
+        '/admin/usuarios': 'Usuarios',
+        '/admin/clientes': 'Clientes',
+        '/admin/servicios': 'Servicios',
+        '/admin/cotizaciones': 'Cotizaciones',
+        '/admin/reportes': 'Reportes',
+        '/admin/configuracion': 'Configuración',
+        
+        // Rutas de Vendedor
         '/vendedor/dashboard': 'Dashboard',
         '/vendedor/cotizaciones': 'Mis Cotizaciones',
-        '/admin/dashboard': 'Dashboard Administrativo',
-        '/admin/cotizaciones': 'Gestión de Cotizaciones',
-        '/admin/usuarios': 'Gestión de Usuarios',
-        '/admin/reportes': 'Reportes y Análisis',
-        '/admin/clientes': 'Gestion de Clientes',
-        '/admin/servicios': 'Gestion de Servicios',
+        '/vendedor/configuracion': 'Configuración',
         
-        
+        // Rutas de SuperUsuario
+        '/super/dashboard': 'Dashboard',
+        '/super/cotizaciones': 'Cotizaciones',
+        '/super/reportes': 'Reportes',
+        '/super/configuracion': 'Configuración'
       };
       return titles[this.$route.path] || 'Sistema de Cotización';
     }

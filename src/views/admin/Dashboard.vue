@@ -6,7 +6,6 @@
         <h1>
           Bienvenido, {{ nombreAdmin }}
         </h1>
-      
       </div>
       <div class="header-date">
         <i class="fas fa-calendar-day"></i>
@@ -70,7 +69,6 @@
           <small>Vendedores trabajando este momento</small>
         </div>
       </div>
-      
     </div>
 
     <!-- Gráficos principales -->
@@ -78,9 +76,11 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Cotizaciones Efectivas por Colaborador
           </h3>
+          <button @click="actualizarDatosColaboradores" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="colaboradoresChart"></canvas>
@@ -90,9 +90,11 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Servicios Más Cotizados
           </h3>
+          <button @click="actualizarDatosServicios" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="serviciosChart"></canvas>
@@ -104,7 +106,6 @@
     <div class="sales-summary">
       <div class="summary-header">
         <h3>
-          
           Resumen Mensual de Ventas
         </h3>
         <div class="month-selector">
@@ -146,10 +147,16 @@
 
     <!-- Últimas cotizaciones creadas -->
     <div class="recent-quotes">
-      <h3>
-        <i class="fas fa-file-invoice-dollar"></i>
-        Últimas Cotizaciones Creadas (Todos los usuarios)
-      </h3>
+      <div class="quotes-header">
+        <h3>
+          <i class="fas fa-file-invoice-dollar"></i>
+          Últimas Cotizaciones Creadas (Todos los usuarios)
+        </h3>
+        <button @click="actualizarCotizaciones" class="refresh-btn">
+          <i class="fas fa-sync-alt"></i>
+          Actualizar
+        </button>
+      </div>
       <div class="quotes-list">
         <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
           <div class="quote-icon" :class="cotizacion.estado">
@@ -172,6 +179,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Loading Modal -->
+    <LoadingModal 
+      :is-loading="isLoading" 
+      :message="loadingMessage"
+      :cancellable="false"
+    />
   </div>
 </template>
 
@@ -192,6 +206,8 @@ import {
   BarController
 } from 'chart.js'
 
+import { useLoading } from '@/utils/useLoading'
+
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -209,6 +225,21 @@ Chart.register(
 
 export default {
   name: 'AdminDashboard',
+  setup() {
+    const { 
+      isLoading, 
+      loadingMessage, 
+      withLoading,
+      withLoadingKey 
+    } = useLoading()
+
+    return {
+      isLoading,
+      loadingMessage,
+      withLoading,
+      withLoadingKey
+    }
+  },
   data() {
     return {
       nombreAdmin: 'Juan Pérez',
@@ -359,38 +390,48 @@ export default {
       });
     }
   },
-  mounted() {
-    this.$nextTick(() => {
-      this.initCharts();
-    });
+  async mounted() {
+    // Cargar datos iniciales con loading
+    await this.withLoading(async () => {
+      await this.cargarDatosIniciales()
+      await this.$nextTick()
+      this.initCharts()
+    }, 'Cargando dashboard...')
   },
   beforeUnmount() {
     if (this.colaboradoresChart) {
-      this.colaboradoresChart.destroy();
+      this.colaboradoresChart.destroy()
     }
     if (this.serviciosChart) {
-      this.serviciosChart.destroy();
+      this.serviciosChart.destroy()
     }
   },
   methods: {
+    // Simular carga de datos iniciales
+    async cargarDatosIniciales() {
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Aquí irían tus llamadas a la API
+      console.log('Datos iniciales cargados')
+    },
+
     initCharts() {
       try {
-        this.createColaboradoresChart();
-        this.createServiciosChart();
+        this.createColaboradoresChart()
+        this.createServiciosChart()
       } catch (error) {
-        console.error('Error al inicializar gráficos:', error);
+        console.error('Error al inicializar gráficos:', error)
       }
     },
     
     createColaboradoresChart() {
-      const ctx = this.$refs.colaboradoresChart?.getContext('2d');
+      const ctx = this.$refs.colaboradoresChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
-      const colaboradores = ['Carlos M.', 'Ana G.', 'Luis R.', 'María L.', 'Pedro S.', 'Laura T.', 'José F.', 'Carmen D.'];
-      const cotizacionesEfectivas = [25, 22, 19, 18, 16, 15, 12, 8];
+      const colaboradores = ['Carlos M.', 'Ana G.', 'Luis R.', 'María L.', 'Pedro S.', 'Laura T.', 'José F.', 'Carmen D.']
+      const cotizacionesEfectivas = [25, 22, 19, 18, 16, 15, 12, 8]
       
       this.colaboradoresChart = new Chart(ctx, {
         type: 'bar',
@@ -438,14 +479,14 @@ export default {
             }
           }
         }
-      });
+      })
     },
     
     createServiciosChart() {
-      const ctx = this.$refs.serviciosChart?.getContext('2d');
+      const ctx = this.$refs.serviciosChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
       this.serviciosChart = new Chart(ctx, {
@@ -482,11 +523,42 @@ export default {
             }
           }
         }
-      });
+      })
+    },
+
+    // Métodos con loading para actualizar datos
+    async actualizarDatosColaboradores() {
+      await this.withLoadingKey('colaboradores', async () => {
+        // Simular llamada a API
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Aquí actualizarías los datos del gráfico
+        console.log('Datos de colaboradores actualizados')
+      }, 'Actualizando datos de colaboradores...')
+    },
+
+    async actualizarDatosServicios() {
+      await this.withLoadingKey('servicios', async () => {
+        // Simular llamada a API
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Datos de servicios actualizados')
+      }, 'Actualizando datos de servicios...')
+    },
+
+    async actualizarCotizaciones() {
+      await this.withLoadingKey('cotizaciones', async () => {
+        // Simular llamada a API
+        await new Promise(resolve => setTimeout(resolve, 1200))
+        // Aquí actualizarías las cotizaciones
+        console.log('Cotizaciones actualizadas')
+      }, 'Actualizando cotizaciones...')
     },
     
-    actualizarResumenMensual() {
-      this.resumenMensual = { ...this.datosMensuales[this.mesSeleccionado] };
+    async actualizarResumenMensual() {
+      await this.withLoading(async () => {
+        // Simular procesamiento
+        await new Promise(resolve => setTimeout(resolve, 800))
+        this.resumenMensual = { ...this.datosMensuales[this.mesSeleccionado] }
+      }, 'Cargando resumen mensual...')
     },
     
     getDescripcionMes() {
@@ -494,28 +566,28 @@ export default {
         actual: 'este mes',
         anterior: 'mes anterior', 
         hace2: 'hace 2 meses'
-      };
-      return descripciones[this.mesSeleccionado];
+      }
+      return descripciones[this.mesSeleccionado]
     },
     
     formatearMoneda(cantidad) {
-      return cantidad.toLocaleString('es-ES');
+      return cantidad.toLocaleString('es-ES')
     },
     
     formatearTiempo(fecha) {
-      const ahora = new Date();
-      const diferencia = ahora - fecha;
-      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const ahora = new Date()
+      const diferencia = ahora - fecha
+      const horas = Math.floor(diferencia / (1000 * 60 * 60))
       
       if (horas < 1) {
-        return 'hace menos de una hora';
+        return 'hace menos de una hora'
       } else if (horas === 1) {
-        return 'hace 1 hora';
+        return 'hace 1 hora'
       } else if (horas < 24) {
-        return `hace ${horas} horas`;
+        return `hace ${horas} horas`
       } else {
-        const dias = Math.floor(horas / 24);
-        return `hace ${dias} día${dias > 1 ? 's' : ''}`;
+        const dias = Math.floor(horas / 24)
+        return `hace ${dias} día${dias > 1 ? 's' : ''}`
       }
     },
     
@@ -525,8 +597,8 @@ export default {
         esperando: 'Esperando Aprobación',
         efectiva: 'Efectiva',
         cancelada: 'Cancelada'
-      };
-      return estados[estado] || estado;
+      }
+      return estados[estado] || estado
     }
   }
 }
@@ -580,6 +652,49 @@ export default {
 }
 
 .header-date i {
+  color: #3498db;
+}
+
+/* Refresh Button Styles */
+.refresh-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-btn:hover {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+.refresh-btn i {
+  font-size: 0.8rem;
+}
+
+.quotes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.quotes-header h3 {
+  color: #2c3e50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quotes-header h3 i {
   color: #3498db;
 }
 
@@ -852,171 +967,171 @@ export default {
 }
 
 .quote-item:last-child {
-  border-bottom: none;
+ border-bottom: none;
 }
 
 .quote-icon {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: white;
-  flex-shrink: 0;
+ width: 45px;
+ height: 45px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 1.2rem;
+ color: white;
+ flex-shrink: 0;
 }
 
 .quote-icon.pendiente {
-  background: #f39c12;
+ background: #f39c12;
 }
 
 .quote-icon.esperando {
-  background: #e67e22;
+ background: #e67e22;
 }
 
 .quote-icon.efectiva {
-  background: #27ae60;
+ background: #27ae60;
 }
 
 .quote-icon.cancelada {
-  background: #e74c3c;
+ background: #e74c3c;
 }
 
 .quote-content {
-  flex: 1;
+ flex: 1;
 }
 
 .quote-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.25rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 0.25rem;
 }
 
 .quote-code {
-  color: #2c3e50;
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+ color: #2c3e50;
+ margin: 0;
+ font-size: 1rem;
+ font-weight: 600;
 }
 
 .quote-amount {
-  color: #27ae60;
-  font-weight: 700;
-  font-size: 1rem;
+ color: #27ae60;
+ font-weight: 700;
+ font-size: 1rem;
 }
 
 .quote-client {
-  color: #34495e;
-  margin: 0 0 0.25rem 0;
-  font-weight: 500;
-  font-size: 0.95rem;
+ color: #34495e;
+ margin: 0 0 0.25rem 0;
+ font-weight: 500;
+ font-size: 0.95rem;
 }
 
 .quote-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 1rem;
 }
 
 .quote-vendor {
-  color: #7f8c8d;
-  font-size: 0.85rem;
-  font-weight: 600;
+ color: #7f8c8d;
+ font-size: 0.85rem;
+ font-weight: 600;
 }
 
 .quote-date {
-  color: #7f8c8d;
-  font-size: 0.85rem;
+ color: #7f8c8d;
+ font-size: 0.85rem;
 }
 
 .quote-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  white-space: nowrap;
+ padding: 0.25rem 0.75rem;
+ border-radius: 15px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ white-space: nowrap;
 }
 
 .quote-status.pendiente {
-  background: #fff3cd;
-  color: #856404;
+ background: #fff3cd;
+ color: #856404;
 }
 
 .quote-status.esperando {
-  background: #fdeaa7;
-  color: #8b5a00;
+ background: #fdeaa7;
+ color: #8b5a00;
 }
 
 .quote-status.efectiva {
-  background: #d4edda;
-  color: #155724;
+ background: #d4edda;
+ color: #155724;
 }
 
 .quote-status.cancelada {
-  background: #f8d7da;
-  color: #721c24;
+ background: #f8d7da;
+ color: #721c24;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .charts-section {
-    grid-template-columns: 1fr;
-  }
-  
-  .summary-cards {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
+ .charts-section {
+   grid-template-columns: 1fr;
+ }
+ 
+ .summary-cards {
+   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+ }
 }
 
 @media (max-width: 768px) {
-  .dashboard-admin {
-    padding: 1rem;
-  }
+ .dashboard-admin {
+   padding: 1rem;
+ }
 
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
+ .dashboard-header {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 1rem;
+ }
 
-  .header-content h1 {
-    font-size: 2rem;
-  }
+ .header-content h1 {
+   font-size: 2rem;
+ }
 
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
+ .stats-grid {
+   grid-template-columns: 1fr;
+ }
 
-  .summary-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
+ .summary-header {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 1rem;
+ }
 
-  .summary-cards {
-    grid-template-columns: 1fr;
-  }
+ .summary-cards {
+   grid-template-columns: 1fr;
+ }
 
-  .best-seller-badge {
-    position: static;
-    align-self: flex-end;
-    margin-top: 0.5rem;
-  }
+ .best-seller-badge {
+   position: static;
+   align-self: flex-end;
+   margin-top: 0.5rem;
+ }
 
-  .summary-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
+ .summary-card {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 1rem;
+ }
 
-  .quote-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+ .quote-item {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 0.75rem;
  }
 
  .quote-header {
@@ -1037,6 +1152,17 @@ export default {
 
  .chart-wrapper {
    height: 250px;
+ }
+
+ .quotes-header {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 1rem;
+ }
+
+ .refresh-btn {
+   align-self: stretch;
+   justify-content: center;
  }
 }
 

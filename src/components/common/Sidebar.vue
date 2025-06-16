@@ -87,7 +87,7 @@
       <div class="sidebar-footer">
         <button 
           class="btn-logout"
-          @click="cerrarSesion"
+          @click="mostrarModalCerrarSesion"
           :title="isOpen ? 'Cerrar sesión' : 'Cerrar sesión'"
         >
           <i class="fas fa-sign-out-alt logout-icon"></i>
@@ -95,6 +95,53 @@
         </button>
       </div>
     </aside>
+
+    <!-- Modal de Cerrar Sesión -->
+    <div v-if="modalCerrarSesion" class="modal-overlay" @click="cerrarModalCerrarSesion">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <i class="fas fa-sign-out-alt"></i>
+            Cerrar Sesión
+          </h3>
+          <button class="btn-close" @click="cerrarModalCerrarSesion">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="logout-content">
+            <div class="logout-icon-large">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="logout-message">
+              <h4>¿Estás seguro que deseas cerrar sesión?</h4>
+              <p>Se cerrará tu sesión actual y tendrás que volver a iniciar sesión para acceder al sistema.</p>
+            </div>
+            <div class="user-info-logout">
+              <div class="user-avatar-logout">
+                <span>{{ usuarioActual.iniciales }}</span>
+              </div>
+              <div class="user-details-logout">
+                <p class="user-name-logout">{{ usuarioActual.nombre }}</p>
+                <p class="user-role-logout">{{ usuarioActual.rolTexto }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="cerrarModalCerrarSesion">
+            <i class="fas fa-times"></i>
+            Cancelar
+          </button>
+          <button class="btn btn-danger" @click="confirmarCerrarSesion">
+            <i class="fas fa-sign-out-alt"></i>
+            Sí, Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -104,13 +151,15 @@ export default {
   props: {
     isOpen: {
       type: Boolean,
-      default: true
+      default: false
     }
   },
+  emits: ['toggle-sidebar'],
   data() {
     return {
       isMobile: false,
       rutaActiva: this.$route.path,
+      modalCerrarSesion: false,
       usuarioActual: {
         nombre: 'Carlos Mendoza',
         rol: 2,
@@ -295,25 +344,35 @@ export default {
       }
     },
     
-    cerrarSesion() {
-      if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        try {
-          // Limpiar todo el almacenamiento de sesión
-          localStorage.removeItem('cloudtech_user');
-          localStorage.removeItem('cloudtech_remember');
-          sessionStorage.removeItem('cloudtech_user');
-          
-          // Log de la acción
-          console.log('Sesión cerrada correctamente');
-          
-          // Redirigir al login
-          this.$router.push('/login');
-          
-        } catch (error) {
-          console.error('Error al cerrar sesión:', error);
-          // Aún así intentar redirigir
-          this.$router.push('/login');
-        }
+    // MÉTODOS PARA EL MODAL
+    mostrarModalCerrarSesion() {
+      this.modalCerrarSesion = true;
+    },
+    
+    cerrarModalCerrarSesion() {
+      this.modalCerrarSesion = false;
+    },
+    
+    confirmarCerrarSesion() {
+      try {
+        // Limpiar todo el almacenamiento de sesión
+        localStorage.removeItem('cloudtech_user');
+        localStorage.removeItem('cloudtech_remember');
+        sessionStorage.removeItem('cloudtech_user');
+        
+        // Log de la acción
+        console.log('Sesión cerrada correctamente');
+        
+        // Cerrar modal
+        this.modalCerrarSesion = false;
+        
+        // Redirigir al login
+        this.$router.push('/login');
+        
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        // Aún así intentar redirigir
+        this.$router.push('/login');
       }
     }
   }
@@ -670,6 +729,207 @@ export default {
   font-size: 1.1rem;
 }
 
+/* ESTILOS DEL MODAL DE CERRAR SESIÓN */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 16px 16px 0 0;
+}
+
+.modal-title {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-title i {
+  color: #e74c3c;
+  font-size: 1.2rem;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: #7f8c8d;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close:hover {
+  background: #e9ecef;
+  color: #e74c3c;
+  transform: scale(1.1);
+}
+
+.modal-body {
+  padding: 2rem;
+}
+
+.logout-content {
+  text-align: center;
+}
+
+.logout-icon-large {
+  font-size: 4rem;
+  color: #f39c12;
+  margin-bottom: 1.5rem;
+}
+
+.logout-message h4 {
+  color: #2c3e50;
+  margin-bottom: 0.75rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.logout-message p {
+  color: #7f8c8d;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+.user-info-logout {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 4px solid #3498db;
+}
+
+.user-avatar-logout {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.user-details-logout {
+  flex: 1;
+  text-align: left;
+}
+
+.user-name-logout {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.user-role-logout {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 0 0 16px 16px;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
 /* Tooltips mejorados */
 [title] {
   position: relative;
@@ -732,6 +992,28 @@ export default {
     height: 38px;
     font-size: 0.9rem;
   }
+
+  .modal-content {
+    margin: 0.5rem;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .modal-header,
+  .modal-footer {
+    padding: 1rem 1.5rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -750,5 +1032,27 @@ export default {
   .nav-text {
     font-size: 0.85rem;
   }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+ .logout-message h4 {
+   font-size: 1.1rem;
+ }
+
+.logout-message p {
+  font-size: 0.9rem;
+}
+
+.user-info-logout {
+  flex-direction: column;
+  text-align: center;
+  gap: 1rem;
+}
+
+.user-details-logout {
+  text-align: center;
+}
 }
 </style>

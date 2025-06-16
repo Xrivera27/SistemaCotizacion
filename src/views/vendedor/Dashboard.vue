@@ -6,7 +6,6 @@
         <h1>
           Bienvenido, {{ nombreVendedor }}
         </h1>
-        
       </div>
       <div class="header-date">
         <i class="fas fa-calendar-day"></i>
@@ -66,11 +65,12 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Ventas Efectivas vs Rechazadas (Últimos 7 días)
           </h3>
+          <button @click="actualizarGraficoVentas" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
-        <!-- Contenedor con altura fija para el gráfico -->
         <div class="chart-wrapper">
           <canvas ref="ventasChart"></canvas>
         </div>
@@ -79,11 +79,12 @@
       <div class="chart-container">
         <div class="chart-header">
           <h3>
-            
             Distribución de Estados
           </h3>
+          <button @click="actualizarGraficoEstados" class="refresh-btn">
+            <i class="fas fa-sync-alt"></i>
+          </button>
         </div>
-        <!-- Contenedor con altura fija para el gráfico -->
         <div class="chart-wrapper">
           <canvas ref="estadosChart"></canvas>
         </div>
@@ -94,7 +95,6 @@
     <div class="sales-summary">
       <div class="summary-header">
         <h3>
-          
           Resumen de Ventas Aprobadas
         </h3>
         <div class="period-selector">
@@ -128,17 +128,22 @@
             <small>{{ getDescripcionPeriodo() }}</small>
           </div>
         </div>
-
-
       </div>
     </div>
 
+   
     <!-- Últimas cotizaciones creadas -->
     <div class="recent-quotes">
-      <h3>
-        
-        Últimas Cotizaciones Creadas
-      </h3>
+      <div class="quotes-header">
+        <h3>
+          <i class="fas fa-file-invoice-dollar"></i>
+          Últimas Cotizaciones Creadas
+        </h3>
+        <button @click="actualizarCotizaciones" class="refresh-btn">
+          <i class="fas fa-sync-alt"></i>
+          Actualizar
+        </button>
+      </div>
       <div class="quotes-list">
         <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
           <div class="quote-icon" :class="cotizacion.estado">
@@ -158,6 +163,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Loading Modal -->
+    <LoadingModal 
+      :is-loading="isLoading" 
+      :message="loadingMessage"
+      :cancellable="false"
+    />
   </div>
 </template>
 
@@ -177,6 +189,8 @@ import {
   DoughnutController
 } from 'chart.js'
 
+import { useLoading } from '@/utils/useLoading'
+
 Chart.register(
   CategoryScale,
   LinearScale,
@@ -193,6 +207,21 @@ Chart.register(
 
 export default {
   name: 'VendedorDashboard',
+  setup() {
+    const { 
+      isLoading, 
+      loadingMessage, 
+      withLoading,
+      withLoadingKey 
+    } = useLoading()
+
+    return {
+      isLoading,
+      loadingMessage,
+      withLoading,
+      withLoadingKey
+    }
+  },
   data() {
     return {
       nombreVendedor: 'Carlos Mendoza',
@@ -307,39 +336,48 @@ export default {
       });
     }
   },
-  mounted() {
-    this.$nextTick(() => {
-      this.initCharts();
-    });
+  async mounted() {
+    // Cargar datos iniciales con loading
+    await this.withLoading(async () => {
+      await this.cargarDatosIniciales()
+      await this.$nextTick()
+      this.initCharts()
+    }, 'Cargando dashboard vendedor...')
   },
   beforeUnmount() {
     if (this.ventasChart) {
-      this.ventasChart.destroy();
+      this.ventasChart.destroy()
     }
     if (this.estadosChart) {
-      this.estadosChart.destroy();
+      this.estadosChart.destroy()
     }
   },
   methods: {
+    // Simular carga de datos iniciales
+    async cargarDatosIniciales() {
+      await new Promise(resolve => setTimeout(resolve, 1300))
+      console.log('Datos iniciales del vendedor cargados')
+    },
+
     initCharts() {
       try {
-        this.createVentasChart();
-        this.createEstadosChart();
+        this.createVentasChart()
+        this.createEstadosChart()
       } catch (error) {
-        console.error('Error al inicializar gráficos:', error);
+        console.error('Error al inicializar gráficos:', error)
       }
     },
     
     createVentasChart() {
-      const ctx = this.$refs.ventasChart?.getContext('2d');
+      const ctx = this.$refs.ventasChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
-      const labels = this.generateDateLabels();
-      const ventasEfectivas = [12, 8, 15, 10, 18, 14, 20];
-      const ventasNegativas = [3, 5, 2, 7, 4, 6, 3];
+      const labels = this.generateDateLabels()
+      const ventasEfectivas = [12, 8, 15, 10, 18, 14, 20]
+      const ventasNegativas = [3, 5, 2, 7, 4, 6, 3]
       
       this.ventasChart = new Chart(ctx, {
         type: 'line',
@@ -387,14 +425,14 @@ export default {
             }
           }
         }
-      });
+      })
     },
     
     createEstadosChart() {
-      const ctx = this.$refs.estadosChart?.getContext('2d');
+      const ctx = this.$refs.estadosChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas');
-        return;
+        console.error('No se pudo obtener el contexto del canvas')
+        return
       }
       
       this.estadosChart = new Chart(ctx, {
@@ -431,24 +469,71 @@ export default {
             }
           }
         }
-      });
+      })
+    },
+
+    // Métodos con loading para actualizar datos
+    async actualizarGraficoVentas() {
+      await this.withLoadingKey('grafico-ventas', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.log('Gráfico de ventas actualizado')
+      }, 'Actualizando gráfico de ventas...')
+    },
+
+    async actualizarGraficoEstados() {
+      await this.withLoadingKey('grafico-estados', async () => {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        console.log('Gráfico de estados actualizado')
+      }, 'Actualizando distribución de estados...')
+    },
+
+    async actualizarCotizaciones() {
+      await this.withLoadingKey('cotizaciones', async () => {
+        await new Promise(resolve => setTimeout(resolve, 1200))
+        console.log('Lista de cotizaciones actualizada')
+      }, 'Actualizando cotizaciones...')
+    },
+
+    // Acciones rápidas con loading
+    async nuevaCotizacion() {
+      await this.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        alert('Redirigiendo a crear nueva cotización...')
+      }, 'Preparando formulario...')
+    },
+
+    async verCotizaciones() {
+      await this.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 600))
+        alert('Cargando lista de cotizaciones...')
+      }, 'Cargando cotizaciones...')
+    },
+
+    async generarReporte() {
+      await this.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        alert('Reporte generado exitosamente')
+      }, 'Generando reporte de ventas...')
     },
     
     generateDateLabels() {
-      const labels = [];
+      const labels = []
       
       // Fijo en 7 días
       for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        labels.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }));
+        const date = new Date()
+        date.setDate(date.getDate() - i)
+        labels.push(date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }))
       }
       
-      return labels;
+      return labels
     },
     
-    actualizarResumenVentas() {
-      this.resumenVentas = { ...this.datosVentasPorPeriodo[this.periodoVentas] };
+    async actualizarResumenVentas() {
+      await this.withLoading(async () => {
+        await new Promise(resolve => setTimeout(resolve, 700))
+        this.resumenVentas = { ...this.datosVentasPorPeriodo[this.periodoVentas] }
+      }, 'Actualizando resumen de ventas...')
     },
     
     getDescripcionPeriodo() {
@@ -456,28 +541,28 @@ export default {
         semana: 'en esta semana',
         quincena: 'en esta quincena',
         mes: 'en este mes'
-      };
-      return descripciones[this.periodoVentas];
+      }
+      return descripciones[this.periodoVentas]
     },
     
     formatearMoneda(cantidad) {
-      return cantidad.toLocaleString('es-ES');
+      return cantidad.toLocaleString('es-ES')
     },
     
     formatearTiempo(fecha) {
-      const ahora = new Date();
-      const diferencia = ahora - fecha;
-      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const ahora = new Date()
+      const diferencia = ahora - fecha
+      const horas = Math.floor(diferencia / (1000 * 60 * 60))
       
       if (horas < 1) {
-        return 'hace menos de una hora';
+        return 'hace menos de una hora'
       } else if (horas === 1) {
-        return 'hace 1 hora';
+        return 'hace 1 hora'
       } else if (horas < 24) {
-        return `hace ${horas} horas`;
+        return `hace ${horas} horas`
       } else {
-        const dias = Math.floor(horas / 24);
-        return `hace ${dias} día${dias > 1 ? 's' : ''}`;
+        const dias = Math.floor(horas / 24)
+        return `hace ${dias} día${dias > 1 ? 's' : ''}`
       }
     },
     
@@ -487,12 +572,8 @@ export default {
         esperando: 'Esperando Aprobación',
         efectiva: 'Efectiva',
         cancelada: 'Cancelada'
-      };
-      return estados[estado] || estado;
-    },
-    
-    generarReporte() {
-      alert('Funcionalidad de reporte en desarrollo');
+      }
+      return estados[estado] || estado
     }
   }
 }
@@ -546,6 +627,49 @@ export default {
 }
 
 .header-date i {
+  color: #3498db;
+}
+
+/* Refresh Button Styles */
+.refresh-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.refresh-btn:hover {
+  background: #2980b9;
+  transform: translateY(-1px);
+}
+
+.refresh-btn i {
+  font-size: 0.8rem;
+}
+
+.quotes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.quotes-header h3 {
+  color: #2c3e50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quotes-header h3 i {
   color: #3498db;
 }
 
@@ -655,7 +779,6 @@ export default {
   color: #3498db;
 }
 
-/* Contenedor con altura fija para los gráficos */
 .chart-wrapper {
   position: relative;
   height: 300px;
@@ -663,6 +786,10 @@ export default {
 }
 
 /* Quick Actions */
+.quick-actions {
+  margin-bottom: 2rem;
+}
+
 .quick-actions h3 {
   color: #2c3e50;
   margin-bottom: 1rem;
@@ -791,321 +918,332 @@ export default {
 }
 
 .summary-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-  transition: transform 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  position: relative;
-}
-
-.summary-card:hover {
-  transform: translateY(-2px);
-}
-
-.summary-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  color: white;
-  flex-shrink: 0;
-}
-
-.total-sales .summary-icon {
-  background: linear-gradient(135deg, #27ae60, #229954);
-}
-
-.total-quotes .summary-icon {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.average-sale .summary-icon {
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-}
-
-.conversion-rate .summary-icon {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.summary-info {
-  flex: 1;
-}
-
-.summary-info h4 {
-  color: #2c3e50;
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.summary-amount {
- font-size: 1.8rem;
- font-weight: 700;
- color: #2c3e50;
- margin-bottom: 0.25rem;
-}
-
-.summary-info small {
- color: #7f8c8d;
- font-size: 0.85rem;
-}
-
-.summary-change {
- position: absolute;
- top: 1rem;
- right: 1rem;
- padding: 0.25rem 0.5rem;
- border-radius: 0.5rem;
- font-size: 0.8rem;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.25rem;
-}
-
-.summary-change.positive {
- background: #d4edda;
- color: #155724;
-}
-
-.summary-change.negative {
- background: #f8d7da;
- color: #721c24;
-}
-
-/* Recent Quotes */
-.recent-quotes h3 {
- color: #2c3e50;
- margin-bottom: 1rem;
- display: flex;
- align-items: center;
- gap: 0.5rem;
-}
-
-.recent-quotes h3 i {
- color: #3498db;
-}
-
-.quotes-list {
  background: white;
+ padding: 1.5rem;
  border-radius: 1rem;
  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
  border: 1px solid #e9ecef;
- overflow: hidden;
-}
-
-.quote-item {
+ transition: transform 0.3s ease;
  display: flex;
  align-items: center;
- padding: 1rem 1.5rem;
- border-bottom: 1px solid #f8f9fa;
  gap: 1rem;
- transition: background-color 0.3s ease;
+ position: relative;
 }
 
-.quote-item:hover {
- background-color: #f8f9fa;
+.summary-card:hover {
+ transform: translateY(-2px);
 }
 
-.quote-item:last-child {
- border-bottom: none;
-}
-
-.quote-icon {
- width: 45px;
- height: 45px;
+.summary-icon {
+ width: 60px;
+ height: 60px;
  border-radius: 50%;
  display: flex;
  align-items: center;
  justify-content: center;
- font-size: 1.2rem;
+ font-size: 1.5rem;
  color: white;
  flex-shrink: 0;
 }
 
-.quote-icon.pendiente {
- background: #f39c12;
+.total-sales .summary-icon {
+ background: linear-gradient(135deg, #27ae60, #229954);
 }
 
-.quote-icon.esperando {
- background: #e67e22;
+.total-quotes .summary-icon {
+ background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-.quote-icon.efectiva {
- background: #27ae60;
+.average-sale .summary-icon {
+ background: linear-gradient(135deg, #f39c12, #e67e22);
 }
 
-.quote-icon.cancelada {
- background: #e74c3c;
+.conversion-rate .summary-icon {
+ background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
 
-.quote-content {
+.summary-info {
  flex: 1;
 }
 
+.summary-info h4 {
+ color: #2c3e50;
+ margin: 0 0 0.5rem 0;
+ font-size: 1rem;
+ font-weight: 600;
+}
+
+.summary-amount {
+font-size: 1.8rem;
+font-weight: 700;
+color: #2c3e50;
+margin-bottom: 0.25rem;
+}
+
+.summary-info small {
+color: #7f8c8d;
+font-size: 0.85rem;
+}
+
+.summary-change {
+position: absolute;
+top: 1rem;
+right: 1rem;
+padding: 0.25rem 0.5rem;
+border-radius: 0.5rem;
+font-size: 0.8rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+gap: 0.25rem;
+}
+
+.summary-change.positive {
+background: #d4edda;
+color: #155724;
+}
+
+.summary-change.negative {
+background: #f8d7da;
+color: #721c24;
+}
+
+/* Recent Quotes */
+.recent-quotes h3 {
+color: #2c3e50;
+margin-bottom: 1rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+
+.recent-quotes h3 i {
+color: #3498db;
+}
+
+.quotes-list {
+background: white;
+border-radius: 1rem;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+border: 1px solid #e9ecef;
+overflow: hidden;
+}
+
+.quote-item {
+display: flex;
+align-items: center;
+padding: 1rem 1.5rem;
+border-bottom: 1px solid #f8f9fa;
+gap: 1rem;
+transition: background-color 0.3s ease;
+}
+
+.quote-item:hover {
+background-color: #f8f9fa;
+}
+
+.quote-item:last-child {
+border-bottom: none;
+}
+
+.quote-icon {
+width: 45px;
+height: 45px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.2rem;
+color: white;
+flex-shrink: 0;
+}
+
+.quote-icon.pendiente {
+background: #f39c12;
+}
+
+.quote-icon.esperando {
+background: #e67e22;
+}
+
+.quote-icon.efectiva {
+background: #27ae60;
+}
+
+.quote-icon.cancelada {
+background: #e74c3c;
+}
+
+.quote-content {
+flex: 1;
+}
+
 .quote-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.25rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 0.25rem;
 }
 
 .quote-code {
- color: #2c3e50;
- margin: 0;
- font-size: 1rem;
- font-weight: 600;
+color: #2c3e50;
+margin: 0;
+font-size: 1rem;
+font-weight: 600;
 }
 
 .quote-amount {
- color: #27ae60;
- font-weight: 700;
- font-size: 1rem;
+color: #27ae60;
+font-weight: 700;
+font-size: 1rem;
 }
 
 .quote-client {
- color: #34495e;
- margin: 0 0 0.25rem 0;
- font-weight: 500;
- font-size: 0.95rem;
+color: #34495e;
+margin: 0 0 0.25rem 0;
+font-weight: 500;
+font-size: 0.95rem;
 }
 
 .quote-date {
- color: #7f8c8d;
- font-size: 0.85rem;
+color: #7f8c8d;
+font-size: 0.85rem;
 }
 
 .quote-status {
- padding: 0.25rem 0.75rem;
- border-radius: 15px;
- font-size: 0.8rem;
- font-weight: 600;
- text-transform: uppercase;
- white-space: nowrap;
+padding: 0.25rem 0.75rem;
+border-radius: 15px;
+font-size: 0.8rem;
+font-weight: 600;
+text-transform: uppercase;
+white-space: nowrap;
 }
 
 .quote-status.pendiente {
- background: #fff3cd;
- color: #856404;
+background: #fff3cd;
+color: #856404;
 }
 
 .quote-status.esperando {
- background: #fdeaa7;
- color: #8b5a00;
+background: #fdeaa7;
+color: #8b5a00;
 }
 
 .quote-status.efectiva {
- background: #d4edda;
- color: #155724;
+background: #d4edda;
+color: #155724;
 }
 
 .quote-status.cancelada {
- background: #f8d7da;
- color: #721c24;
+background: #f8d7da;
+color: #721c24;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
- .charts-section {
-   grid-template-columns: 1fr;
- }
- 
- .summary-cards {
-   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
- }
+.charts-section {
+  grid-template-columns: 1fr;
+}
+
+.summary-cards {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
 }
 
 @media (max-width: 768px) {
- .dashboard-vendedor {
-   padding: 1rem;
- }
+.dashboard-vendedor {
+  padding: 1rem;
+}
 
- .dashboard-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.dashboard-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .header-content h1 {
-   font-size: 2rem;
- }
+.header-content h1 {
+  font-size: 2rem;
+}
 
- .stats-grid {
-   grid-template-columns: 1fr;
- }
+.stats-grid {
+  grid-template-columns: 1fr;
+}
 
- .actions-grid {
-   grid-template-columns: 1fr;
- }
+.actions-grid {
+  grid-template-columns: 1fr;
+}
 
- .summary-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.summary-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .summary-cards {
-   grid-template-columns: 1fr;
- }
+.summary-cards {
+  grid-template-columns: 1fr;
+}
 
- .summary-change {
-   position: static;
-   align-self: flex-end;
-   margin-top: 0.5rem;
- }
+.summary-change {
+  position: static;
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
 
- .summary-card {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 1rem;
- }
+.summary-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
 
- .quote-item {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.75rem;
- }
+.quote-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
 
- .quote-header {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.25rem;
- }
+.quote-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
 
- .quote-status {
-   align-self: flex-end;
- }
+.quote-status {
+  align-self: flex-end;
+}
 
- .chart-wrapper {
-   height: 250px;
- }
+.chart-wrapper {
+  height: 250px;
+}
+
+.quotes-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.refresh-btn {
+  align-self: stretch;
+  justify-content: center;
+}
 }
 
 @media (max-width: 480px) {
- .stat-card {
-   flex-direction: column;
-   text-align: center;
- }
+.stat-card {
+  flex-direction: column;
+  text-align: center;
+}
 
- .action-card {
-   flex-direction: column;
-   text-align: center;
- }
+.action-card {
+  flex-direction: column;
+  text-align: center;
+}
 
- .summary-card {
-   text-align: center;
- }
+.summary-card {
+  text-align: center;
+}
 
- .chart-wrapper {
-   height: 200px;
- }
+.chart-wrapper {
+  height: 200px;
+}
 }
 </style>
