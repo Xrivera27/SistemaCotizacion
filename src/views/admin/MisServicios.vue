@@ -197,7 +197,7 @@
                     <button 
                       class="btn-accion" 
                       :class="servicio.estado === 'activo' ? 'deshabilitar' : 'habilitar'"
-                      @click="cambiarEstadoServicio(servicio)"
+                      @click="mostrarModalCambiarEstado(servicio)"
                       :title="servicio.estado === 'activo' ? 'Desactivar servicio' : 'Activar servicio'"
                     >
                       <i :class="servicio.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
@@ -273,7 +273,7 @@
               <button 
                 class="btn btn-sm"
                 :class="servicio.estado === 'activo' ? 'btn-danger' : 'btn-success'"
-                @click="cambiarEstadoServicio(servicio)"
+                @click="mostrarModalCambiarEstado(servicio)"
               >
                 <i :class="servicio.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
                 {{ servicio.estado === 'activo' ? 'Desactivar' : 'Activar' }}
@@ -513,6 +513,100 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de confirmación para cambiar estado -->
+    <div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
+      <div class="modal-content modal-confirmacion" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
+            {{ servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar Servicio' : 'Activar Servicio' }}
+          </h3>
+          <button class="btn-close" @click="cerrarModalCambiarEstado">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="confirmacion-content">
+            <div class="servicio-info-resumen">
+              <div class="servicio-avatar">
+                <i class="fas fa-cogs"></i>
+              </div>
+              <div class="servicio-datos">
+                <h4>{{ servicioParaCambiarEstado.nombre }}</h4>
+                <p class="servicio-descripcion">{{ truncarTexto(servicioParaCambiarEstado.descripcion, 100) }}</p>
+                <div class="servicio-badges">
+                  <span class="servicio-id">#{{ String(servicioParaCambiarEstado.id).padStart(4, '0') }}</span>
+                  <span class="precio-badge">{{ formatearMoneda(servicioParaCambiarEstado.precioRecomendado) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mensaje-confirmacion">
+              <div class="icono-estado" :class="servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
+                <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+              </div>
+              
+              <div class="texto-confirmacion">
+                <p class="pregunta-principal">
+                  ¿Está seguro que desea 
+                  <strong :class="servicioParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
+                    {{ servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar' }}
+                  </strong> 
+                  este servicio?
+                </p>
+                
+                <div class="advertencia-estado" v-if="servicioParaCambiarEstado.estado === 'activo'">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span>Al desactivar este servicio, no estará disponible para nuevas cotizaciones hasta que sea activado nuevamente.</span>
+                </div>
+                
+                <div class="info-estado" v-else>
+                  <i class="fas fa-info-circle"></i>
+                  <span>Al activar este servicio, estará disponible para ser incluido en cotizaciones.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="cambio-estado-visual">
+              <div class="estado-actual">
+                <span class="label">Estado actual:</span>
+                <span class="estado-badge" :class="servicioParaCambiarEstado.estado">
+                  {{ getEstadoTexto(servicioParaCambiarEstado.estado) }}
+                </span>
+              </div>
+              
+              <div class="flecha-cambio">
+                <i class="fas fa-arrow-right"></i>
+              </div>
+              
+              <div class="estado-nuevo">
+                <span class="label">Nuevo estado:</span>
+                <span class="estado-badge" :class="servicioParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
+                  {{ servicioParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
+            <i class="fas fa-times"></i>
+            Cancelar
+          </button>
+          <button 
+            class="btn"
+            :class="servicioParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+            @click="confirmarCambiarEstado"
+          >
+            <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+            {{ servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar' }} Servicio
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -524,7 +618,9 @@ export default {
       vistaActual: 'tabla',
       modalServicio: null,
       modalFormulario: false,
+      modalCambiarEstado: false,
       servicioEditando: null,
+      servicioParaCambiarEstado: null,
       paginaActual: 1,
       itemsPorPagina: 25,
       paginaSalto: 1,
@@ -604,327 +700,351 @@ export default {
           nombre: 'Auditoría de Sistemas',
           descripcion: 'Revisión integral de infraestructura tecnológica, evaluación de seguridad, rendimiento y recomendaciones de mejoras.',
           precioMinimo: 10000.00,
-          precioRecomendado: 18000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-02-15'
-        },
-        {
-          id: 8,
-          nombre: 'Capacitación Tecnológica',
-          descripcion: 'Programas de entrenamiento personalizados en diversas tecnologías para equipos de trabajo y empresas.',
-          precioMinimo: 2500.00,
-          precioRecomendado: 5000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-03-01'
-        }
-      ]
-    }
-  },
-  
-  computed: {
-    serviciosFiltrados() {
-      let resultado = [...this.servicios];
-      
-      if (this.filtros.busqueda) {
-        const busqueda = this.filtros.busqueda.toLowerCase();
-        resultado = resultado.filter(servicio => 
-          servicio.nombre.toLowerCase().includes(busqueda) ||
-          servicio.descripcion.toLowerCase().includes(busqueda)
-        );
-      }
-      
-      if (this.filtros.rangoPrecio) {
-        resultado = resultado.filter(servicio => {
-          if (this.filtros.rangoPrecio === 'bajo') {
-            return servicio.precioRecomendado < 5000;
-          } else if (this.filtros.rangoPrecio === 'medio') {
-            return servicio.precioRecomendado >= 5000 && servicio.precioRecomendado <= 20000;
-          } else if (this.filtros.rangoPrecio === 'alto') {
-            return servicio.precioRecomendado > 20000;
-          }
-          return true;
-        });
-      }
+         precioRecomendado: 18000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-02-15'
+       },
+       {
+         id: 8,
+         nombre: 'Capacitación Tecnológica',
+         descripcion: 'Programas de entrenamiento personalizados en diversas tecnologías para equipos de trabajo y empresas.',
+         precioMinimo: 2500.00,
+         precioRecomendado: 5000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-03-01'
+       }
+     ]
+   }
+ },
+ 
+ computed: {
+   serviciosFiltrados() {
+     let resultado = [...this.servicios];
+     
+     if (this.filtros.busqueda) {
+       const busqueda = this.filtros.busqueda.toLowerCase();
+       resultado = resultado.filter(servicio => 
+         servicio.nombre.toLowerCase().includes(busqueda) ||
+         servicio.descripcion.toLowerCase().includes(busqueda)
+       );
+     }
+     
+     if (this.filtros.rangoPrecio) {
+       resultado = resultado.filter(servicio => {
+         if (this.filtros.rangoPrecio === 'bajo') {
+           return servicio.precioRecomendado < 5000;
+         } else if (this.filtros.rangoPrecio === 'medio') {
+           return servicio.precioRecomendado >= 5000 && servicio.precioRecomendado <= 20000;
+         } else if (this.filtros.rangoPrecio === 'alto') {
+           return servicio.precioRecomendado > 20000;
+         }
+         return true;
+       });
+     }
 
-      if (this.filtros.estado) {
-        resultado = resultado.filter(servicio => 
-          servicio.estado === this.filtros.estado
-        );
-      }
-      
-      resultado.sort((a, b) => {
-        let valorA = a[this.ordenActual.campo];
-        let valorB = b[this.ordenActual.campo];
-        
-        if (this.ordenActual.campo === 'fechaCreacion') {
-          valorA = new Date(valorA);
-          valorB = new Date(valorB);
-        }
-        
-        if (valorA < valorB) {
-          return this.ordenActual.direccion === 'asc' ? -1 : 1;
-        }
-        if (valorA > valorB) {
-          return this.ordenActual.direccion === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-      
-      return resultado;
-    },
-    
-    serviciosPaginados() {
-      const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-      const fin = inicio + this.itemsPorPagina;
-      return this.serviciosFiltrados.slice(inicio, fin);
-    },
-    
-    totalPaginas() {
-      return Math.ceil(this.serviciosFiltrados.length / this.itemsPorPagina);
-    },
-    
-    paginasVisibles() {
-      const total = this.totalPaginas;
-      const actual = this.paginaActual;
-      const rango = 2;
-      
-      let inicio = Math.max(1, actual - rango);
-      let fin = Math.min(total, actual + rango);
-      
-      if (fin - inicio < 4) {
-        if (inicio === 1) {
-          fin = Math.min(total, inicio + 4);
-        } else if (fin === total) {
-          inicio = Math.max(1, fin - 4);
-        }
-      }
-      
-      const paginas = [];
-      for (let i = inicio; i <= fin; i++) {
-        paginas.push(i);
-      }
-      return paginas;
-    },
-    
-    rangoInicio() {
-      return (this.paginaActual - 1) * this.itemsPorPagina + 1;
-    },
-    
-    rangoFin() {
-      return Math.min(this.paginaActual * this.itemsPorPagina, this.serviciosFiltrados.length);
-    },
-    
-    estadisticas() {
-      const serviciosActivos = this.servicios.filter(s => s.estado === 'activo');
-      const precios = serviciosActivos.map(s => s.precioRecomendado);
-      
-      return {
-        total: this.servicios.length,
-        activos: serviciosActivos.length,
-        inactivos: this.servicios.filter(s => s.estado === 'inactivo').length,
-precioPromedio: precios.length > 0 ? precios.reduce((a, b) => a + b, 0) / precios.length : 0,
-precioMaximo: precios.length > 0 ? Math.max(...precios) : 0
-};
-},
-formularioValido() {
-  return this.formulario.nombre && 
-         this.formulario.descripcion && 
-         this.formulario.precioMinimo >= 0 && 
-         this.formulario.precioRecomendado >= 0 &&
-         this.formulario.precioRecomendado >= this.formulario.precioMinimo;
-}
-},
-watch: {
-'filtros.busqueda'() {
-this.paginaActual = 1;
-},
-'filtros.rangoPrecio'() {
-this.paginaActual = 1;
-},
-'filtros.estado'() {
-this.paginaActual = 1;
-},
-paginaActual(newVal) {
-  this.paginaSalto = newVal;
-}
-},
-methods: {
-nuevoServicio() {
-this.servicioEditando = null;
-this.limpiarFormulario();
-this.modalFormulario = true;
-},
-verServicio(servicio) {
-  this.modalServicio = servicio;
-},
+     if (this.filtros.estado) {
+       resultado = resultado.filter(servicio => 
+         servicio.estado === this.filtros.estado
+       );
+     }
+     
+     resultado.sort((a, b) => {
+       let valorA = a[this.ordenActual.campo];
+       let valorB = b[this.ordenActual.campo];
+       
+       if (this.ordenActual.campo === 'fechaCreacion') {
+         valorA = new Date(valorA);
+         valorB = new Date(valorB);
+       }
+       
+       if (valorA < valorB) {
+         return this.ordenActual.direccion === 'asc' ? -1 : 1;
+       }
+       if (valorA > valorB) {
+         return this.ordenActual.direccion === 'asc' ? 1 : -1;
+       }
+       return 0;
+     });
+     
+     return resultado;
+   },
+   
+   serviciosPaginados() {
+     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+     const fin = inicio + this.itemsPorPagina;
+     return this.serviciosFiltrados.slice(inicio, fin);
+   },
+   
+   totalPaginas() {
+     return Math.ceil(this.serviciosFiltrados.length / this.itemsPorPagina);
+   },
+   
+   paginasVisibles() {
+     const total = this.totalPaginas;
+     const actual = this.paginaActual;
+     const rango = 2;
+     
+     let inicio = Math.max(1, actual - rango);
+     let fin = Math.min(total, actual + rango);
+     
+     if (fin - inicio < 4) {
+       if (inicio === 1) {
+         fin = Math.min(total, inicio + 4);
+       } else if (fin === total) {
+         inicio = Math.max(1, fin - 4);
+       }
+     }
+     
+     const paginas = [];
+     for (let i = inicio; i <= fin; i++) {
+       paginas.push(i);
+     }
+     return paginas;
+   },
+   
+   rangoInicio() {
+     return (this.paginaActual - 1) * this.itemsPorPagina + 1;
+   },
+   
+   rangoFin() {
+     return Math.min(this.paginaActual * this.itemsPorPagina, this.serviciosFiltrados.length);
+   },
+   
+   estadisticas() {
+     const serviciosActivos = this.servicios.filter(s => s.estado === 'activo');
+     const precios = serviciosActivos.map(s => s.precioRecomendado);
+     
+     return {
+       total: this.servicios.length,
+       activos: serviciosActivos.length,
+       inactivos: this.servicios.filter(s => s.estado === 'inactivo').length,
+       precioPromedio: precios.length > 0 ? precios.reduce((a, b) => a + b, 0) / precios.length : 0,
+       precioMaximo: precios.length > 0 ? Math.max(...precios) : 0
+     };
+   },
+   
+   formularioValido() {
+     return this.formulario.nombre && 
+            this.formulario.descripcion && 
+            this.formulario.precioMinimo >= 0 && 
+            this.formulario.precioRecomendado >= 0 &&
+            this.formulario.precioRecomendado >= this.formulario.precioMinimo;
+   }
+ },
+ 
+ watch: {
+   'filtros.busqueda'() {
+     this.paginaActual = 1;
+   },
+   'filtros.rangoPrecio'() {
+     this.paginaActual = 1;
+   },
+   'filtros.estado'() {
+     this.paginaActual = 1;
+   },
+   paginaActual(newVal) {
+     this.paginaSalto = newVal;
+   }
+ },
+ 
+ methods: {
+   nuevoServicio() {
+     this.servicioEditando = null;
+     this.limpiarFormulario();
+     this.modalFormulario = true;
+   },
+   
+   verServicio(servicio) {
+     this.modalServicio = servicio;
+   },
 
-editarServicio(servicio) {
-  this.servicioEditando = servicio;
-  this.llenarFormulario(servicio);
-  this.modalFormulario = true;
-  this.modalServicio = null;
-},
+   editarServicio(servicio) {
+     this.servicioEditando = servicio;
+     this.llenarFormulario(servicio);
+     this.modalFormulario = true;
+     this.modalServicio = null;
+   },
 
-cambiarEstadoServicio(servicio) {
-  const accion = servicio.estado === 'activo' ? 'desactivar' : 'activar';
-  const confirmacion = confirm(`¿Está seguro que desea ${accion} el servicio ${servicio.nombre}?`);
-  
-  if (confirmacion) {
-    servicio.estado = servicio.estado === 'activo' ? 'inactivo' : 'activo';
-    alert(`Servicio ${accion === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
-  }
-},
+   // Nuevo método para mostrar el modal de confirmación
+   mostrarModalCambiarEstado(servicio) {
+     this.servicioParaCambiarEstado = servicio;
+     this.modalCambiarEstado = true;
+   },
 
-guardarServicio() {
-  if (!this.formularioValido) {
-    alert('Por favor complete todos los campos correctamente');
-    return;
-  }
-  
-  if (this.formulario.precioRecomendado < this.formulario.precioMinimo) {
-    alert('El precio recomendado debe ser mayor o igual al precio mínimo');
-    return;
-  }
-  
-  const nombreExiste = this.servicios.some(s => 
-    s.nombre.toLowerCase() === this.formulario.nombre.toLowerCase() && 
-    (!this.servicioEditando || s.id !== this.servicioEditando.id)
-  );
-  
-  if (nombreExiste) {
-    alert('Ya existe un servicio con ese nombre');
-    return;
-  }
-  
-  if (this.servicioEditando) {
-    Object.assign(this.servicioEditando, {
-      nombre: this.formulario.nombre,
-      descripcion: this.formulario.descripcion,
-      precioMinimo: parseFloat(this.formulario.precioMinimo),
-      precioRecomendado: parseFloat(this.formulario.precioRecomendado),
-      estado: this.formulario.estado
-    });
-    alert('Servicio actualizado exitosamente');
-  } else {
-    const nuevoServicio = {
-      id: Math.max(...this.servicios.map(s => s.id)) + 1,
-      nombre: this.formulario.nombre,
-      descripcion: this.formulario.descripcion,
-      precioMinimo: parseFloat(this.formulario.precioMinimo),
-      precioRecomendado: parseFloat(this.formulario.precioRecomendado),
-      estado: 'activo',
-      fechaCreacion: new Date().toISOString().split('T')[0]
-    };
-    this.servicios.push(nuevoServicio);
-    alert('Servicio creado exitosamente');
-  }
-  
-  this.cerrarModalFormulario();
-},
+   // Nuevo método para confirmar el cambio de estado
+   confirmarCambiarEstado() {
+     if (this.servicioParaCambiarEstado) {
+       const estadoAnterior = this.servicioParaCambiarEstado.estado;
+       const nuevoEstado = estadoAnterior === 'activo' ? 'inactivo' : 'activo';
+       
+       // Cambiar el estado
+       this.servicioParaCambiarEstado.estado = nuevoEstado;
+       
+       // Mostrar mensaje de éxito
+       const accion = nuevoEstado === 'activo' ? 'activado' : 'desactivado';
+       alert(`Servicio ${accion} exitosamente`);
+       
+       // Cerrar modal
+       this.cerrarModalCambiarEstado();
+     }
+   },
 
-llenarFormulario(servicio) {
-  this.formulario = {
-    nombre: servicio.nombre,
-    descripcion: servicio.descripcion,
-    precioMinimo: servicio.precioMinimo,
-    precioRecomendado: servicio.precioRecomendado,
-    estado: servicio.estado
-  };
-},
+   // Nuevo método para cerrar el modal de confirmación
+   cerrarModalCambiarEstado() {
+     this.modalCambiarEstado = false;
+     this.servicioParaCambiarEstado = null;
+   },
 
-limpiarFormulario() {
-  this.formulario = {
-    nombre: '',
-    descripcion: '',
-    precioMinimo: '',
-    precioRecomendado: '',
-    estado: 'activo'
-  };
-},
+   guardarServicio() {
+     if (!this.formularioValido) {
+       alert('Por favor complete todos los campos correctamente');
+       return;
+     }
+     
+     if (this.formulario.precioRecomendado < this.formulario.precioMinimo) {
+       alert('El precio recomendado debe ser mayor o igual al precio mínimo');
+       return;
+     }
+     
+     const nombreExiste = this.servicios.some(s => 
+       s.nombre.toLowerCase() === this.formulario.nombre.toLowerCase() && 
+       (!this.servicioEditando || s.id !== this.servicioEditando.id)
+     );
+     
+     if (nombreExiste) {
+       alert('Ya existe un servicio con ese nombre');
+       return;
+     }
+     
+     if (this.servicioEditando) {
+       Object.assign(this.servicioEditando, {
+         nombre: this.formulario.nombre,
+         descripcion: this.formulario.descripcion,
+         precioMinimo: parseFloat(this.formulario.precioMinimo),
+         precioRecomendado: parseFloat(this.formulario.precioRecomendado),
+         estado: this.formulario.estado
+       });
+       alert('Servicio actualizado exitosamente');
+     } else {
+       const nuevoServicio = {
+         id: Math.max(...this.servicios.map(s => s.id)) + 1,
+         nombre: this.formulario.nombre,
+         descripcion: this.formulario.descripcion,
+         precioMinimo: parseFloat(this.formulario.precioMinimo),
+         precioRecomendado: parseFloat(this.formulario.precioRecomendado),
+         estado: 'activo',
+         fechaCreacion: new Date().toISOString().split('T')[0]
+       };
+       this.servicios.push(nuevoServicio);
+       alert('Servicio creado exitosamente');
+     }
+     
+     this.cerrarModalFormulario();
+   },
 
-truncarTexto(texto, limite) {
-  if (texto.length <= limite) return texto;
-  return texto.substring(0, limite) + '...';
-},
+   llenarFormulario(servicio) {
+     this.formulario = {
+       nombre: servicio.nombre,
+       descripcion: servicio.descripcion,
+       precioMinimo: servicio.precioMinimo,
+       precioRecomendado: servicio.precioRecomendado,
+       estado: servicio.estado
+     };
+   },
 
-ordenarPor(campo) {
-  if (this.ordenActual.campo === campo) {
-    this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-  } else {
-    this.ordenActual = { campo, direccion: 'asc' };
-  }
-},
+   limpiarFormulario() {
+     this.formulario = {
+       nombre: '',
+       descripcion: '',
+       precioMinimo: '',
+       precioRecomendado: '',
+       estado: 'activo'
+     };
+   },
 
-getSortIcon(campo) {
-  if (this.ordenActual.campo !== campo) return '↕';
-  return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
-},
+   truncarTexto(texto, limite) {
+     if (texto.length <= limite) return texto;
+     return texto.substring(0, limite) + '...';
+   },
 
-limpiarFiltros() {
-  this.filtros = {
-    busqueda: '',
-    rangoPrecio: '',
-    estado: ''
-  };
-  this.paginaActual = 1;
-  this.paginaSalto = 1;
-},
+   ordenarPor(campo) {
+     if (this.ordenActual.campo === campo) {
+       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+     } else {
+       this.ordenActual = { campo, direccion: 'asc' };
+     }
+   },
 
-cerrarModal() {
-  this.modalServicio = null;
-},
+   getSortIcon(campo) {
+     if (this.ordenActual.campo !== campo) return '↕';
+     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+   },
 
-cerrarModalFormulario() {
-  this.modalFormulario = false;
-  this.servicioEditando = null;
-  this.limpiarFormulario();
-},
+   limpiarFiltros() {
+     this.filtros = {
+       busqueda: '',
+       rangoPrecio: '',
+       estado: ''
+     };
+     this.paginaActual = 1;
+     this.paginaSalto = 1;
+   },
 
-cambiarItemsPorPagina() {
-  this.paginaActual = 1;
-  this.paginaSalto = 1;
-},
+   cerrarModal() {
+     this.modalServicio = null;
+   },
 
-irAPrimera() {
-  this.paginaActual = 1;
-},
+   cerrarModalFormulario() {
+     this.modalFormulario = false;
+     this.servicioEditando = null;
+     this.limpiarFormulario();
+   },
 
-irAUltima() {
-  this.paginaActual = this.totalPaginas;
-},
+   cambiarItemsPorPagina() {
+     this.paginaActual = 1;
+     this.paginaSalto = 1;
+   },
 
-irAPagina() {
-  if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
-    this.paginaActual = this.paginaSalto;
-  } else {
-    alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
-    this.paginaSalto = this.paginaActual;
-  }
-},
+   irAPrimera() {
+     this.paginaActual = 1;
+   },
 
-formatearFecha(fecha) {
-  return new Date(fecha).toLocaleDateString('es-HN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-},
+   irAUltima() {
+     this.paginaActual = this.totalPaginas;
+   },
 
-formatearMoneda(monto) {
-  return new Intl.NumberFormat('es-HN', {
-    style: 'currency',
-    currency: 'HNL'
-  }).format(monto);
-},
+   irAPagina() {
+     if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
+       this.paginaActual = this.paginaSalto;
+     } else {
+       alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
+       this.paginaSalto = this.paginaActual;
+     }
+   },
 
-getEstadoTexto(estado) {
-  const estados = {
-    activo: 'Activo',
-    inactivo: 'Inactivo'
-  };
-  return estados[estado] || estado;
-}
-}
+   formatearFecha(fecha) {
+     return new Date(fecha).toLocaleDateString('es-HN', {
+       year: 'numeric',
+       month: 'short',
+       day: 'numeric'
+     });
+   },
+
+   formatearMoneda(monto) {
+     return new Intl.NumberFormat('es-HN', {
+       style: 'currency',
+       currency: 'HNL'
+     }).format(monto);
+   },
+
+   getEstadoTexto(estado) {
+     const estados = {
+       activo: 'Activo',
+       inactivo: 'Inactivo'
+     };
+     return estados[estado] || estado;
+   }
+ }
 }
 </script>
 
@@ -1631,6 +1751,9 @@ getEstadoTexto(estado) {
 .modal-header h3 {
  margin: 0;
  color: #2c3e50;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .btn-close {
@@ -1773,9 +1896,207 @@ getEstadoTexto(estado) {
  gap: 0.5rem;
 }
 
+/* Estilos específicos para el modal de confirmación de servicios */
+.modal-confirmacion {
+ max-width: 600px;
+}
+
+.confirmacion-content {
+ display: flex;
+ flex-direction: column;
+ gap: 2rem;
+}
+
+.servicio-info-resumen {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ padding: 1rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ border-left: 4px solid #3498db;
+}
+
+.servicio-avatar {
+ width: 60px;
+ height: 60px;
+ background: linear-gradient(135deg, #3498db, #2980b9);
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: white;
+ font-size: 1.5rem;
+ flex-shrink: 0;
+}
+
+.servicio-datos h4 {
+ margin: 0 0 0.25rem 0;
+ color: #2c3e50;
+ font-size: 1.2rem;
+}
+
+.servicio-descripcion {
+ margin: 0 0 0.25rem 0;
+ color: #7f8c8d;
+ font-size: 0.9rem;
+ line-height: 1.4;
+}
+
+.servicio-badges {
+ display: flex;
+ gap: 0.5rem;
+ align-items: center;
+}
+
+.servicio-id {
+ font-family: monospace;
+ background: #e3f2fd;
+ color: #1976d2;
+ padding: 0.2rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+.precio-badge {
+ font-family: monospace;
+ background: #d4edda;
+ color: #155724;
+ padding: 0.2rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+.mensaje-confirmacion {
+ text-align: center;
+ padding: 1.5rem;
+}
+
+.icono-estado {
+ width: 80px;
+ height: 80px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ margin: 0 auto 1.5rem;
+ font-size: 2rem;
+ color: white;
+}
+
+.icono-estado.desactivar {
+ background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.icono-estado.activar {
+ background: linear-gradient(135deg, #27ae60, #219a52);
+}
+
+.texto-confirmacion {
+ max-width: 400px;
+ margin: 0 auto;
+}
+
+.pregunta-principal {
+ font-size: 1.1rem;
+ color: #2c3e50;
+ margin-bottom: 1rem;
+ line-height: 1.5;
+}
+
+.text-danger {
+ color: #e74c3c;
+}
+
+.text-success {
+ color: #27ae60;
+}
+
+.advertencia-estado,
+.info-estado {
+ display: flex;
+ align-items: flex-start;
+ gap: 0.5rem;
+ padding: 1rem;
+ border-radius: 6px;
+ font-size: 0.9rem;
+ line-height: 1.4;
+ text-align: left;
+}
+
+.advertencia-estado {
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
+}
+
+.advertencia-estado i {
+ color: #f39c12;
+ margin-top: 0.1rem;
+}
+
+.info-estado {
+ background: #d1ecf1;
+ color: #0c5460;
+ border: 1px solid #bee5eb;
+}
+
+.info-estado i {
+ color: #17a2b8;
+ margin-top: 0.1rem;
+}
+
+.cambio-estado-visual {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 1.5rem;
+ padding: 1.5rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
+}
+
+.estado-actual,
+.estado-nuevo {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.label {
+ font-size: 0.8rem;
+ color: #6c757d;
+ font-weight: 500;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+}
+
+.flecha-cambio {
+ color: #6c757d;
+ font-size: 1.5rem;
+}
+
+/* Responsive Design */
 @media (max-width: 1200px) {
  .estadisticas-grid {
    grid-template-columns: repeat(3, 1fr);
+ }
+ 
+ .confirmacion-content {
+   gap: 1.5rem;
+ }
+ 
+ .cambio-estado-visual {
+   flex-direction: column;
+   gap: 1rem;
+ }
+ 
+ .flecha-cambio {
+   transform: rotate(90deg);
  }
 }
 
@@ -1861,6 +2182,27 @@ getEstadoTexto(estado) {
  .modal-footer {
    flex-direction: column;
  }
+ 
+ .modal-confirmacion {
+   max-width: 95%;
+   margin: 1rem;
+ }
+ 
+ .servicio-info-resumen {
+   flex-direction: column;
+   text-align: center;
+   gap: 0.75rem;
+ }
+ 
+ .icono-estado {
+   width: 60px;
+   height: 60px;
+   font-size: 1.5rem;
+ }
+ 
+ .cambio-estado-visual {
+   padding: 1rem;
+ }
 }
 
 @media (max-width: 480px) {
@@ -1903,6 +2245,27 @@ getEstadoTexto(estado) {
    min-width: 70px;
    font-size: 0.8rem;
    padding: 0.4rem 0.8rem;
+ }
+ 
+ .modal-confirmacion {
+   max-width: 100%;
+   margin: 0.5rem;
+ }
+ 
+ .servicio-avatar {
+   width: 50px;
+   height: 50px;
+   font-size: 1.2rem;
+ }
+ 
+ .pregunta-principal {
+   font-size: 1rem;
+ }
+ 
+ .advertencia-estado,
+ .info-estado {
+   padding: 0.75rem;
+   font-size: 0.85rem;
  }
 }
 </style>

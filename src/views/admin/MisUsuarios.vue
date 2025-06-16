@@ -215,7 +215,7 @@
                     <button 
                       class="btn-accion" 
                       :class="usuario.estado === 'activo' ? 'deshabilitar' : 'habilitar'"
-                      @click="cambiarEstadoUsuario(usuario)"
+                      @click="mostrarModalCambiarEstado(usuario)"
                       :title="usuario.estado === 'activo' ? 'Deshabilitar cuenta' : 'Habilitar cuenta'"
                     >
                       <i :class="usuario.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
@@ -287,7 +287,7 @@
               <button 
                 class="btn btn-sm"
                 :class="usuario.estado === 'activo' ? 'btn-danger' : 'btn-success'"
-                @click="cambiarEstadoUsuario(usuario)"
+                @click="mostrarModalCambiarEstado(usuario)"
               >
                 <i :class="usuario.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
                 {{ usuario.estado === 'activo' ? 'Deshabilitar' : 'Habilitar' }}
@@ -399,34 +399,34 @@
           <div class="usuario-detalle">
             <div class="detalle-grid">
               <div class="detalle-item">
-                <strong>Nombre Completo:</strong> {{ modalUsuario.nombreCompleto }}
+                <strong><i class="fas fa-user"></i> Nombre Completo:</strong> {{ modalUsuario.nombreCompleto }}
               </div>
               <div class="detalle-item">
-                <strong>Correo Electrónico:</strong> {{ modalUsuario.correo }}
+                <strong><i class="fas fa-envelope"></i> Correo Electrónico:</strong> {{ modalUsuario.correo }}
               </div>
               <div class="detalle-item">
-                <strong>Usuario:</strong> {{ modalUsuario.usuario }}
+                <strong><i class="fas fa-at"></i> Usuario:</strong> {{ modalUsuario.usuario }}
               </div>
               <div class="detalle-item">
-                <strong>Tipo de Usuario:</strong> 
+                <strong><i class="fas fa-user-tag"></i> Tipo de Usuario:</strong> 
                 <span class="tipo-badge" :class="modalUsuario.tipoUsuario">
                   {{ getTipoTexto(modalUsuario.tipoUsuario) }}
                 </span>
               </div>
               <div class="detalle-item">
-                <strong>Teléfono:</strong> {{ modalUsuario.telefono || 'No registrado' }}
+                <strong><i class="fas fa-phone"></i> Teléfono:</strong> {{ modalUsuario.telefono || 'No registrado' }}
               </div>
               <div class="detalle-item">
-                <strong>Fecha de Registro:</strong> {{ formatearFecha(modalUsuario.fechaCreacion) }}
+                <strong><i class="fas fa-calendar-alt"></i> Fecha de Registro:</strong> {{ formatearFecha(modalUsuario.fechaCreacion) }}
               </div>
               <div class="detalle-item">
-                <strong>Estado:</strong> 
+                <strong><i class="fas fa-info-circle"></i> Estado:</strong> 
                 <span class="estado-badge" :class="modalUsuario.estado">
                   {{ getEstadoTexto(modalUsuario.estado) }}
                 </span>
               </div>
               <div class="detalle-item">
-                <strong>Último Acceso:</strong> {{ formatearFecha(modalUsuario.ultimoAcceso) }}
+                <strong><i class="fas fa-clock"></i> Último Acceso:</strong> {{ formatearFecha(modalUsuario.ultimoAcceso) }}
               </div>
             </div>
           </div>
@@ -559,6 +559,102 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de confirmación para cambiar estado -->
+    <div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
+      <div class="modal-content modal-confirmacion" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i :class="usuarioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
+            {{ usuarioParaCambiarEstado.estado === 'activo' ? 'Deshabilitar Cuenta' : 'Habilitar Cuenta' }}
+          </h3>
+          <button class="btn-close" @click="cerrarModalCambiarEstado">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="confirmacion-content">
+            <div class="usuario-info-resumen">
+              <div class="usuario-avatar" :class="usuarioParaCambiarEstado.tipoUsuario">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="usuario-datos">
+                <h4>{{ usuarioParaCambiarEstado.nombreCompleto }}</h4>
+                <p class="usuario-email">{{ usuarioParaCambiarEstado.correo }}</p>
+                <div class="usuario-badges">
+                  <span class="usuario-id">#{{ String(usuarioParaCambiarEstado.id).padStart(4, '0') }}</span>
+                  <span class="tipo-badge" :class="usuarioParaCambiarEstado.tipoUsuario">
+                    {{ getTipoTexto(usuarioParaCambiarEstado.tipoUsuario) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mensaje-confirmacion">
+              <div class="icono-estado" :class="usuarioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
+                <i :class="usuarioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+              </div>
+              
+              <div class="texto-confirmacion">
+                <p class="pregunta-principal">
+                  ¿Está seguro que desea 
+                  <strong :class="usuarioParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
+                    {{ usuarioParaCambiarEstado.estado === 'activo' ? 'deshabilitar' : 'habilitar' }}
+                  </strong> 
+                  la cuenta de este usuario?
+                </p>
+                
+                <div class="advertencia-estado" v-if="usuarioParaCambiarEstado.estado === 'activo'">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span>Al deshabilitar este usuario, no podrá acceder al sistema hasta que sea habilitado nuevamente.</span>
+                </div>
+                
+                <div class="info-estado" v-else>
+                  <i class="fas fa-info-circle"></i>
+                  <span>Al habilitar este usuario, podrá acceder al sistema y realizar sus funciones normalmente.</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="cambio-estado-visual">
+              <div class="estado-actual">
+                <span class="label">Estado actual:</span>
+                <span class="estado-badge" :class="usuarioParaCambiarEstado.estado">
+                  {{ getEstadoTexto(usuarioParaCambiarEstado.estado) }}
+                </span>
+              </div>
+              
+              <div class="flecha-cambio">
+                <i class="fas fa-arrow-right"></i>
+              </div>
+              
+              <div class="estado-nuevo">
+                <span class="label">Nuevo estado:</span>
+                <span class="estado-badge" :class="usuarioParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
+                  {{ usuarioParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
+            <i class="fas fa-times"></i>
+            Cancelar
+          </button>
+          <button 
+            class="btn"
+            :class="usuarioParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+            @click="confirmarCambiarEstado"
+          >
+            <i :class="usuarioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+            {{ usuarioParaCambiarEstado.estado === 'activo' ? 'Deshabilitar' : 'Habilitar' }} Cuenta
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -570,7 +666,9 @@ export default {
       vistaActual: 'tabla',
       modalUsuario: null,
       modalFormulario: false,
+      modalCambiarEstado: false,
       usuarioEditando: null,
+      usuarioParaCambiarEstado: null,
       mostrarPassword: false,
       paginaActual: 1,
       itemsPorPagina: 25,
@@ -636,557 +734,581 @@ export default {
           usuario: 'mlopez',
           telefono: '+504 6543-2109',
           tipoUsuario: 'supervisor',
-          estado: 'inactivo',
-          fechaCreacion: '2024-02-01',
-          ultimoAcceso: '2024-05-30'
-        },
-        {
-          id: 5,
-          nombreCompleto: 'Pedro Sánchez Martínez',
-          correo: 'pedro.sanchez@empresa.com',
-          usuario: 'psanchez',
-          telefono: '+504 5432-1098',
-          tipoUsuario: 'vendedor',
-          estado: 'activo',
-          fechaCreacion: '2024-02-05',
-          ultimoAcceso: '2024-06-12'
-        },
-        // Generar más datos para demostración
-        ...Array.from({ length: 45 }, (_, i) => ({
-          id: i + 6,
-          nombreCompleto: `Usuario ${i + 6} Apellido${i + 6}`,
-          correo: `usuario${i + 6}@empresa.com`,
-          usuario: `user${i + 6}`,
-          telefono: `+504 ${String(Math.floor(Math.random() * 9000) + 1000)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-          tipoUsuario: ['admin', 'vendedor', 'supervisor', 'cliente'][Math.floor(Math.random() * 4)],
-          estado: Math.random() > 0.2 ? 'activo' : 'inactivo',
-          fechaCreacion: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-          ultimoAcceso: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`
-        }))
-      ]
-    }
-  },
-  
-  computed: {
-    usuariosFiltrados() {
-      let resultado = [...this.usuarios];
-      
-      // Filtro por búsqueda
-      if (this.filtros.busqueda) {
-        const busqueda = this.filtros.busqueda.toLowerCase();
-        resultado = resultado.filter(usuario => 
-          usuario.nombreCompleto.toLowerCase().includes(busqueda) ||
-          usuario.correo.toLowerCase().includes(busqueda) ||
-          usuario.usuario.toLowerCase().includes(busqueda) ||
-          (usuario.telefono && usuario.telefono.toLowerCase().includes(busqueda))
-        );
-      }
-      
-      // Filtro por tipo de usuario
-      if (this.filtros.tipoUsuario) {
-        resultado = resultado.filter(usuario => 
-          usuario.tipoUsuario === this.filtros.tipoUsuario
-        );
-      }
+         estado: 'inactivo',
+         fechaCreacion: '2024-02-01',
+         ultimoAcceso: '2024-05-30'
+       },
+       {
+         id: 5,
+         nombreCompleto: 'Pedro Sánchez Martínez',
+         correo: 'pedro.sanchez@empresa.com',
+         usuario: 'psanchez',
+         telefono: '+504 5432-1098',
+         tipoUsuario: 'vendedor',
+         estado: 'activo',
+         fechaCreacion: '2024-02-05',
+         ultimoAcceso: '2024-06-12'
+       },
+       // Generar más datos para demostración
+       ...Array.from({ length: 45 }, (_, i) => ({
+         id: i + 6,
+         nombreCompleto: `Usuario ${i + 6} Apellido${i + 6}`,
+         correo: `usuario${i + 6}@empresa.com`,
+         usuario: `user${i + 6}`,
+         telefono: `+504 ${String(Math.floor(Math.random() * 9000) + 1000)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+         tipoUsuario: ['admin', 'vendedor', 'supervisor', 'cliente'][Math.floor(Math.random() * 4)],
+         estado: Math.random() > 0.2 ? 'activo' : 'inactivo',
+         fechaCreacion: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+         ultimoAcceso: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`
+       }))
+     ]
+   }
+ },
+ 
+ computed: {
+   usuariosFiltrados() {
+     let resultado = [...this.usuarios];
+     
+     // Filtro por búsqueda
+     if (this.filtros.busqueda) {
+       const busqueda = this.filtros.busqueda.toLowerCase();
+       resultado = resultado.filter(usuario => 
+         usuario.nombreCompleto.toLowerCase().includes(busqueda) ||
+         usuario.correo.toLowerCase().includes(busqueda) ||
+         usuario.usuario.toLowerCase().includes(busqueda) ||
+         (usuario.telefono && usuario.telefono.toLowerCase().includes(busqueda))
+       );
+     }
+     
+     // Filtro por tipo de usuario
+     if (this.filtros.tipoUsuario) {
+       resultado = resultado.filter(usuario => 
+         usuario.tipoUsuario === this.filtros.tipoUsuario
+       );
+     }
 
-      // Filtro por estado
-      if (this.filtros.estado) {
-        resultado = resultado.filter(usuario => 
-          usuario.estado === this.filtros.estado
-        );
-      }
-      
-      // Ordenamiento
-      resultado.sort((a, b) => {
-        let valorA = a[this.ordenActual.campo];
-        let valorB = b[this.ordenActual.campo];
-        
-        if (this.ordenActual.campo === 'fechaCreacion' || this.ordenActual.campo === 'ultimoAcceso') {
-          valorA = new Date(valorA);
-          valorB = new Date(valorB);
-        }
-        
-        if (valorA < valorB) {
-          return this.ordenActual.direccion === 'asc' ? -1 : 1;
-        }
-        if (valorA > valorB) {
-          return this.ordenActual.direccion === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-      
-      return resultado;
-    },
-    
-    usuariosPaginados() {
-      const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-      const fin = inicio + this.itemsPorPagina;
-      return this.usuariosFiltrados.slice(inicio, fin);
-    },
-    
-    totalPaginas() {
-      return Math.ceil(this.usuariosFiltrados.length / this.itemsPorPagina);
-    },
-    
-    paginasVisibles() {
-      const total = this.totalPaginas;
-      const actual = this.paginaActual;
-      const rango = 2;
-      
-      let inicio = Math.max(1, actual - rango);
-      let fin = Math.min(total, actual + rango);
-      
-      if (fin - inicio < 4) {
-        if (inicio === 1) {
-          fin = Math.min(total, inicio + 4);
-        } else if (fin === total) {
-          inicio = Math.max(1, fin - 4);
-        }
-      }
-      
-      const paginas = [];
-      for (let i = inicio; i <= fin; i++) {
-        paginas.push(i);
-      }
-      return paginas;
-    },
-    
-    rangoInicio() {
-      return (this.paginaActual - 1) * this.itemsPorPagina + 1;
-    },
-    
-    rangoFin() {
-      return Math.min(this.paginaActual * this.itemsPorPagina, this.usuariosFiltrados.length);
-    },
-    
-    estadisticas() {
-      return {
-        total: this.usuarios.length,
-        activos: this.usuarios.filter(u => u.estado === 'activo').length,
-        inactivos: this.usuarios.filter(u => u.estado === 'inactivo').length,
-        administradores: this.usuarios.filter(u => u.tipoUsuario === 'admin').length,
-vendedores: this.usuarios.filter(u => u.tipoUsuario === 'vendedor').length,
-supervisores: this.usuarios.filter(u => u.tipoUsuario === 'supervisor').length,
-clientes: this.usuarios.filter(u => u.tipoUsuario === 'cliente').length
-};
-}
-},
-watch: {
-// Resetear a la primera página cuando cambien los filtros
-'filtros.busqueda'() {
-this.paginaActual = 1;
-},
-'filtros.tipoUsuario'() {
-this.paginaActual = 1;
-},
-'filtros.estado'() {
-this.paginaActual = 1;
-},
-// Actualizar paginaSalto cuando cambie la página actual
-paginaActual(newVal) {
-  this.paginaSalto = newVal;
-}
-},
-methods: {
-nuevoUsuario() {
-this.usuarioEditando = null;
-this.limpiarFormulario();
-this.modalFormulario = true;
-},
-verUsuario(usuario) {
-  this.modalUsuario = usuario;
-},
+     // Filtro por estado
+     if (this.filtros.estado) {
+       resultado = resultado.filter(usuario => 
+         usuario.estado === this.filtros.estado
+       );
+     }
+     
+     // Ordenamiento
+     resultado.sort((a, b) => {
+       let valorA = a[this.ordenActual.campo];
+       let valorB = b[this.ordenActual.campo];
+       
+       if (this.ordenActual.campo === 'fechaCreacion' || this.ordenActual.campo === 'ultimoAcceso') {
+         valorA = new Date(valorA);
+         valorB = new Date(valorB);
+       }
+       
+       if (valorA < valorB) {
+         return this.ordenActual.direccion === 'asc' ? -1 : 1;
+       }
+       if (valorA > valorB) {
+         return this.ordenActual.direccion === 'asc' ? 1 : -1;
+       }
+       return 0;
+     });
+     
+     return resultado;
+   },
+   
+   usuariosPaginados() {
+     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+     const fin = inicio + this.itemsPorPagina;
+     return this.usuariosFiltrados.slice(inicio, fin);
+   },
+   
+   totalPaginas() {
+     return Math.ceil(this.usuariosFiltrados.length / this.itemsPorPagina);
+   },
+   
+   paginasVisibles() {
+     const total = this.totalPaginas;
+     const actual = this.paginaActual;
+     const rango = 2;
+     
+     let inicio = Math.max(1, actual - rango);
+     let fin = Math.min(total, actual + rango);
+     
+     if (fin - inicio < 4) {
+       if (inicio === 1) {
+         fin = Math.min(total, inicio + 4);
+       } else if (fin === total) {
+         inicio = Math.max(1, fin - 4);
+       }
+     }
+     
+     const paginas = [];
+     for (let i = inicio; i <= fin; i++) {
+       paginas.push(i);
+     }
+     return paginas;
+   },
+   
+   rangoInicio() {
+     return (this.paginaActual - 1) * this.itemsPorPagina + 1;
+   },
+   
+   rangoFin() {
+     return Math.min(this.paginaActual * this.itemsPorPagina, this.usuariosFiltrados.length);
+   },
+   
+   estadisticas() {
+     return {
+       total: this.usuarios.length,
+       activos: this.usuarios.filter(u => u.estado === 'activo').length,
+       inactivos: this.usuarios.filter(u => u.estado === 'inactivo').length,
+       administradores: this.usuarios.filter(u => u.tipoUsuario === 'admin').length,
+       vendedores: this.usuarios.filter(u => u.tipoUsuario === 'vendedor').length,
+       supervisores: this.usuarios.filter(u => u.tipoUsuario === 'supervisor').length,
+       clientes: this.usuarios.filter(u => u.tipoUsuario === 'cliente').length
+     };
+   }
+ },
+ 
+ watch: {
+   // Resetear a la primera página cuando cambien los filtros
+   'filtros.busqueda'() {
+     this.paginaActual = 1;
+   },
+   'filtros.tipoUsuario'() {
+     this.paginaActual = 1;
+   },
+   'filtros.estado'() {
+     this.paginaActual = 1;
+   },
+   // Actualizar paginaSalto cuando cambie la página actual
+   paginaActual(newVal) {
+     this.paginaSalto = newVal;
+   }
+ },
+ 
+ methods: {
+   nuevoUsuario() {
+     this.usuarioEditando = null;
+     this.limpiarFormulario();
+     this.modalFormulario = true;
+   },
+   
+   verUsuario(usuario) {
+     this.modalUsuario = usuario;
+   },
 
-editarUsuario(usuario) {
-  this.usuarioEditando = usuario;
-  this.llenarFormulario(usuario);
-  this.modalFormulario = true;
-  this.modalUsuario = null;
-},
+   editarUsuario(usuario) {
+     this.usuarioEditando = usuario;
+     this.llenarFormulario(usuario);
+     this.modalFormulario = true;
+     this.modalUsuario = null;
+   },
 
-cambiarEstadoUsuario(usuario) {
-  const accion = usuario.estado === 'activo' ? 'deshabilitar' : 'habilitar';
-  const confirmacion = confirm(`¿Está seguro que desea ${accion} la cuenta de ${usuario.nombreCompleto}?`);
-  
-  if (confirmacion) {
-    usuario.estado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
-    alert(`Cuenta ${accion === 'deshabilitar' ? 'deshabilitada' : 'habilitada'} exitosamente`);
-  }
-},
+   // Nuevo método para mostrar el modal de confirmación
+   mostrarModalCambiarEstado(usuario) {
+     this.usuarioParaCambiarEstado = usuario;
+     this.modalCambiarEstado = true;
+   },
 
-guardarUsuario() {
-  // Validaciones
-  if (!this.formulario.nombreCompleto || !this.formulario.correo || !this.formulario.usuario || !this.formulario.tipoUsuario) {
-    alert('Por favor complete todos los campos obligatorios');
-    return;
-  }
-  
-  if (!this.usuarioEditando && !this.formulario.password) {
-    alert('La contraseña es obligatoria para usuarios nuevos');
-    return;
-  }
-  
-  if (!this.usuarioEditando && this.formulario.password !== this.formulario.confirmPassword) {
-    alert('Las contraseñas no coinciden');
-    return;
-  }
-  
-  // Verificar usuario único
-  const usuarioExiste = this.usuarios.some(u => 
-    u.usuario === this.formulario.usuario && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
-  );
-  
-  if (usuarioExiste) {
-    alert('Ya existe un usuario con ese nombre de usuario');
-    return;
-  }
-  
-  // Verificar correo único
-  const correoExiste = this.usuarios.some(u => 
-    u.correo === this.formulario.correo && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
-  );
-  
-  if (correoExiste) {
-    alert('Ya existe un usuario con ese correo electrónico');
-    return;
-  }
-  
-  if (this.usuarioEditando) {
-    // Actualizar usuario existente
-    Object.assign(this.usuarioEditando, {
-      nombreCompleto: this.formulario.nombreCompleto,
-      correo: this.formulario.correo,
-      usuario: this.formulario.usuario,
-      telefono: this.formulario.telefono,
-      tipoUsuario: this.formulario.tipoUsuario,
-      estado: this.formulario.estado
-    });
-    alert('Usuario actualizado exitosamente');
-  } else {
-    // Crear nuevo usuario
-    const nuevoUsuario = {
-      id: Math.max(...this.usuarios.map(u => u.id)) + 1,
-      nombreCompleto: this.formulario.nombreCompleto,
-      correo: this.formulario.correo,
-      usuario: this.formulario.usuario,
-      telefono: this.formulario.telefono,
-      tipoUsuario: this.formulario.tipoUsuario,
-      estado: 'activo',
-      fechaCreacion: new Date().toISOString().split('T')[0],
-      ultimoAcceso: new Date().toISOString().split('T')[0]
-    };
-    this.usuarios.push(nuevoUsuario);
-    alert('Usuario creado exitosamente');
-  }
-  
-  this.cerrarModalFormulario();
-},
+   // Nuevo método para confirmar el cambio de estado
+   confirmarCambiarEstado() {
+     if (this.usuarioParaCambiarEstado) {
+       const estadoAnterior = this.usuarioParaCambiarEstado.estado;
+       const nuevoEstado = estadoAnterior === 'activo' ? 'inactivo' : 'activo';
+       
+       // Cambiar el estado
+       this.usuarioParaCambiarEstado.estado = nuevoEstado;
+       
+       // Mostrar mensaje de éxito
+       const accion = nuevoEstado === 'activo' ? 'habilitada' : 'deshabilitada';
+       alert(`Cuenta ${accion} exitosamente`);
+       
+       // Cerrar modal
+       this.cerrarModalCambiarEstado();
+     }
+   },
 
-llenarFormulario(usuario) {
-  this.formulario = {
-    nombreCompleto: usuario.nombreCompleto,
-    correo: usuario.correo,
-    usuario: usuario.usuario,
-    telefono: usuario.telefono,
-    tipoUsuario: usuario.tipoUsuario,
-    password: '',
-    confirmPassword: '',
-    estado: usuario.estado
-  };
-},
+   // Nuevo método para cerrar el modal de confirmación
+   cerrarModalCambiarEstado() {
+     this.modalCambiarEstado = false;
+     this.usuarioParaCambiarEstado = null;
+   },
 
-limpiarFormulario() {
-  this.formulario = {
-    nombreCompleto: '',
-    correo: '',
-    usuario: '',
-    telefono: '',
-    tipoUsuario: '',
-    password: '',
-    confirmPassword: '',
-    estado: 'activo'
-  };
-},
+   guardarUsuario() {
+     // Validaciones
+     if (!this.formulario.nombreCompleto || !this.formulario.correo || !this.formulario.usuario || !this.formulario.tipoUsuario) {
+       alert('Por favor complete todos los campos obligatorios');
+       return;
+     }
+     
+     if (!this.usuarioEditando && !this.formulario.password) {
+       alert('La contraseña es obligatoria para usuarios nuevos');
+       return;
+     }
+     
+     if (!this.usuarioEditando && this.formulario.password !== this.formulario.confirmPassword) {
+       alert('Las contraseñas no coinciden');
+       return;
+     }
+     
+     // Verificar usuario único
+     const usuarioExiste = this.usuarios.some(u => 
+       u.usuario === this.formulario.usuario && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
+     );
+     
+     if (usuarioExiste) {
+       alert('Ya existe un usuario con ese nombre de usuario');
+       return;
+     }
+     
+     // Verificar correo único
+     const correoExiste = this.usuarios.some(u => 
+       u.correo === this.formulario.correo && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
+     );
+     
+     if (correoExiste) {
+       alert('Ya existe un usuario con ese correo electrónico');
+       return;
+     }
+     
+     if (this.usuarioEditando) {
+       // Actualizar usuario existente
+       Object.assign(this.usuarioEditando, {
+         nombreCompleto: this.formulario.nombreCompleto,
+         correo: this.formulario.correo,
+         usuario: this.formulario.usuario,
+         telefono: this.formulario.telefono,
+         tipoUsuario: this.formulario.tipoUsuario,
+         estado: this.formulario.estado
+       });
+       alert('Usuario actualizado exitosamente');
+     } else {
+       // Crear nuevo usuario
+       const nuevoUsuario = {
+         id: Math.max(...this.usuarios.map(u => u.id)) + 1,
+         nombreCompleto: this.formulario.nombreCompleto,
+         correo: this.formulario.correo,
+         usuario: this.formulario.usuario,
+         telefono: this.formulario.telefono,
+         tipoUsuario: this.formulario.tipoUsuario,
+         estado: 'activo',
+         fechaCreacion: new Date().toISOString().split('T')[0],
+         ultimoAcceso: new Date().toISOString().split('T')[0]
+       };
+       this.usuarios.push(nuevoUsuario);
+       alert('Usuario creado exitosamente');
+     }
+     
+     this.cerrarModalFormulario();
+   },
 
-ordenarPor(campo) {
-  if (this.ordenActual.campo === campo) {
-    this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-  } else {
-    this.ordenActual = { campo, direccion: 'asc' };
-  }
-},
+   llenarFormulario(usuario) {
+     this.formulario = {
+       nombreCompleto: usuario.nombreCompleto,
+       correo: usuario.correo,
+       usuario: usuario.usuario,
+       telefono: usuario.telefono,
+       tipoUsuario: usuario.tipoUsuario,
+       password: '',
+       confirmPassword: '',
+       estado: usuario.estado
+     };
+   },
 
-getSortIcon(campo) {
-  if (this.ordenActual.campo !== campo) return '↕';
-  return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
-},
+   limpiarFormulario() {
+     this.formulario = {
+       nombreCompleto: '',
+       correo: '',
+       usuario: '',
+       telefono: '',
+       tipoUsuario: '',
+       password: '',
+       confirmPassword: '',
+       estado: 'activo'
+     };
+   },
 
-limpiarFiltros() {
-  this.filtros = {
-    busqueda: '',
-    tipoUsuario: '',
-    estado: ''
-  };
-  this.paginaActual = 1;
-  this.paginaSalto = 1;
-},
+   ordenarPor(campo) {
+     if (this.ordenActual.campo === campo) {
+       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+     } else {
+       this.ordenActual = { campo, direccion: 'asc' };
+     }
+   },
 
-cerrarModal() {
-  this.modalUsuario = null;
-},
+   getSortIcon(campo) {
+     if (this.ordenActual.campo !== campo) return '↕';
+     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+   },
 
-cerrarModalFormulario() {
-  this.modalFormulario = false;
-  this.usuarioEditando = null;
-  this.limpiarFormulario();
-  this.mostrarPassword = false;
-},
+   limpiarFiltros() {
+     this.filtros = {
+       busqueda: '',
+       tipoUsuario: '',
+       estado: ''
+     };
+     this.paginaActual = 1;
+     this.paginaSalto = 1;
+   },
 
-// Métodos de paginación
-cambiarItemsPorPagina() {
-  this.paginaActual = 1;
-  this.paginaSalto = 1;
-},
+   cerrarModal() {
+     this.modalUsuario = null;
+   },
 
-irAPrimera() {
-  this.paginaActual = 1;
-},
+   cerrarModalFormulario() {
+     this.modalFormulario = false;
+     this.usuarioEditando = null;
+     this.limpiarFormulario();
+     this.mostrarPassword = false;
+   },
 
-irAUltima() {
-  this.paginaActual = this.totalPaginas;
-},
+   // Métodos de paginación
+   cambiarItemsPorPagina() {
+     this.paginaActual = 1;
+     this.paginaSalto = 1;
+   },
 
-irAPagina() {
-  if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
-    this.paginaActual = this.paginaSalto;
-  } else {
-    alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
-    this.paginaSalto = this.paginaActual;
-  }
-},
+   irAPrimera() {
+     this.paginaActual = 1;
+   },
 
-formatearFecha(fecha) {
-  return new Date(fecha).toLocaleDateString('es-HN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-},
+   irAUltima() {
+     this.paginaActual = this.totalPaginas;
+   },
 
-getTipoTexto(tipo) {
-  const tipos = {
-    admin: 'Administrador',
-    vendedor: 'Vendedor',
-    supervisor: 'Supervisor',
-    cliente: 'Cliente'
-  };
-  return tipos[tipo] || tipo;
-},
+   irAPagina() {
+     if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
+       this.paginaActual = this.paginaSalto;
+     } else {
+       alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
+       this.paginaSalto = this.paginaActual;
+     }
+   },
 
-getEstadoTexto(estado) {
-  const estados = {
-    activo: 'Activo',
-    inactivo: 'Inactivo'
-  };
-  return estados[estado] || estado;
-}
-}
+   formatearFecha(fecha) {
+     return new Date(fecha).toLocaleDateString('es-HN', {
+       year: 'numeric',
+       month: 'short',
+       day: 'numeric'
+     });
+   },
+
+   getTipoTexto(tipo) {
+     const tipos = {
+       admin: 'Administrador',
+       vendedor: 'Vendedor',
+       supervisor: 'Supervisor',
+       cliente: 'Cliente'
+     };
+     return tipos[tipo] || tipo;
+   },
+
+   getEstadoTexto(estado) {
+     const estados = {
+       activo: 'Activo',
+       inactivo: 'Inactivo'
+     };
+     return estados[estado] || estado;
+   }
+ }
 }
 </script>
+
 <style scoped>
 /* Estilos base heredados del componente de cotizaciones */
 .admin-usuarios-container {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+ padding: 2rem;
+ max-width: 1400px;
+ margin: 0 auto;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  gap: 2rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-start;
+ margin-bottom: 2rem;
+ gap: 2rem;
 }
 
 .header-content h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
+ font-size: 2.5rem;
+ font-weight: 700;
+ color: #2c3e50;
+ margin-bottom: 0.5rem;
 }
 
 .page-subtitle {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-  margin: 0;
+ color: #7f8c8d;
+ font-size: 1.1rem;
+ margin: 0;
 }
 
 .header-actions {
-  flex-shrink: 0;
-  display: flex;
-  gap: 1rem;
+ flex-shrink: 0;
+ display: flex;
+ gap: 1rem;
 }
 
 .btn {
-  padding: 0.875rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  font-size: 0.9rem;
+ padding: 0.875rem 1.5rem;
+ border: none;
+ border-radius: 8px;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ display: inline-flex;
+ align-items: center;
+ gap: 0.5rem;
+ text-decoration: none;
+ font-size: 0.9rem;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  color: white;
+ background: linear-gradient(135deg, #3498db, #2980b9);
+ color: white;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+ transform: translateY(-2px);
+ box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
 }
 
 .btn-secondary {
-  background: #95a5a6;
-  color: white;
+ background: #95a5a6;
+ color: white;
 }
 
 .btn-secondary:hover {
-  background: #7f8c8d;
+ background: #7f8c8d;
 }
 
 .btn-outline {
-  background: transparent;
-  color: #3498db;
-  border: 2px solid #3498db;
+ background: transparent;
+ color: #3498db;
+ border: 2px solid #3498db;
 }
 
 .btn-outline:hover {
-  background: #3498db;
-  color: white;
+ background: #3498db;
+ color: white;
 }
 
 .btn-danger {
-  background: #e74c3c;
-  color: white;
+ background: #e74c3c;
+ color: white;
 }
 
 .btn-danger:hover {
-  background: #c0392b;
+ background: #c0392b;
 }
 
 .btn-success {
-  background: #27ae60;
-  color: white;
+ background: #27ae60;
+ color: white;
 }
 
 .btn-success:hover {
-  background: #219a52;
+ background: #219a52;
 }
 
 .btn-sm {
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
+ padding: 0.5rem 1rem;
+ font-size: 0.85rem;
 }
 
 /* Filtros */
 .filtros-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+ background: white;
+ border-radius: 12px;
+ padding: 1.5rem;
+ margin-bottom: 2rem;
+ box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .filtros-container {
-  display: grid;
-  gap: 1rem;
+ display: grid;
+ gap: 1rem;
 }
 
 .search-box {
-  position: relative;
-  max-width: 400px;
+ position: relative;
+ max-width: 400px;
 }
 
 .search-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.2rem;
-  color: #7f8c8d;
+ position: absolute;
+ left: 1rem;
+ top: 50%;
+ transform: translateY(-50%);
+ font-size: 1.2rem;
+ color: #7f8c8d;
 }
 
 .search-input {
-  width: 100%;
-  padding: 0.875rem 1rem 0.875rem 3rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
+ width: 100%;
+ padding: 0.875rem 1rem 0.875rem 3rem;
+ border: 2px solid #e1e8ed;
+ border-radius: 8px;
+ font-size: 1rem;
+ transition: border-color 0.3s ease;
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #3498db;
+ outline: none;
+ border-color: #3498db;
 }
 
 .filtros-grid {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
+ display: flex;
+ gap: 1rem;
+ flex-wrap: wrap;
+ align-items: center;
 }
 
 .filter-select {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  min-width: 180px;
-  cursor: pointer;
+ padding: 0.75rem 1rem;
+ border: 2px solid #e1e8ed;
+ border-radius: 8px;
+ font-size: 0.9rem;
+ min-width: 180px;
+ cursor: pointer;
 }
 
 /* Estadísticas */
 .estadisticas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+ gap: 1.5rem;
+ margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease;
+ background: white;
+ border-radius: 12px;
+ padding: 1.5rem;
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+ transition: transform 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
+ transform: translateY(-2px);
 }
 
 .stat-number {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
-  line-height: 1;
+ font-size: 2rem;
+ font-weight: 700;
+ color: #2c3e50;
+ line-height: 1;
 }
 
 .stat-label {
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
+ color: #7f8c8d;
+ font-size: 0.9rem;
+ margin-top: 0.25rem;
 }
 
 .stat-card.total { border-left: 4px solid #3498db; }
@@ -1197,734 +1319,1005 @@ getEstadoTexto(estado) {
 
 /* Usuarios section */
 .usuarios-section {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+ background: white;
+ border-radius: 12px;
+ padding: 1.5rem;
+ box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1.5rem;
+ flex-wrap: wrap;
+ gap: 1rem;
 }
 
 .section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0;
+ font-size: 1.5rem;
+ font-weight: 600;
+ color: #2c3e50;
+ margin: 0;
 }
 
 .view-controls {
-  display: flex;
-  gap: 0.5rem;
+ display: flex;
+ gap: 0.5rem;
 }
 
 .view-btn {
-  padding: 0.5rem 1rem;
-  border: 2px solid #e1e8ed;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+ padding: 0.5rem 1rem;
+ border: 2px solid #e1e8ed;
+ background: white;
+ border-radius: 6px;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ font-size: 0.85rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .view-btn.active {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
+ background: #3498db;
+ color: white;
+ border-color: #3498db;
 }
 
 /* Tabla */
 .tabla-wrapper {
-  overflow-x: auto;
+ overflow-x: auto;
 }
 
 .usuarios-tabla {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
+ width: 100%;
+ border-collapse: collapse;
+ margin-bottom: 1rem;
 }
 
 .usuarios-tabla th {
-  background: #f8f9fa;
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 2px solid #e9ecef;
-  white-space: nowrap;
+ background: #f8f9fa;
+ padding: 1rem;
+ text-align: left;
+ font-weight: 600;
+ color: #2c3e50;
+ border-bottom: 2px solid #e9ecef;
+ white-space: nowrap;
 }
 
 .usuarios-tabla th.sortable {
-  cursor: pointer;
-  user-select: none;
+ cursor: pointer;
+ user-select: none;
 }
 
 .usuarios-tabla th.sortable:hover {
-  background: #e9ecef;
+ background: #e9ecef;
 }
 
 .sort-icon {
-  margin-left: 0.5rem;
-  opacity: 0.5;
+ margin-left: 0.5rem;
+ opacity: 0.5;
 }
 
 .usuarios-tabla td {
-  padding: 1rem;
-  border-bottom: 1px solid #e9ecef;
-  vertical-align: middle;
+ padding: 1rem;
+ border-bottom: 1px solid #e9ecef;
+ vertical-align: middle;
 }
 
 .usuario-id {
-  font-weight: 600;
-  color: #3498db;
-  font-family: monospace;
-  font-size: 1rem;
+ font-weight: 600;
+ color: #3498db;
+ font-family: monospace;
+ font-size: 1rem;
 }
 
 .usuario-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem;
 }
 
 .usuario-nombre {
-  font-weight: 500;
-  color: #2c3e50;
+ font-weight: 500;
+ color: #2c3e50;
 }
 
 .usuario-correo {
-  color: #7f8c8d;
-  font-size: 0.9rem;
+ color: #7f8c8d;
+ font-size: 0.9rem;
 }
 
 .usuario-username {
-  font-family: monospace;
-  background: #f8f9fa;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  color: #2c3e50;
+ font-family: monospace;
+ background: #f8f9fa;
+ padding: 0.25rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.85rem;
+ color: #2c3e50;
 }
 
 /* Vista de tarjetas */
 .tarjetas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+ display: grid;
+ grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+ gap: 1.5rem;
 }
 
 .usuario-card {
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  background: white;
+ border: 1px solid #e9ecef;
+ border-radius: 12px;
+ padding: 1.5rem;
+ transition: all 0.3s ease;
+ background: white;
 }
 
 .usuario-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+ transform: translateY(-2px);
+ box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1rem;
 }
 
 .card-numero {
-  font-weight: 600;
-  color: #3498db;
-  font-family: monospace;
-  font-size: 1.1rem;
+ font-weight: 600;
+ color: #3498db;
+ font-family: monospace;
+ font-size: 1.1rem;
 }
 
 .card-content h3 {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-  font-size: 1.2rem;
+ color: #2c3e50;
+ margin-bottom: 0.5rem;
+ font-size: 1.2rem;
 }
 
 .usuario-nombre-card {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-  font-size: 1.2rem;
+ color: #2c3e50;
+ margin-bottom: 0.5rem;
+ font-size: 1.2rem;
 }
 
 .usuario-email-card {
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+ color: #7f8c8d;
+ font-size: 0.9rem;
+ margin-bottom: 1rem;
 }
 
 .usuario-details {
-  display: grid;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+ display: grid;
+ gap: 0.75rem;
+ margin-bottom: 1.5rem;
 }
 
 .detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  background: #f8f9fa;
-  border-radius: 6px;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 0.5rem;
+ background: #f8f9fa;
+ border-radius: 6px;
 }
 
 .detail-label {
-  color: #7f8c8d;
-  font-size: 0.85rem;
-  font-weight: 500;
+ color: #7f8c8d;
+ font-size: 0.85rem;
+ font-weight: 500;
 }
 
 .detail-value {
-  color: #2c3e50;
-  font-weight: 500;
-  font-size: 0.9rem;
+ color: #2c3e50;
+ font-weight: 500;
+ font-size: 0.9rem;
 }
 
 .usuario-username-card {
-  font-family: monospace;
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
+ font-family: monospace;
+ background: #e3f2fd;
+ color: #1976d2;
+ padding: 0.25rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.85rem;
 }
 
 .card-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+ display: flex;
+ gap: 0.75rem;
+ flex-wrap: wrap;
 }
 
 .card-actions .btn {
-  flex: 1;
-  justify-content: center;
-  min-width: auto;
+ flex: 1;
+ justify-content: center;
+ min-width: auto;
 }
 
 /* Badges de tipo de usuario */
 .tipo-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
 }
 
 .tipo-badge.admin {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+ background: #fee2e2;
+ color: #dc2626;
+ border: 1px solid #fecaca;
 }
 
 .tipo-badge.vendedor {
-  background: #fef3c7;
-  color: #d97706;
-  border: 1px solid #fed7aa;
+ background: #fef3c7;
+ color: #d97706;
+ border: 1px solid #fed7aa;
 }
 
 .tipo-badge.supervisor {
-  background: #dbeafe;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+ background: #dbeafe;
+ color: #2563eb;
+ border: 1px solid #bfdbfe;
 }
 
 .tipo-badge.cliente {
-  background: #d1fae5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+ background: #d1fae5;
+ color: #059669;
+ border: 1px solid #a7f3d0;
 }
 
 /* Badges de estado */
 .estado-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
 }
 
 .estado-badge.activo {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+ background: #d4edda;
+ color: #155724;
+ border: 1px solid #c3e6cb;
 }
 
 .estado-badge.inactivo {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
+ background: #f8d7da;
+ color: #721c24;
+ border: 1px solid #f5c6cb;
 }
 
 /* Acciones */
 .acciones {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+ display: flex;
+ gap: 0.5rem;
+ flex-wrap: wrap;
 }
 
 .btn-accion {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
+ width: 32px;
+ height: 32px;
+ border: none;
+ border-radius: 6px;
+ cursor: pointer;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 0.9rem;
+ transition: all 0.3s ease;
 }
 
 .btn-accion.ver {
-  background: #e3f2fd;
-  color: #1976d2;
+ background: #e3f2fd;
+ color: #1976d2;
 }
 
 .btn-accion.ver:hover {
-  background: #bbdefb;
+ background: #bbdefb;
 }
 
 .btn-accion.editar {
-  background: #fff3e0;
-  color: #f57c00;
+ background: #fff3e0;
+ color: #f57c00;
 }
 
 .btn-accion.editar:hover {
-  background: #ffe0b2;
+ background: #ffe0b2;
 }
 
 .btn-accion.deshabilitar {
-  background: #ffebee;
-  color: #d32f2f;
+ background: #ffebee;
+ color: #d32f2f;
 }
 
 .btn-accion.deshabilitar:hover {
-  background: #ffcdd2;
+ background: #ffcdd2;
 }
 
 .btn-accion.habilitar {
-  background: #e8f5e8;
-  color: #388e3c;
+ background: #e8f5e8;
+ color: #388e3c;
 }
 
 .btn-accion.habilitar:hover {
-  background: #c8e6c9;
+ background: #c8e6c9;
 }
 
 /* Estado vacío */
 .empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #7f8c8d;
+ text-align: center;
+ padding: 4rem 2rem;
+ color: #7f8c8d;
 }
 
 .empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
+ font-size: 4rem;
+ margin-bottom: 1rem;
+ opacity: 0.5;
 }
 
 .empty-title {
-  font-size: 1.5rem;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
+ font-size: 1.5rem;
+ color: #2c3e50;
+ margin-bottom: 0.5rem;
 }
 
 .empty-description {
-  margin-bottom: 2rem;
-  font-size: 1rem;
-  line-height: 1.5;
+ margin-bottom: 2rem;
+ font-size: 1rem;
+ line-height: 1.5;
 }
 
 /* Paginación */
 .paginacion-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  flex-wrap: wrap;
-  gap: 1rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1rem;
+ padding: 1rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ flex-wrap: wrap;
+ gap: 1rem;
 }
 
 .items-info {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-weight: 500;
+ color: #6c757d;
+ font-size: 0.9rem;
+ font-weight: 500;
 }
 
 .pagination-jump {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .pagination-jump label {
-  color: #6c757d;
-  font-size: 0.85rem;
-  font-weight: 500;
+ color: #6c757d;
+ font-size: 0.85rem;
+ font-weight: 500;
 }
 
 .page-input {
-  width: 60px;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.85rem;
+ width: 60px;
+ padding: 0.375rem 0.5rem;
+ border: 1px solid #ced4da;
+ border-radius: 4px;
+ text-align: center;
+ font-size: 0.85rem;
 }
 
 .page-input:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+ outline: none;
+ border-color: #3498db;
+ box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
 .paginacion-completa {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+ margin-top: 2rem;
+ padding-top: 1.5rem;
+ border-top: 1px solid #e9ecef;
 }
 
 .paginacion {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ gap: 0.5rem;
+ flex-wrap: wrap;
+ margin-bottom: 1rem;
 }
 
 .btn-pag {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #dee2e6;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
+ padding: 0.5rem 0.75rem;
+ border: 1px solid #dee2e6;
+ background: white;
+ border-radius: 6px;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ font-size: 0.9rem;
+ min-width: 40px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.25rem;
 }
 
 .btn-pag:hover:not(:disabled) {
-  background: #e9ecef;
-  transform: translateY(-1px);
+ background: #e9ecef;
+ transform: translateY(-1px);
 }
 
 .btn-pag:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+ opacity: 0.5;
+ cursor: not-allowed;
 }
 
 .btn-pag.active {
-  background: #3498db;
-  color: white;
-  border-color: #3498db;
-  font-weight: 600;
+ background: #3498db;
+ color: white;
+ border-color: #3498db;
+ font-weight: 600;
 }
 
 .paginas {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
+ display: flex;
+ gap: 0.25rem;
+ align-items: center;
 }
 
 .pagina-separador {
-  padding: 0.5rem 0.25rem;
-  color: #6c757d;
-  font-weight: bold;
+ padding: 0.5rem 0.25rem;
+ color: #6c757d;
+ font-weight: bold;
 }
 
 .paginacion-info-bottom {
-  text-align: center;
-  margin-top: 1rem;
+ text-align: center;
+ margin-top: 1rem;
 }
 
 .pagina-actual {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-weight: 500;
-  background: #f8f9fa;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+ color: #6c757d;
+ font-size: 0.9rem;
+ font-weight: 500;
+ background: #f8f9fa;
+ padding: 0.5rem 1rem;
+ border-radius: 20px;
 }
 
 /* Modal */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
+ position: fixed;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background: rgba(0, 0, 0, 0.5);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ z-index: 1000;
+ padding: 1rem;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  max-width: 800px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+ background: white;
+ border-radius: 12px;
+ max-width: 800px;
+ width: 100%;
+ max-height: 90vh;
+ overflow-y: auto;
+ box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-formulario {
-  max-width: 900px;
+ max-width: 900px;
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e9ecef;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 1.5rem;
+ border-bottom: 1px solid #e9ecef;
 }
 
 .modal-header h3 {
-  margin: 0;
-  color: #2c3e50;
+ margin: 0;
+ color: #2c3e50;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .btn-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #7f8c8d;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+ background: none;
+ border: none;
+ font-size: 1.5rem;
+ cursor: pointer;
+ color: #7f8c8d;
+ padding: 0.5rem;
+ border-radius: 50%;
+ transition: all 0.3s ease;
 }
 
 .btn-close:hover {
-  background: #f8f9fa;
-  color: #e74c3c;
+ background: #f8f9fa;
+ color: #e74c3c;
 }
 
 .modal-body {
-  padding: 1.5rem;
+ padding: 1.5rem;
 }
 
 .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e9ecef;
-  background: #f8f9fa;
+ display: flex;
+ justify-content: flex-end;
+ gap: 1rem;
+ padding: 1.5rem;
+ border-top: 1px solid #e9ecef;
+ background: #f8f9fa;
 }
 
 /* Detalle de usuario */
 .usuario-detalle {
-  padding: 1rem 0;
+ padding: 1rem 0;
 }
 
 .detalle-grid {
-  display: grid;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+ display: grid;
+ gap: 1rem;
+ margin-bottom: 1.5rem;
 }
 
 .detalle-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 6px;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 0.75rem;
+ background: #f8f9fa;
+ border-radius: 6px;
 }
 
 .detalle-item strong {
-  color: #2c3e50;
-  font-weight: 600;
+ color: #2c3e50;
+ font-weight: 600;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 /* Formulario */
 .formulario-usuario {
-  padding: 1rem 0;
+ padding: 1rem 0;
 }
 
 .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+ gap: 1.5rem;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
 }
 
 .form-group label {
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 0.9rem;
+ font-weight: 600;
+ color: #2c3e50;
+ font-size: 0.9rem;
 }
 
 .form-input,
 .form-select {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
+ padding: 0.75rem 1rem;
+ border: 2px solid #e1e8ed;
+ border-radius: 8px;
+ font-size: 1rem;
+ transition: border-color 0.3s ease;
 }
 
 .form-input:focus,
 .form-select:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+ outline: none;
+ border-color: #3498db;
+ box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .password-input {
-  position: relative;
+ position: relative;
 }
 
 .password-toggle {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #7f8c8d;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0.25rem;
+ position: absolute;
+ right: 1rem;
+ top: 50%;
+ transform: translateY(-50%);
+ background: none;
+ border: none;
+ color: #7f8c8d;
+ cursor: pointer;
+ font-size: 1rem;
+ padding: 0.25rem;
 }
 
 .password-toggle:hover {
-  color: #2c3e50;
+ color: #2c3e50;
+}
+
+/* Estilos específicos para el modal de confirmación de usuarios */
+.modal-confirmacion {
+ max-width: 600px;
+}
+
+.confirmacion-content {
+ display: flex;
+ flex-direction: column;
+ gap: 2rem;
+}
+
+.usuario-info-resumen {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ padding: 1rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ border-left: 4px solid #3498db;
+}
+
+.usuario-avatar {
+ width: 60px;
+ height: 60px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ color: white;
+ font-size: 1.5rem;
+ flex-shrink: 0;
+}
+
+.usuario-avatar.admin {
+ background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.usuario-avatar.vendedor {
+ background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+.usuario-avatar.supervisor {
+ background: linear-gradient(135deg, #3498db, #2980b9);
+}
+
+.usuario-avatar.cliente {
+ background: linear-gradient(135deg, #27ae60, #219a52);
+}
+
+.usuario-datos h4 {
+ margin: 0 0 0.25rem 0;
+ color: #2c3e50;
+ font-size: 1.2rem;
+}
+
+.usuario-email {
+ margin: 0 0 0.25rem 0;
+ color: #7f8c8d;
+ font-size: 0.9rem;
+}
+
+.usuario-badges {
+ display: flex;
+ gap: 0.5rem;
+ align-items: center;
+}
+
+.usuario-id {
+ font-family: monospace;
+ background: #e3f2fd;
+ color: #1976d2;
+ padding: 0.2rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+.mensaje-confirmacion {
+ text-align: center;
+ padding: 1.5rem;
+}
+
+.icono-estado {
+ width: 80px;
+ height: 80px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ margin: 0 auto 1.5rem;
+ font-size: 2rem;
+ color: white;
+}
+
+.icono-estado.desactivar {
+ background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.icono-estado.activar {
+ background: linear-gradient(135deg, #27ae60, #219a52);
+}
+
+.texto-confirmacion {
+ max-width: 400px;
+ margin: 0 auto;
+}
+
+.pregunta-principal {
+ font-size: 1.1rem;
+ color: #2c3e50;
+ margin-bottom: 1rem;
+ line-height: 1.5;
+}
+
+.text-danger {
+ color: #e74c3c;
+}
+
+.text-success {
+ color: #27ae60;
+}
+
+.advertencia-estado,
+.info-estado {
+ display: flex;
+ align-items: flex-start;
+ gap: 0.5rem;
+ padding: 1rem;
+ border-radius: 6px;
+ font-size: 0.9rem;
+ line-height: 1.4;
+ text-align: left;
+}
+
+.advertencia-estado {
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
+}
+
+.advertencia-estado i {
+ color: #f39c12;
+ margin-top: 0.1rem;
+}
+
+.info-estado {
+ background: #d1ecf1;
+ color: #0c5460;
+ border: 1px solid #bee5eb;
+}
+
+.info-estado i {
+ color: #17a2b8;
+ margin-top: 0.1rem;
+}
+
+.cambio-estado-visual {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 1.5rem;
+ padding: 1.5rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
+}
+
+.estado-actual,
+.estado-nuevo {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.label {
+ font-size: 0.8rem;
+ color: #6c757d;
+ font-weight: 500;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+}
+
+.flecha-cambio {
+ color: #6c757d;
+ font-size: 1.5rem;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .estadisticas-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+ .estadisticas-grid {
+   grid-template-columns: repeat(3, 1fr);
+ }
+ 
+ .confirmacion-content {
+   gap: 1.5rem;
+ }
+ 
+ .cambio-estado-visual {
+   flex-direction: column;
+   gap: 1rem;
+ }
+ 
+ .flecha-cambio {
+   transform: rotate(90deg);
+ }
 }
 
 @media (max-width: 768px) {
-  .admin-usuarios-container {
-    padding: 1rem;
-  }
+ .admin-usuarios-container {
+   padding: 1rem;
+ }
 
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
+ .page-header {
+   flex-direction: column;
+   align-items: stretch;
+   gap: 1rem;
+ }
 
-  .header-actions {
-    flex-direction: column;
-  }
-  .header-content h1 {
-font-size: 2rem;
+ .header-actions {
+   flex-direction: column;
+ }
+ 
+ .header-content h1 {
+   font-size: 2rem;
+ }
+ 
+ .estadisticas-grid {
+   grid-template-columns: repeat(2, 1fr);
+ }
+ 
+ .filtros-grid {
+   flex-direction: column;
+   align-items: stretch;
+ }
+ 
+ .filter-select {
+   min-width: auto;
+ }
+ 
+ .section-header {
+   flex-direction: column;
+   align-items: stretch;
+ }
+ 
+ .paginacion-info {
+   flex-direction: column;
+   align-items: stretch;
+   text-align: center;
+ }
+ 
+ .tabla-wrapper {
+   overflow-x: scroll;
+ }
+ 
+ .usuarios-tabla {
+   min-width: 800px;
+ }
+ 
+ .tarjetas-grid {
+   grid-template-columns: 1fr;
+ }
+ 
+ .card-actions {
+   justify-content: stretch;
+ }
+ 
+ .card-actions .btn {
+   flex: 1;
+   justify-content: center;
+ }
+ 
+ .detalle-item {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 0.5rem;
+ }
+ 
+ .form-grid {
+   grid-template-columns: 1fr;
+ }
+ 
+ .modal-footer {
+   flex-direction: column;
+ }
+ 
+ .modal-confirmacion {
+   max-width: 95%;
+   margin: 1rem;
+ }
+ 
+ .usuario-info-resumen {
+   flex-direction: column;
+   text-align: center;
+   gap: 0.75rem;
+ }
+ 
+ .icono-estado {
+   width: 60px;
+   height: 60px;
+   font-size: 1.5rem;
+ }
+ 
+ .cambio-estado-visual {
+   padding: 1rem;
+ }
 }
-.estadisticas-grid {
-grid-template-columns: repeat(2, 1fr);
-}
-.filtros-grid {
-flex-direction: column;
-align-items: stretch;
-}
-.filter-select {
-min-width: auto;
-}
-.section-header {
-flex-direction: column;
-align-items: stretch;
-}
-.paginacion-info {
-flex-direction: column;
-align-items: stretch;
-text-align: center;
-}
-.tabla-wrapper {
-overflow-x: scroll;
-}
-.usuarios-tabla {
-min-width: 800px;
-}
-.tarjetas-grid {
-grid-template-columns: 1fr;
-}
-.card-actions {
-justify-content: stretch;
-}
-.card-actions .btn {
-flex: 1;
-justify-content: center;
-}
-.detalle-item {
-flex-direction: column;
-align-items: flex-start;
-gap: 0.5rem;
-}
-.form-grid {
-grid-template-columns: 1fr;
-}
-.modal-footer {
-flex-direction: column;
-}
-}
+
 @media (max-width: 480px) {
-.estadisticas-grid {
-grid-template-columns: 1fr;
-}
-.filtros-section,
-.usuarios-section {
-padding: 1rem;
-}
-.stat-card {
-padding: 1rem;
-}
-.usuario-card {
-padding: 1rem;
-}
-.modal-content {
-margin: 0.5rem;
-}
-.btn-pag {
-min-width: 35px;
-padding: 0.375rem 0.5rem;
-}
-.card-actions {
-flex-direction: column;
-}
-.card-actions .btn {
-width: 100%;
-}
+ .estadisticas-grid {
+   grid-template-columns: 1fr;
+ }
+ 
+ .filtros-section,
+ .usuarios-section {
+   padding: 1rem;
+ }
+ 
+ .stat-card {
+   padding: 1rem;
+ }
+ 
+ .usuario-card {
+   padding: 1rem;
+ }
+ 
+ .modal-content {
+   margin: 0.5rem;
+ }
+ 
+ .btn-pag {
+   min-width: 35px;
+   padding: 0.375rem 0.5rem;
+ }
+ 
+ .card-actions {
+   flex-direction: column;
+ }
+ 
+ .card-actions .btn {
+   width: 100%;
+ }
+ 
+ .modal-confirmacion {
+   max-width: 100%;
+   margin: 0.5rem;
+ }
+ 
+ .usuario-avatar {
+   width: 50px;
+   height: 50px;
+   font-size: 1.2rem;
+ }
+ 
+ .pregunta-principal {
+   font-size: 1rem;
+ }
+ 
+ .advertencia-estado,
+ .info-estado {
+   padding: 0.75rem;
+   font-size: 0.85rem;
+ }
 }
 </style>
