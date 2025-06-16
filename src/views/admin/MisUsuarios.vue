@@ -1,0 +1,1930 @@
+<template>
+  <div class="admin-usuarios-container">
+    <!-- Header de la página -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">Gestión de Usuarios</h1>
+        <p class="page-subtitle">Administración y control de todos los usuarios del sistema</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" @click="nuevoUsuario">
+          <i class="fas fa-plus btn-icon"></i>
+          Nuevo Usuario
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros y búsqueda -->
+    <div class="filtros-section">
+      <div class="filtros-container">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            v-model="filtros.busqueda"
+            type="text"
+            placeholder="Buscar por nombre, correo, usuario..."
+            class="search-input"
+          />
+        </div>
+        
+        <div class="filtros-grid">
+          <select v-model="filtros.tipoUsuario" class="filter-select">
+            <option value="">Todos los tipos</option>
+            <option value="admin">Administrador</option>
+            <option value="vendedor">Vendedor</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="cliente">Cliente</option>
+          </select>
+          
+          <select v-model="filtros.estado" class="filter-select">
+            <option value="">Todos los estados</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+          </select>
+          
+          <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
+            <option value="10">10 por página</option>
+            <option value="25">25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+          </select>
+          
+          <button class="btn btn-secondary" @click="limpiarFiltros">
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="estadisticas-grid">
+      <div class="stat-card total">
+        <div class="stat-content">
+          <div class="stat-number">{{ estadisticas.total }}</div>
+          <div class="stat-label">Total Usuarios</div>
+        </div>
+      </div>
+      
+      <div class="stat-card activos">
+        <div class="stat-content">
+          <div class="stat-number">{{ estadisticas.activos }}</div>
+          <div class="stat-label">Usuarios Activos</div>
+        </div>
+      </div>
+      
+      <div class="stat-card admins">
+        <div class="stat-content">
+          <div class="stat-number">{{ estadisticas.administradores }}</div>
+          <div class="stat-label">Administradores</div>
+        </div>
+      </div>
+      
+      <div class="stat-card vendedores">
+        <div class="stat-content">
+          <div class="stat-number">{{ estadisticas.vendedores }}</div>
+          <div class="stat-label">Vendedores</div>
+        </div>
+      </div>
+
+      <div class="stat-card inactivos">
+        <div class="stat-content">
+          <div class="stat-number">{{ estadisticas.inactivos }}</div>
+          <div class="stat-label">Usuarios Inactivos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usuarios section -->
+    <div class="usuarios-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          {{ usuariosFiltrados.length }} Usuarios encontrados
+        </h2>
+        <div class="view-controls">
+          <button 
+            class="view-btn"
+            :class="{ active: vistaActual === 'tabla' }"
+            @click="vistaActual = 'tabla'"
+          >
+            <i class="fas fa-table"></i> Tabla
+          </button>
+          <button 
+            class="view-btn"
+            :class="{ active: vistaActual === 'tarjetas' }"
+            @click="vistaActual = 'tarjetas'"
+          >
+            <i class="fas fa-th-large"></i> Tarjetas
+          </button>
+        </div>
+      </div>
+
+      <!-- Información de paginación superior -->
+      <div class="paginacion-info">
+        <span class="items-info">
+          Mostrando {{ rangoInicio }} - {{ rangoFin }} de {{ usuariosFiltrados.length }} usuarios
+        </span>
+        <div class="pagination-jump">
+          <label for="jump-page">Ir a página:</label>
+          <input 
+            id="jump-page"
+            type="number" 
+            v-model.number="paginaSalto" 
+            @keyup.enter="irAPagina"
+            :min="1" 
+            :max="totalPaginas"
+            class="page-input"
+          >
+          <button class="btn btn-sm btn-outline" @click="irAPagina">
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Vista de tabla -->
+      <div v-if="vistaActual === 'tabla'" class="tabla-container">
+        <div class="tabla-wrapper">
+          <table class="usuarios-tabla">
+            <thead>
+              <tr>
+                <th @click="ordenarPor('id')" class="sortable">
+                  ID
+                  <span class="sort-icon">{{ getSortIcon('id') }}</span>
+                </th>
+                <th @click="ordenarPor('nombreCompleto')" class="sortable">
+                  Nombre Completo
+                  <span class="sort-icon">{{ getSortIcon('nombreCompleto') }}</span>
+                </th>
+                <th @click="ordenarPor('correo')" class="sortable">
+                  Correo Electrónico
+                  <span class="sort-icon">{{ getSortIcon('correo') }}</span>
+                </th>
+                <th @click="ordenarPor('usuario')" class="sortable">
+                  Usuario
+                  <span class="sort-icon">{{ getSortIcon('usuario') }}</span>
+                </th>
+                <th @click="ordenarPor('tipoUsuario')" class="sortable">
+                  Tipo de Usuario
+                  <span class="sort-icon">{{ getSortIcon('tipoUsuario') }}</span>
+                </th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="usuario in usuariosPaginados" :key="usuario.id">
+                <td>
+                  <span class="usuario-id">#{{ String(usuario.id).padStart(4, '0') }}</span>
+                </td>
+                <td>
+                  <div class="usuario-info">
+                    <span class="usuario-nombre">{{ usuario.nombreCompleto }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="usuario-correo">{{ usuario.correo }}</span>
+                </td>
+                <td>
+                  <span class="usuario-username">{{ usuario.usuario }}</span>
+                </td>
+                <td>
+                  <span class="tipo-badge" :class="usuario.tipoUsuario">
+                    {{ getTipoTexto(usuario.tipoUsuario) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="estado-badge" :class="usuario.estado">
+                    {{ getEstadoTexto(usuario.estado) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="acciones">
+                    <button 
+                      class="btn-accion ver"
+                      @click="verUsuario(usuario)"
+                      title="Ver detalles"
+                    >
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button 
+                      class="btn-accion editar"
+                      @click="editarUsuario(usuario)"
+                      title="Editar usuario"
+                    >
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button 
+                      class="btn-accion" 
+                      :class="usuario.estado === 'activo' ? 'deshabilitar' : 'habilitar'"
+                      @click="cambiarEstadoUsuario(usuario)"
+                      :title="usuario.estado === 'activo' ? 'Deshabilitar cuenta' : 'Habilitar cuenta'"
+                    >
+                      <i :class="usuario.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vista de tarjetas -->
+      <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
+        <div class="tarjetas-grid">
+          <div 
+            v-for="usuario in usuariosPaginados" 
+            :key="usuario.id"
+            class="usuario-card"
+          >
+            <div class="card-header">
+              <div class="card-numero">#{{ String(usuario.id).padStart(4, '0') }}</div>
+              <span class="estado-badge" :class="usuario.estado">
+                {{ getEstadoTexto(usuario.estado) }}
+              </span>
+            </div>
+            
+            <div class="card-content">
+              <h3 class="usuario-nombre-card">{{ usuario.nombreCompleto }}</h3>
+              <p class="usuario-email-card">{{ usuario.correo }}</p>
+              
+              <div class="usuario-details">
+                <div class="detail">
+                  <span class="detail-label">Usuario:</span>
+                  <span class="detail-value usuario-username-card">{{ usuario.usuario }}</span>
+                </div>
+                
+                <div class="detail">
+                  <span class="detail-label">Tipo:</span>
+                  <span class="tipo-badge" :class="usuario.tipoUsuario">
+                    {{ getTipoTexto(usuario.tipoUsuario) }}
+                  </span>
+                </div>
+                
+                <div class="detail">
+                  <span class="detail-label">Teléfono:</span>
+                  <span class="detail-value">{{ usuario.telefono || 'No registrado' }}</span>
+                </div>
+                
+                <div class="detail">
+                  <span class="detail-label">Registro:</span>
+                  <span class="detail-value">{{ formatearFecha(usuario.fechaCreacion) }}</span>
+                </div>
+                
+                <div class="detail">
+                  <span class="detail-label">Último acceso:</span>
+                  <span class="detail-value">{{ formatearFecha(usuario.ultimoAcceso) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-actions">
+              <button class="btn btn-sm btn-outline" @click="verUsuario(usuario)">
+                Ver Detalles
+              </button>
+              <button class="btn btn-sm btn-primary" @click="editarUsuario(usuario)">
+                <i class="fas fa-edit"></i> Editar
+              </button>
+              <button 
+                class="btn btn-sm"
+                :class="usuario.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+                @click="cambiarEstadoUsuario(usuario)"
+              >
+                <i :class="usuario.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+                {{ usuario.estado === 'activo' ? 'Deshabilitar' : 'Habilitar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mensaje cuando no hay usuarios -->
+      <div v-if="usuariosFiltrados.length === 0" class="empty-state">
+        <div class="empty-icon"><i class="fas fa-users"></i></div>
+        <h3 class="empty-title">No hay usuarios</h3>
+        <p class="empty-description">
+          {{ filtros.busqueda || filtros.tipoUsuario || filtros.estado 
+            ? 'No se encontraron usuarios con los filtros aplicados.' 
+            : 'Aún no se han registrado usuarios en el sistema.' }}
+        </p>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="totalPaginas > 1" class="paginacion-completa">
+        <div class="paginacion">
+          <button 
+            class="btn-pag"
+            @click="irAPrimera"
+            :disabled="paginaActual === 1"
+            title="Primera página"
+          >
+            <i class="fas fa-angle-double-left"></i>
+          </button>
+
+          <button 
+            class="btn-pag"
+            @click="paginaActual = paginaActual - 1"
+            :disabled="paginaActual === 1"
+            title="Página anterior"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          
+          <div class="paginas">
+            <button
+              v-if="paginasVisibles[0] > 1"
+              class="btn-pag"
+              @click="paginaActual = 1"
+            >
+              1
+            </button>
+            
+            <span v-if="paginasVisibles[0] > 2" class="pagina-separador">...</span>
+            
+            <button
+              v-for="pagina in paginasVisibles"
+              :key="pagina"
+              class="btn-pag"
+              :class="{ active: pagina === paginaActual }"
+              @click="paginaActual = pagina"
+            >
+              {{ pagina }}
+            </button>
+            
+            <span v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas - 1" class="pagina-separador">...</span>
+            
+            <button
+              v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas"
+              class="btn-pag"
+              @click="paginaActual = totalPaginas"
+            >
+              {{ totalPaginas }}
+            </button>
+          </div>
+          
+          <button 
+            class="btn-pag"
+            @click="paginaActual = paginaActual + 1"
+            :disabled="paginaActual === totalPaginas"
+            title="Página siguiente"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+
+          <button 
+            class="btn-pag"
+            @click="irAUltima"
+            :disabled="paginaActual === totalPaginas"
+            title="Última página"
+          >
+            <i class="fas fa-angle-double-right"></i>
+          </button>
+        </div>
+
+        <div class="paginacion-info-bottom">
+          <span class="pagina-actual">
+            Página {{ paginaActual }} de {{ totalPaginas }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de vista previa -->
+    <div v-if="modalUsuario" class="modal-overlay" @click="cerrarModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Usuario #{{ String(modalUsuario.id).padStart(4, '0') }}</h3>
+          <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="usuario-detalle">
+            <div class="detalle-grid">
+              <div class="detalle-item">
+                <strong>Nombre Completo:</strong> {{ modalUsuario.nombreCompleto }}
+              </div>
+              <div class="detalle-item">
+                <strong>Correo Electrónico:</strong> {{ modalUsuario.correo }}
+              </div>
+              <div class="detalle-item">
+                <strong>Usuario:</strong> {{ modalUsuario.usuario }}
+              </div>
+              <div class="detalle-item">
+                <strong>Tipo de Usuario:</strong> 
+                <span class="tipo-badge" :class="modalUsuario.tipoUsuario">
+                  {{ getTipoTexto(modalUsuario.tipoUsuario) }}
+                </span>
+              </div>
+              <div class="detalle-item">
+                <strong>Teléfono:</strong> {{ modalUsuario.telefono || 'No registrado' }}
+              </div>
+              <div class="detalle-item">
+                <strong>Fecha de Registro:</strong> {{ formatearFecha(modalUsuario.fechaCreacion) }}
+              </div>
+              <div class="detalle-item">
+                <strong>Estado:</strong> 
+                <span class="estado-badge" :class="modalUsuario.estado">
+                  {{ getEstadoTexto(modalUsuario.estado) }}
+                </span>
+              </div>
+              <div class="detalle-item">
+                <strong>Último Acceso:</strong> {{ formatearFecha(modalUsuario.ultimoAcceso) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" @click="cerrarModal">Cerrar</button>
+          <button class="btn btn-primary" @click="editarUsuario(modalUsuario)">
+            <i class="fas fa-edit"></i> Editar Usuario
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de formulario -->
+    <div v-if="modalFormulario" class="modal-overlay" @click="cerrarModalFormulario">
+      <div class="modal-content modal-formulario" @click.stop>
+        <div class="modal-header">
+          <h3>{{ usuarioEditando ? 'Editar Usuario' : 'Nuevo Usuario' }}</h3>
+          <button class="btn-close" @click="cerrarModalFormulario"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="guardarUsuario" class="formulario-usuario">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="nombreCompleto">Nombre Completo *</label>
+                <input 
+                  id="nombreCompleto"
+                  v-model="formulario.nombreCompleto" 
+                  type="text" 
+                  required 
+                  class="form-input"
+                  placeholder="Ingrese el nombre completo"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="correo">Correo Electrónico *</label>
+                <input 
+                  id="correo"
+                  v-model="formulario.correo" 
+                  type="email" 
+                  required 
+                  class="form-input"
+                  placeholder="correo@ejemplo.com"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="usuario">Usuario *</label>
+                <input 
+                  id="usuario"
+                  v-model="formulario.usuario" 
+                  type="text" 
+                  required 
+                  class="form-input"
+                  placeholder="Nombre de usuario"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input 
+                  id="telefono"
+                  v-model="formulario.telefono" 
+                  type="tel" 
+                  class="form-input"
+                  placeholder="+504 0000-0000"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="tipoUsuario">Tipo de Usuario *</label>
+                <select id="tipoUsuario" v-model="formulario.tipoUsuario" required class="form-select">
+                  <option value="">Seleccione un tipo</option>
+                  <option value="admin">Administrador</option>
+                  <option value="vendedor">Vendedor</option>
+                  <option value="supervisor">Supervisor</option>
+                  <option value="cliente">Cliente</option>
+                </select>
+              </div>
+              
+              <div class="form-group" v-if="!usuarioEditando">
+                <label for="password">Contraseña *</label>
+                <div class="password-input">
+                  <input 
+                    id="password"
+                    v-model="formulario.password" 
+                    :type="mostrarPassword ? 'text' : 'password'"
+                    required 
+                    class="form-input"
+                    placeholder="Mínimo 8 caracteres"
+                  >
+                  <button 
+                    type="button" 
+                    class="password-toggle"
+                    @click="mostrarPassword = !mostrarPassword"
+                  >
+                    <i :class="mostrarPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="form-group" v-if="!usuarioEditando">
+                <label for="confirmPassword">Confirmar Contraseña *</label>
+                <input 
+                  id="confirmPassword"
+                  v-model="formulario.confirmPassword" 
+                  type="password" 
+                  required 
+                  class="form-input"
+                  placeholder="Confirme la contraseña"
+                >
+              </div>
+              
+              <div class="form-group" v-if="usuarioEditando">
+                <label for="estado">Estado</label>
+                <select id="estado" v-model="formulario.estado" class="form-select">
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" @click="cerrarModalFormulario">Cancelar</button>
+          <button type="button" class="btn btn-primary" @click="guardarUsuario">
+            <i class="fas fa-save"></i> {{ usuarioEditando ? 'Actualizar' : 'Crear' }} Usuario
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'AdminUsuarios',
+  data() {
+    return {
+      vistaActual: 'tabla',
+      modalUsuario: null,
+      modalFormulario: false,
+      usuarioEditando: null,
+      mostrarPassword: false,
+      paginaActual: 1,
+      itemsPorPagina: 25,
+      paginaSalto: 1,
+      ordenActual: { campo: 'id', direccion: 'desc' },
+      
+      filtros: {
+        busqueda: '',
+        tipoUsuario: '',
+        estado: ''
+      },
+      
+      formulario: {
+        nombreCompleto: '',
+        correo: '',
+        usuario: '',
+        telefono: '',
+        tipoUsuario: '',
+        password: '',
+        confirmPassword: '',
+        estado: 'activo'
+      },
+      
+      // Datos simulados para demostración
+      usuarios: [
+        {
+          id: 1,
+          nombreCompleto: 'Carlos Mendoza Ruiz',
+          correo: 'carlos.mendoza@empresa.com',
+          usuario: 'cmendoza',
+          telefono: '+504 9876-5432',
+          tipoUsuario: 'admin',
+          estado: 'activo',
+          fechaCreacion: '2024-01-15',
+          ultimoAcceso: '2024-06-15'
+        },
+        {
+          id: 2,
+          nombreCompleto: 'Ana García López',
+          correo: 'ana.garcia@empresa.com',
+          usuario: 'agarcia',
+          telefono: '+504 8765-4321',
+          tipoUsuario: 'vendedor',
+          estado: 'activo',
+          fechaCreacion: '2024-01-20',
+          ultimoAcceso: '2024-06-14'
+        },
+        {
+          id: 3,
+          nombreCompleto: 'Luis Rodríguez Pérez',
+          correo: 'luis.rodriguez@empresa.com',
+          usuario: 'lrodriguez',
+          telefono: '+504 7654-3210',
+          tipoUsuario: 'vendedor',
+          estado: 'activo',
+          fechaCreacion: '2024-01-25',
+          ultimoAcceso: '2024-06-13'
+        },
+        {
+          id: 4,
+          nombreCompleto: 'María López Sánchez',
+          correo: 'maria.lopez@empresa.com',
+          usuario: 'mlopez',
+          telefono: '+504 6543-2109',
+          tipoUsuario: 'supervisor',
+          estado: 'inactivo',
+          fechaCreacion: '2024-02-01',
+          ultimoAcceso: '2024-05-30'
+        },
+        {
+          id: 5,
+          nombreCompleto: 'Pedro Sánchez Martínez',
+          correo: 'pedro.sanchez@empresa.com',
+          usuario: 'psanchez',
+          telefono: '+504 5432-1098',
+          tipoUsuario: 'vendedor',
+          estado: 'activo',
+          fechaCreacion: '2024-02-05',
+          ultimoAcceso: '2024-06-12'
+        },
+        // Generar más datos para demostración
+        ...Array.from({ length: 45 }, (_, i) => ({
+          id: i + 6,
+          nombreCompleto: `Usuario ${i + 6} Apellido${i + 6}`,
+          correo: `usuario${i + 6}@empresa.com`,
+          usuario: `user${i + 6}`,
+          telefono: `+504 ${String(Math.floor(Math.random() * 9000) + 1000)}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+          tipoUsuario: ['admin', 'vendedor', 'supervisor', 'cliente'][Math.floor(Math.random() * 4)],
+          estado: Math.random() > 0.2 ? 'activo' : 'inactivo',
+          fechaCreacion: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+          ultimoAcceso: `2024-0${Math.floor(Math.random() * 6) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`
+        }))
+      ]
+    }
+  },
+  
+  computed: {
+    usuariosFiltrados() {
+      let resultado = [...this.usuarios];
+      
+      // Filtro por búsqueda
+      if (this.filtros.busqueda) {
+        const busqueda = this.filtros.busqueda.toLowerCase();
+        resultado = resultado.filter(usuario => 
+          usuario.nombreCompleto.toLowerCase().includes(busqueda) ||
+          usuario.correo.toLowerCase().includes(busqueda) ||
+          usuario.usuario.toLowerCase().includes(busqueda) ||
+          (usuario.telefono && usuario.telefono.toLowerCase().includes(busqueda))
+        );
+      }
+      
+      // Filtro por tipo de usuario
+      if (this.filtros.tipoUsuario) {
+        resultado = resultado.filter(usuario => 
+          usuario.tipoUsuario === this.filtros.tipoUsuario
+        );
+      }
+
+      // Filtro por estado
+      if (this.filtros.estado) {
+        resultado = resultado.filter(usuario => 
+          usuario.estado === this.filtros.estado
+        );
+      }
+      
+      // Ordenamiento
+      resultado.sort((a, b) => {
+        let valorA = a[this.ordenActual.campo];
+        let valorB = b[this.ordenActual.campo];
+        
+        if (this.ordenActual.campo === 'fechaCreacion' || this.ordenActual.campo === 'ultimoAcceso') {
+          valorA = new Date(valorA);
+          valorB = new Date(valorB);
+        }
+        
+        if (valorA < valorB) {
+          return this.ordenActual.direccion === 'asc' ? -1 : 1;
+        }
+        if (valorA > valorB) {
+          return this.ordenActual.direccion === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+      
+      return resultado;
+    },
+    
+    usuariosPaginados() {
+      const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+      const fin = inicio + this.itemsPorPagina;
+      return this.usuariosFiltrados.slice(inicio, fin);
+    },
+    
+    totalPaginas() {
+      return Math.ceil(this.usuariosFiltrados.length / this.itemsPorPagina);
+    },
+    
+    paginasVisibles() {
+      const total = this.totalPaginas;
+      const actual = this.paginaActual;
+      const rango = 2;
+      
+      let inicio = Math.max(1, actual - rango);
+      let fin = Math.min(total, actual + rango);
+      
+      if (fin - inicio < 4) {
+        if (inicio === 1) {
+          fin = Math.min(total, inicio + 4);
+        } else if (fin === total) {
+          inicio = Math.max(1, fin - 4);
+        }
+      }
+      
+      const paginas = [];
+      for (let i = inicio; i <= fin; i++) {
+        paginas.push(i);
+      }
+      return paginas;
+    },
+    
+    rangoInicio() {
+      return (this.paginaActual - 1) * this.itemsPorPagina + 1;
+    },
+    
+    rangoFin() {
+      return Math.min(this.paginaActual * this.itemsPorPagina, this.usuariosFiltrados.length);
+    },
+    
+    estadisticas() {
+      return {
+        total: this.usuarios.length,
+        activos: this.usuarios.filter(u => u.estado === 'activo').length,
+        inactivos: this.usuarios.filter(u => u.estado === 'inactivo').length,
+        administradores: this.usuarios.filter(u => u.tipoUsuario === 'admin').length,
+vendedores: this.usuarios.filter(u => u.tipoUsuario === 'vendedor').length,
+supervisores: this.usuarios.filter(u => u.tipoUsuario === 'supervisor').length,
+clientes: this.usuarios.filter(u => u.tipoUsuario === 'cliente').length
+};
+}
+},
+watch: {
+// Resetear a la primera página cuando cambien los filtros
+'filtros.busqueda'() {
+this.paginaActual = 1;
+},
+'filtros.tipoUsuario'() {
+this.paginaActual = 1;
+},
+'filtros.estado'() {
+this.paginaActual = 1;
+},
+// Actualizar paginaSalto cuando cambie la página actual
+paginaActual(newVal) {
+  this.paginaSalto = newVal;
+}
+},
+methods: {
+nuevoUsuario() {
+this.usuarioEditando = null;
+this.limpiarFormulario();
+this.modalFormulario = true;
+},
+verUsuario(usuario) {
+  this.modalUsuario = usuario;
+},
+
+editarUsuario(usuario) {
+  this.usuarioEditando = usuario;
+  this.llenarFormulario(usuario);
+  this.modalFormulario = true;
+  this.modalUsuario = null;
+},
+
+cambiarEstadoUsuario(usuario) {
+  const accion = usuario.estado === 'activo' ? 'deshabilitar' : 'habilitar';
+  const confirmacion = confirm(`¿Está seguro que desea ${accion} la cuenta de ${usuario.nombreCompleto}?`);
+  
+  if (confirmacion) {
+    usuario.estado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
+    alert(`Cuenta ${accion === 'deshabilitar' ? 'deshabilitada' : 'habilitada'} exitosamente`);
+  }
+},
+
+guardarUsuario() {
+  // Validaciones
+  if (!this.formulario.nombreCompleto || !this.formulario.correo || !this.formulario.usuario || !this.formulario.tipoUsuario) {
+    alert('Por favor complete todos los campos obligatorios');
+    return;
+  }
+  
+  if (!this.usuarioEditando && !this.formulario.password) {
+    alert('La contraseña es obligatoria para usuarios nuevos');
+    return;
+  }
+  
+  if (!this.usuarioEditando && this.formulario.password !== this.formulario.confirmPassword) {
+    alert('Las contraseñas no coinciden');
+    return;
+  }
+  
+  // Verificar usuario único
+  const usuarioExiste = this.usuarios.some(u => 
+    u.usuario === this.formulario.usuario && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
+  );
+  
+  if (usuarioExiste) {
+    alert('Ya existe un usuario con ese nombre de usuario');
+    return;
+  }
+  
+  // Verificar correo único
+  const correoExiste = this.usuarios.some(u => 
+    u.correo === this.formulario.correo && (!this.usuarioEditando || u.id !== this.usuarioEditando.id)
+  );
+  
+  if (correoExiste) {
+    alert('Ya existe un usuario con ese correo electrónico');
+    return;
+  }
+  
+  if (this.usuarioEditando) {
+    // Actualizar usuario existente
+    Object.assign(this.usuarioEditando, {
+      nombreCompleto: this.formulario.nombreCompleto,
+      correo: this.formulario.correo,
+      usuario: this.formulario.usuario,
+      telefono: this.formulario.telefono,
+      tipoUsuario: this.formulario.tipoUsuario,
+      estado: this.formulario.estado
+    });
+    alert('Usuario actualizado exitosamente');
+  } else {
+    // Crear nuevo usuario
+    const nuevoUsuario = {
+      id: Math.max(...this.usuarios.map(u => u.id)) + 1,
+      nombreCompleto: this.formulario.nombreCompleto,
+      correo: this.formulario.correo,
+      usuario: this.formulario.usuario,
+      telefono: this.formulario.telefono,
+      tipoUsuario: this.formulario.tipoUsuario,
+      estado: 'activo',
+      fechaCreacion: new Date().toISOString().split('T')[0],
+      ultimoAcceso: new Date().toISOString().split('T')[0]
+    };
+    this.usuarios.push(nuevoUsuario);
+    alert('Usuario creado exitosamente');
+  }
+  
+  this.cerrarModalFormulario();
+},
+
+llenarFormulario(usuario) {
+  this.formulario = {
+    nombreCompleto: usuario.nombreCompleto,
+    correo: usuario.correo,
+    usuario: usuario.usuario,
+    telefono: usuario.telefono,
+    tipoUsuario: usuario.tipoUsuario,
+    password: '',
+    confirmPassword: '',
+    estado: usuario.estado
+  };
+},
+
+limpiarFormulario() {
+  this.formulario = {
+    nombreCompleto: '',
+    correo: '',
+    usuario: '',
+    telefono: '',
+    tipoUsuario: '',
+    password: '',
+    confirmPassword: '',
+    estado: 'activo'
+  };
+},
+
+ordenarPor(campo) {
+  if (this.ordenActual.campo === campo) {
+    this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+  } else {
+    this.ordenActual = { campo, direccion: 'asc' };
+  }
+},
+
+getSortIcon(campo) {
+  if (this.ordenActual.campo !== campo) return '↕';
+  return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+},
+
+limpiarFiltros() {
+  this.filtros = {
+    busqueda: '',
+    tipoUsuario: '',
+    estado: ''
+  };
+  this.paginaActual = 1;
+  this.paginaSalto = 1;
+},
+
+cerrarModal() {
+  this.modalUsuario = null;
+},
+
+cerrarModalFormulario() {
+  this.modalFormulario = false;
+  this.usuarioEditando = null;
+  this.limpiarFormulario();
+  this.mostrarPassword = false;
+},
+
+// Métodos de paginación
+cambiarItemsPorPagina() {
+  this.paginaActual = 1;
+  this.paginaSalto = 1;
+},
+
+irAPrimera() {
+  this.paginaActual = 1;
+},
+
+irAUltima() {
+  this.paginaActual = this.totalPaginas;
+},
+
+irAPagina() {
+  if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
+    this.paginaActual = this.paginaSalto;
+  } else {
+    alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
+    this.paginaSalto = this.paginaActual;
+  }
+},
+
+formatearFecha(fecha) {
+  return new Date(fecha).toLocaleDateString('es-HN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+},
+
+getTipoTexto(tipo) {
+  const tipos = {
+    admin: 'Administrador',
+    vendedor: 'Vendedor',
+    supervisor: 'Supervisor',
+    cliente: 'Cliente'
+  };
+  return tipos[tipo] || tipo;
+},
+
+getEstadoTexto(estado) {
+  const estados = {
+    activo: 'Activo',
+    inactivo: 'Inactivo'
+  };
+  return estados[estado] || estado;
+}
+}
+}
+</script>
+<style scoped>
+/* Estilos base heredados del componente de cotizaciones */
+.admin-usuarios-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.header-content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.header-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #3498db;
+  border: 2px solid #3498db;
+}
+
+.btn-outline:hover {
+  background: #3498db;
+  color: white;
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c0392b;
+}
+
+.btn-success {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #219a52;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* Filtros */
+.filtros-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.filtros-container {
+  display: grid;
+  gap: 1rem;
+}
+
+.search-box {
+  position: relative;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: #7f8c8d;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 3rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.filtros-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  min-width: 180px;
+  cursor: pointer;
+}
+
+/* Estadísticas */
+.estadisticas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1;
+}
+
+.stat-label {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.stat-card.total { border-left: 4px solid #3498db; }
+.stat-card.activos { border-left: 4px solid #27ae60; }
+.stat-card.admins { border-left: 4px solid #e74c3c; }
+.stat-card.vendedores { border-left: 4px solid #f39c12; }
+.stat-card.inactivos { border-left: 4px solid #95a5a6; }
+
+/* Usuarios section */
+.usuarios-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.view-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.view-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e1e8ed;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* Tabla */
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+.usuarios-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.usuarios-tabla th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e9ecef;
+  white-space: nowrap;
+}
+
+.usuarios-tabla th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.usuarios-tabla th.sortable:hover {
+  background: #e9ecef;
+}
+
+.sort-icon {
+  margin-left: 0.5rem;
+  opacity: 0.5;
+}
+
+.usuarios-tabla td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.usuario-id {
+  font-weight: 600;
+  color: #3498db;
+  font-family: monospace;
+  font-size: 1rem;
+}
+
+.usuario-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.usuario-nombre {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.usuario-correo {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.usuario-username {
+  font-family: monospace;
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #2c3e50;
+}
+
+/* Vista de tarjetas */
+.tarjetas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.usuario-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.usuario-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card-numero {
+  font-weight: 600;
+  color: #3498db;
+  font-family: monospace;
+  font-size: 1.1rem;
+}
+
+.card-content h3 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.usuario-nombre-card {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.usuario-email-card {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.usuario-details {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.detail-label {
+  color: #7f8c8d;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.usuario-username-card {
+  font-family: monospace;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.card-actions .btn {
+  flex: 1;
+  justify-content: center;
+  min-width: auto;
+}
+
+/* Badges de tipo de usuario */
+.tipo-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tipo-badge.admin {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.tipo-badge.vendedor {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fed7aa;
+}
+
+.tipo-badge.supervisor {
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.tipo-badge.cliente {
+  background: #d1fae5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* Badges de estado */
+.estado-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.estado-badge.activo {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.estado-badge.inactivo {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Acciones */
+.acciones {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-accion {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-accion.ver {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.btn-accion.ver:hover {
+  background: #bbdefb;
+}
+
+.btn-accion.editar {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.btn-accion.editar:hover {
+  background: #ffe0b2;
+}
+
+.btn-accion.deshabilitar {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.btn-accion.deshabilitar:hover {
+  background: #ffcdd2;
+}
+
+.btn-accion.habilitar {
+  background: #e8f5e8;
+  color: #388e3c;
+}
+
+.btn-accion.habilitar:hover {
+  background: #c8e6c9;
+}
+
+/* Estado vacío */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #7f8c8d;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.empty-description {
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Paginación */
+.paginacion-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.items-info {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pagination-jump {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-jump label {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.page-input {
+  width: 60px;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.page-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.paginacion-completa {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.btn-pag {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.btn-pag:hover:not(:disabled) {
+  background: #e9ecef;
+  transform: translateY(-1px);
+}
+
+.btn-pag:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-pag.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+  font-weight: 600;
+}
+
+.paginas {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.pagina-separador {
+  padding: 0.5rem 0.25rem;
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.paginacion-info-bottom {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.pagina-actual {
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-formulario {
+  max-width: 900px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #7f8c8d;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  background: #f8f9fa;
+  color: #e74c3c;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+/* Detalle de usuario */
+.usuario-detalle {
+  padding: 1rem 0;
+}
+
+.detalle-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detalle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.detalle-item strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Formulario */
+.formulario-usuario {
+  padding: 1rem 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.form-input,
+.form-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #7f8c8d;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+
+.password-toggle:hover {
+  color: #2c3e50;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .estadisticas-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-usuarios-container {
+    padding: 1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+  .header-content h1 {
+font-size: 2rem;
+}
+.estadisticas-grid {
+grid-template-columns: repeat(2, 1fr);
+}
+.filtros-grid {
+flex-direction: column;
+align-items: stretch;
+}
+.filter-select {
+min-width: auto;
+}
+.section-header {
+flex-direction: column;
+align-items: stretch;
+}
+.paginacion-info {
+flex-direction: column;
+align-items: stretch;
+text-align: center;
+}
+.tabla-wrapper {
+overflow-x: scroll;
+}
+.usuarios-tabla {
+min-width: 800px;
+}
+.tarjetas-grid {
+grid-template-columns: 1fr;
+}
+.card-actions {
+justify-content: stretch;
+}
+.card-actions .btn {
+flex: 1;
+justify-content: center;
+}
+.detalle-item {
+flex-direction: column;
+align-items: flex-start;
+gap: 0.5rem;
+}
+.form-grid {
+grid-template-columns: 1fr;
+}
+.modal-footer {
+flex-direction: column;
+}
+}
+@media (max-width: 480px) {
+.estadisticas-grid {
+grid-template-columns: 1fr;
+}
+.filtros-section,
+.usuarios-section {
+padding: 1rem;
+}
+.stat-card {
+padding: 1rem;
+}
+.usuario-card {
+padding: 1rem;
+}
+.modal-content {
+margin: 0.5rem;
+}
+.btn-pag {
+min-width: 35px;
+padding: 0.375rem 0.5rem;
+}
+.card-actions {
+flex-direction: column;
+}
+.card-actions .btn {
+width: 100%;
+}
+}
+</style>

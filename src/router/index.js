@@ -9,14 +9,26 @@ import Cotizacion from '@/views/shared/Cotizacion.vue';
 import Configuracion from '@/views/shared/Configuracion.vue';
 
 // Vistas por Rol
-import VendedorDashboard from '@/views/vendedor/Dashboard.vue';
 
+
+
+// Vistas para Admin
 import AdminDashboard from '@/views/admin/Dashboard.vue';
+import MisCotizacione from '@/views/admin/MisCotizaciones.vue';
+import MisUsuarios from '@/views/admin/MisUsuarios.vue';
+import MisClientes from '@/views/admin/MisClientes.vue';
+import MisServicios from '@/views/admin/MisServicios.vue';
+import MisReportes from '@/views/admin/MisReportes.vue';
 
+
+// Vistas para SuperUsuario
 import SuperDashboard from '@/views/super/Dashboard.vue';
+
+
 
 //Vistas Para Vendedor
 import MisCotizaciones from '@/views/vendedor/MisCotizaciones.vue';
+import VendedorDashboard from '@/views/vendedor/Dashboard.vue';
 
 // Guard de autenticación
 function requireAuth(to, from, next) {
@@ -79,6 +91,33 @@ const routes = [
         path: 'admin/configuracion',
         name: 'AdminConfiguracion',
         component: Configuracion
+      },
+       {
+        path: '/admin/cotizaciones',
+        name: 'MisCotizacionesAdmin',
+        component: MisCotizacione
+      },
+      {
+        path: '/admin/usuarios',
+        name: 'MisUsuarios',
+        component: MisUsuarios
+      },
+      {
+        path: '/admin/clientes',
+        name: 'MisClientes',
+        component: MisClientes
+      },
+
+       {
+        path: '/admin/servicios',
+        name: 'MisServicios',
+        component: MisServicios
+      },
+
+      {
+        path: '/admin/reportes',
+        name: 'MisReportes',
+        component: MisReportes
       },
       
       // Rutas de SuperUsuario

@@ -1,0 +1,1328 @@
+<template>
+  <div class="admin-reportes-container">
+    <!-- Header de la página -->
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">Reportes y Análisis</h1>
+        <p class="page-subtitle">Análisis detallado del desempeño del sistema de cotizaciones</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" @click="exportarReportes">
+          <i class="fas fa-download"></i>
+          Exportar Reportes
+        </button>
+        <button class="btn btn-secondary" @click="actualizarDatos">
+          <i class="fas fa-sync-alt"></i>
+          Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros de período -->
+    <div class="filtros-section">
+      <div class="filtros-container">
+        <div class="periodo-selector">
+          <label>Período de análisis:</label>
+          <select v-model="filtros.periodo" @change="actualizarReportes" class="filter-select">
+            <option value="7">Últimos 7 días</option>
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 3 meses</option>
+            <option value="180">Últimos 6 meses</option>
+            <option value="365">Último año</option>
+            <option value="custom">Período personalizado</option>
+          </select>
+        </div>
+
+        <div v-if="filtros.periodo === 'custom'" class="fechas-custom">
+          <div class="fecha-group">
+            <label>Desde:</label>
+            <input v-model="filtros.fechaInicio" type="date" class="form-input">
+          </div>
+          <div class="fecha-group">
+            <label>Hasta:</label>
+            <input v-model="filtros.fechaFin" type="date" class="form-input">
+          </div>
+          <button class="btn btn-outline" @click="aplicarFechasCustom">
+            Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Métricas principales -->
+    <div class="metricas-principales">
+      <h2 class="section-title">
+        <i class="fas fa-chart-line"></i>
+        Métricas Principales
+      </h2>
+      <div class="metricas-grid">
+        <div class="metrica-card ventas">
+          <div class="metrica-header">
+            <i class="fas fa-dollar-sign"></i>
+            <h3>Ingresos Totales</h3>
+          </div>
+          <div class="metrica-valor">{{ formatearMoneda(metricas.ingresosTotales) }}</div>
+          <div class="metrica-cambio" :class="metricas.cambioIngresos > 0 ? 'positivo' : 'negativo'">
+            <i :class="metricas.cambioIngresos > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+            {{ Math.abs(metricas.cambioIngresos) }}% vs período anterior
+          </div>
+        </div>
+
+        <div class="metrica-card cotizaciones">
+          <div class="metrica-header">
+            <i class="fas fa-file-alt"></i>
+            <h3>Cotizaciones Generadas</h3>
+          </div>
+          <div class="metrica-valor">{{ metricas.totalCotizaciones }}</div>
+          <div class="metrica-cambio" :class="metricas.cambioCotizaciones > 0 ? 'positivo' : 'negativo'">
+            <i :class="metricas.cambioCotizaciones > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+            {{ Math.abs(metricas.cambioCotizaciones) }}% vs período anterior
+          </div>
+        </div>
+
+        <div class="metrica-card conversion">
+          <div class="metrica-header">
+            <i class="fas fa-percentage"></i>
+            <h3>Tasa de Conversión</h3>
+          </div>
+          <div class="metrica-valor">{{ metricas.tasaConversion }}%</div>
+          <div class="metrica-cambio" :class="metricas.cambioConversion > 0 ? 'positivo' : 'negativo'">
+            <i :class="metricas.cambioConversion > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+            {{ Math.abs(metricas.cambioConversion) }}% vs período anterior
+          </div>
+        </div>
+
+        <div class="metrica-card ticket">
+          <div class="metrica-header">
+            <i class="fas fa-receipt"></i>
+            <h3>Ticket Promedio</h3>
+          </div>
+          <div class="metrica-valor">{{ formatearMoneda(metricas.ticketPromedio) }}</div>
+          <div class="metrica-cambio" :class="metricas.cambioTicket > 0 ? 'positivo' : 'negativo'">
+            <i :class="metricas.cambioTicket > 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
+            {{ Math.abs(metricas.cambioTicket) }}% vs período anterior
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficos principales -->
+    <div class="graficos-principales">
+      <div class="grafico-container">
+        <div class="grafico-card">
+          <div class="grafico-header">
+            <h3>
+              <i class="fas fa-chart-area"></i>
+              Ingresos por Mes
+            </h3>
+            <div class="grafico-controles">
+              <select v-model="graficoIngresos.tipo" class="control-select">
+                <option value="ingresos">Ingresos</option>
+                <option value="cotizaciones">Cotizaciones</option>
+                <option value="ambos">Ambos</option>
+              </select>
+            </div>
+          </div>
+          <div class="grafico-content">
+            <canvas ref="graficoIngresosMes" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="grafico-container">
+        <div class="grafico-card">
+          <div class="grafico-header">
+            <h3>
+              <i class="fas fa-users"></i>
+              Desempeño por Vendedor
+            </h3>
+            <div class="grafico-controles">
+              <select v-model="graficoVendedores.metrica" class="control-select">
+                <option value="ingresos">Por Ingresos</option>
+                <option value="cotizaciones">Por Cotizaciones</option>
+                <option value="conversion">Por Conversión</option>
+              </select>
+            </div>
+          </div>
+          <div class="grafico-content">
+            <canvas ref="graficoVendedores" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Análisis detallados -->
+    <div class="analisis-detallados">
+      <div class="analisis-row">
+        <!-- Servicios más cotizados -->
+        <div class="analisis-card">
+          <div class="analisis-header">
+            <h3>
+              <i class="fas fa-cogs"></i>
+              Servicios Más Cotizados
+            </h3>
+            <button class="btn btn-sm btn-outline" @click="verDetalleServicios">
+              Ver detalle
+            </button>
+          </div>
+          <div class="servicios-ranking">
+            <div 
+              v-for="(servicio, index) in reportes.serviciosMasCotizados" 
+              :key="servicio.nombre"
+              class="servicio-item"
+            >
+              <div class="servicio-posicion">{{ index + 1 }}</div>
+              <div class="servicio-info">
+                <div class="servicio-nombre">{{ servicio.nombre }}</div>
+                <div class="servicio-stats">
+                  {{ servicio.cotizaciones }} cotizaciones • {{ formatearMoneda(servicio.ingresos) }}
+                </div>
+              </div>
+              <div class="servicio-barra">
+                <div 
+                  class="servicio-progreso" 
+                  :style="{ width: (servicio.cotizaciones / reportes.serviciosMasCotizados[0].cotizaciones * 100) + '%' }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estados de cotizaciones -->
+        <div class="analisis-card">
+          <div class="analisis-header">
+            <h3>
+              <i class="fas fa-chart-pie"></i>
+              Estados de Cotizaciones
+            </h3>
+          </div>
+          <div class="estados-container">
+            <canvas ref="graficoEstados" width="250" height="250"></canvas>
+            <div class="estados-leyenda">
+              <div 
+                v-for="estado in reportes.estadosCotizaciones" 
+                :key="estado.nombre"
+                class="estado-item"
+              >
+                <div class="estado-color" :style="{ backgroundColor: estado.color }"></div>
+                <div class="estado-info">
+                  <div class="estado-nombre">{{ estado.nombre }}</div>
+                  <div class="estado-valor">{{ estado.cantidad }} ({{ estado.porcentaje }}%)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de rendimiento por vendedor -->
+      <div class="analisis-card tabla-vendedores">
+        <div class="analisis-header">
+          <h3>
+            <i class="fas fa-trophy"></i>
+            Ranking de Vendedores
+          </h3>
+          <div class="tabla-controles">
+            <select v-model="tablaVendedores.ordenPor" class="control-select">
+              <option value="ingresos">Ordenar por Ingresos</option>
+              <option value="cotizaciones">Ordenar por Cotizaciones</option>
+              <option value="conversion">Ordenar por Conversión</option>
+              <option value="ticket">Ordenar por Ticket Promedio</option>
+            </select>
+          </div>
+        </div>
+        <div class="tabla-wrapper">
+          <table class="vendedores-tabla">
+            <thead>
+              <tr>
+                <th>Pos.</th>
+                <th>Vendedor</th>
+                <th>Cotizaciones</th>
+                <th>Efectivas</th>
+                <th>Conversión</th>
+                <th>Ingresos</th>
+                <th>Ticket Promedio</th>
+                <th>Clientes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="(vendedor, index) in vendedoresOrdenados" 
+                :key="vendedor.nombre"
+                :class="{ 'top-performer': index < 3 }"
+              >
+                <td>
+                  <div class="posicion">
+                    <span class="numero">{{ index + 1 }}</span>
+                    <i v-if="index === 0" class="fas fa-crown corona-oro"></i>
+                    <i v-else-if="index === 1" class="fas fa-medal corona-plata"></i>
+                    <i v-else-if="index === 2" class="fas fa-medal corona-bronce"></i>
+                  </div>
+                </td>
+                <td>
+                  <div class="vendedor-info">
+                    <div class="vendedor-nombre">{{ vendedor.nombre }}</div>
+                    <div class="vendedor-rol">{{ vendedor.rol }}</div>
+                  </div>
+                </td>
+                <td class="numero">{{ vendedor.cotizaciones }}</td>
+                <td class="numero">{{ vendedor.efectivas }}</td>
+                <td>
+                  <div class="conversion-badge" :class="getConversionClass(vendedor.conversion)">
+                    {{ vendedor.conversion }}%
+                  </div>
+                </td>
+                <td class="numero destacado">{{ formatearMoneda(vendedor.ingresos) }}</td>
+                <td class="numero">{{ formatearMoneda(vendedor.ticketPromedio) }}</td>
+                <td class="numero">{{ vendedor.clientes }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Análisis temporal -->
+      <div class="analisis-card">
+        <div class="analisis-header">
+          <h3>
+            <i class="fas fa-calendar-alt"></i>
+            Análisis Temporal
+          </h3>
+        </div>
+        <div class="temporal-grid">
+          <div class="temporal-item">
+            <div class="temporal-label">Mejor día de la semana</div>
+            <div class="temporal-valor">{{ reportes.mejorDia.nombre }}</div>
+            <div class="temporal-detalle">{{ formatearMoneda(reportes.mejorDia.promedio) }} promedio</div>
+          </div>
+          <div class="temporal-item">
+            <div class="temporal-label">Mejor mes</div>
+            <div class="temporal-valor">{{ reportes.mejorMes.nombre }}</div>
+            <div class="temporal-detalle">{{ formatearMoneda(reportes.mejorMes.total) }} total</div>
+          </div>
+          <div class="temporal-item">
+            <div class="temporal-label">Hora pico</div>
+            <div class="temporal-valor">{{ reportes.horaPico.hora }}</div>
+            <div class="temporal-detalle">{{ reportes.horaPico.cotizaciones }} cotizaciones</div>
+          </div>
+          <div class="temporal-item">
+            <div class="temporal-label">Tendencia actual</div>
+            <div class="temporal-valor" :class="reportes.tendencia.tipo">
+              <i :class="reportes.tendencia.tipo === 'positiva' ? 'fas fa-trending-up' : 'fas fa-trending-down'"></i>
+              {{ reportes.tendencia.tipo === 'positiva' ? 'Creciendo' : 'Decreciendo' }}
+            </div>
+            <div class="temporal-detalle">{{ reportes.tendencia.porcentaje }}% este período</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alertas y recomendaciones -->
+    <div class="alertas-section">
+      <h2 class="section-title">
+        <i class="fas fa-lightbulb"></i>
+        Alertas y Recomendaciones
+      </h2>
+      <div class="alertas-grid">
+        <div 
+          v-for="alerta in reportes.alertas" 
+          :key="alerta.id"
+          class="alerta-card"
+          :class="alerta.tipo"
+        >
+          <div class="alerta-icon">
+            <i :class="alerta.icono"></i>
+          </div>
+          <div class="alerta-content">
+            <div class="alerta-titulo">{{ alerta.titulo }}</div>
+            <div class="alerta-descripcion">{{ alerta.descripcion }}</div>
+            <div class="alerta-accion" v-if="alerta.accion">
+              <button class="btn btn-sm" :class="'btn-' + alerta.tipo">
+                {{ alerta.accion }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de detalle de servicios -->
+    <div v-if="modalServicios" class="modal-overlay" @click="cerrarModalServicios">
+      <div class="modal-content modal-servicios" @click.stop>
+        <div class="modal-header">
+          <h3>Análisis Detallado de Servicios</h3>
+          <button class="btn-close" @click="cerrarModalServicios">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="servicios-detalle">
+            <table class="servicios-detalle-tabla">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Cotizaciones</th>
+                  <th>Efectivas</th>
+                  <th>Conversión</th>
+                  <th>Ingresos</th>
+                  <th>Precio Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="servicio in reportes.serviciosDetalle" :key="servicio.nombre">
+                  <td>{{ servicio.nombre }}</td>
+                  <td>{{ servicio.cotizaciones }}</td>
+                  <td>{{ servicio.efectivas }}</td>
+                  <td>{{ servicio.conversion }}%</td>
+                  <td>{{ formatearMoneda(servicio.ingresos) }}</td>
+                  <td>{{ formatearMoneda(servicio.precioPromedio) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'AdminReportes',
+  data() {
+    return {
+      modalServicios: false,
+      
+      filtros: {
+        periodo: '30',
+        fechaInicio: '',
+        fechaFin: ''
+      },
+
+      graficoIngresos: {
+        tipo: 'ingresos'
+      },
+
+      graficoVendedores: {
+        metrica: 'ingresos'
+      },
+
+      tablaVendedores: {
+        ordenPor: 'ingresos'
+      },
+
+      // Métricas principales calculadas
+      metricas: {
+        ingresosTotales: 285750.00,
+        cambioIngresos: 12.5,
+        totalCotizaciones: 47,
+        cambioCotizaciones: 8.3,
+        tasaConversion: 68.1,
+        cambioConversion: -2.1,
+        ticketPromedio: 18750.00,
+        cambioTicket: 15.2
+      },
+
+      // Datos para reportes
+      reportes: {
+        serviciosMasCotizados: [
+          { nombre: 'Desarrollo Web', cotizaciones: 18, ingresos: 125000, conversion: 72 },
+          { nombre: 'Marketing Digital', cotizaciones: 12, ingresos: 85000, conversion: 65 },
+          { nombre: 'Consultoría TI', cotizaciones: 8, ingresos: 45000, conversion: 80 },
+          { nombre: 'Aplicaciones Móviles', cotizaciones: 6, ingresos: 95000, conversion: 83 },
+          { nombre: 'Diseño Gráfico', cotizaciones: 5, ingresos: 15000, conversion: 60 }
+        ],
+
+        serviciosDetalle: [
+          { nombre: 'Desarrollo Web', cotizaciones: 18, efectivas: 13, conversion: 72, ingresos: 125000, precioPromedio: 22500 },
+          { nombre: 'Marketing Digital', cotizaciones: 12, efectivas: 8, conversion: 65, ingresos: 85000, precioPromedio: 18750 },
+          { nombre: 'Consultoría TI', cotizaciones: 8, efectivas: 6, conversion: 80, ingresos: 45000, precioPromedio: 15000 },
+          { nombre: 'Aplicaciones Móviles', cotizaciones: 6, efectivas: 5, conversion: 83, ingresos: 95000, precioPromedio: 32500 },
+          { nombre: 'Diseño Gráfico', cotizaciones: 5, efectivas: 3, conversion: 60, ingresos: 15000, precioPromedio: 8500 }
+        ],
+
+        estadosCotizaciones: [
+          { nombre: 'Efectivas', cantidad: 32, porcentaje: 68, color: '#27ae60' },
+          { nombre: 'Pendientes', cantidad: 8, porcentaje: 17, color: '#f39c12' },
+          { nombre: 'Esperando', cantidad: 4, porcentaje: 9, color: '#3498db' },
+          { nombre: 'Canceladas', cantidad: 3, porcentaje: 6, color: '#e74c3c' }
+        ],
+
+        vendedores: [
+          { 
+            nombre: 'Carlos Mendoza', 
+            rol: 'Vendedor Senior',
+            cotizaciones: 15, 
+            efectivas: 12, 
+            conversion: 80, 
+            ingresos: 125000, 
+            ticketPromedio: 25000,
+            clientes: 8 
+          },
+          { 
+            nombre: 'Ana García', 
+            rol: 'Vendedor',
+            cotizaciones: 12, 
+            efectivas: 8, 
+            conversion: 67, 
+            ingresos: 98000, 
+            ticketPromedio: 22000,
+            clientes: 6 
+          },
+          { 
+            nombre: 'Luis Rodríguez', 
+            rol: 'Vendedor',
+            cotizaciones: 10, 
+            efectivas: 6, 
+            conversion: 60, 
+            ingresos: 75000, 
+            ticketPromedio: 18500,
+            clientes: 5 
+          },
+          { 
+            nombre: 'María López', 
+            rol: 'Vendedor Senior',
+            cotizaciones: 8, 
+            efectivas: 5, 
+            conversion: 63, 
+            ingresos: 65000, 
+            ticketPromedio: 20000,
+            clientes: 4 
+          },
+          { 
+            nombre: 'Pedro Sánchez', 
+            rol: 'Vendedor',
+            cotizaciones: 6, 
+            efectivas: 3, 
+            conversion: 50, 
+            ingresos: 35000, 
+            ticketPromedio: 15000,
+            clientes: 3 
+          }
+        ],
+
+        mejorDia: { nombre: 'Martes', promedio: 15250 },
+        mejorMes: { nombre: 'Marzo', total: 95000 },
+        horaPico: { hora: '10:00 AM', cotizaciones: 12 },
+        tendencia: { tipo: 'positiva', porcentaje: 12.5 },
+
+        alertas: [
+          {
+            id: 1,
+            tipo: 'success',
+            icono: 'fas fa-trophy',
+            titulo: 'Excelente desempeño',
+            descripcion: 'La conversión este mes ha superado el objetivo en un 15%',
+            accion: 'Ver detalles'
+          },
+          {
+            id: 2,
+            tipo: 'warning',
+            icono: 'fas fa-exclamation-triangle',
+            titulo: 'Atención requerida',
+            descripcion: 'Pedro Sánchez tiene baja conversión (50%). Considerar capacitación adicional.',
+            accion: 'Programar reunión'
+          },
+          {
+            id: 3,
+            tipo: 'info',
+            icono: 'fas fa-lightbulb',
+            titulo: 'Oportunidad detectada',
+            descripcion: 'Los servicios de "Aplicaciones Móviles" tienen alta conversión. Considerar ampliar la oferta.',
+            accion: 'Explorar'
+          },
+          {
+            id: 4,
+            tipo: 'danger',
+            icono: 'fas fa-chart-line-down',
+            titulo: 'Tendencia negativa',
+            descripcion: 'Las cotizaciones de "Diseño Gráfico" han bajado 20% este mes.',
+            accion: 'Analizar causas'
+          }
+        ]
+      }
+    }
+  },
+
+  computed: {
+    vendedoresOrdenados() {
+      const vendedores = [...this.reportes.vendedores];
+      
+      switch (this.tablaVendedores.ordenPor) {
+        case 'cotizaciones':
+          return vendedores.sort((a, b) => b.cotizaciones - a.cotizaciones);
+        case 'conversion':
+          return vendedores.sort((a, b) => b.conversion - a.conversion);
+        case 'ticket':
+          return vendedores.sort((a, b) => b.ticketPromedio - a.ticketPromedio);
+        default:
+          return vendedores.sort((a, b) => b.ingresos - a.ingresos);
+      }
+    }
+  },
+
+  mounted() {
+    this.inicializarGraficos();
+  },
+
+  methods: {
+    inicializarGraficos() {
+      // Aquí inicializarías los gráficos con Chart.js o similar
+      // Por simplicidad, solo muestro la estructura
+      this.crearGraficoIngresos();
+      this.crearGraficoVendedores();
+      this.crearGraficoEstados();
+    },
+
+    crearGraficoIngresos() {
+      // Implementación del gráfico de ingresos por mes
+      console.log('Creando gráfico de ingresos...');
+    },
+
+    crearGraficoVendedores() {
+      // Implementación del gráfico de desempeño por vendedor
+      console.log('Creando gráfico de vendedores...');
+    },
+
+    crearGraficoEstados() {
+      // Implementación del gráfico de estados (pie chart)
+      console.log('Creando gráfico de estados...');
+    },
+
+    actualizarReportes() {
+      // Actualizar datos basado en el período seleccionado
+      console.log('Actualizando reportes para período:', this.filtros.periodo);
+    },
+
+    aplicarFechasCustom() {
+      if (this.filtros.fechaInicio && this.filtros.fechaFin) {
+        this.actualizarReportes();
+      }
+    },
+
+    exportarReportes() {
+      alert('Exportando reportes... (funcionalidad pendiente de implementar)');
+    },
+
+    actualizarDatos() {
+      alert('Actualizando datos...');
+    },
+
+    verDetalleServicios() {
+      this.modalServicios = true;
+    },
+
+    cerrarModalServicios() {
+      this.modalServicios = false;
+    },
+
+    formatearMoneda(monto) {
+      return new Intl.NumberFormat('es-HN', {
+        style: 'currency',
+        currency: 'HNL'
+      }).format(monto);
+    },
+
+    getConversionClass(conversion) {
+      if (conversion >= 75) return 'excelente';
+      if (conversion >= 60) return 'buena';
+      if (conversion >= 45) return 'regular';
+      return 'baja';
+    }
+  }
+}
+</script>
+
+<style scoped>
+.admin-reportes-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.header-content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  color: #3498db;
+  border: 2px solid #3498db;
+}
+
+.btn-outline:hover {
+  background: #3498db;
+  color: white;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.btn-success {
+  background: #27ae60;
+  color: white;
+}
+
+.btn-warning {
+  background: #f39c12;
+  color: white;
+}
+
+.btn-info {
+  background: #3498db;
+  color: white;
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Filtros */
+.filtros-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.filtros-container {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.periodo-selector {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.periodo-selector label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.filter-select,
+.control-select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.fechas-custom {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+}
+
+.fecha-group {
+  display: flex; 
+  flex-direction: column;
+gap: 0.5rem;
+}
+.fecha-group label {
+font-weight: 600;
+color: #2c3e50;
+font-size: 0.9rem;
+}
+.form-input {
+padding: 0.75rem 1rem;
+border: 2px solid #e1e8ed;
+border-radius: 8px;
+font-size: 0.9rem;
+}
+/* Métricas principales */
+.metricas-principales {
+margin-bottom: 2rem;
+}
+.section-title {
+font-size: 1.5rem;
+font-weight: 600;
+color: #2c3e50;
+margin-bottom: 1.5rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+.metricas-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+gap: 1.5rem;
+}
+.metrica-card {
+background: white;
+border-radius: 12px;
+padding: 1.5rem;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+transition: transform 0.3s ease;
+}
+.metrica-card:hover {
+transform: translateY(-2px);
+}
+.metrica-card.ventas { border-left: 4px solid #27ae60; }
+.metrica-card.cotizaciones { border-left: 4px solid #3498db; }
+.metrica-card.conversion { border-left: 4px solid #f39c12; }
+.metrica-card.ticket { border-left: 4px solid #9b59b6; }
+.metrica-header {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+margin-bottom: 1rem;
+}
+.metrica-header i {
+font-size: 1.2rem;
+color: #7f8c8d;
+}
+.metrica-header h3 {
+font-size: 1rem;
+color: #7f8c8d;
+margin: 0;
+}
+.metrica-valor {
+font-size: 2rem;
+font-weight: 700;
+color: #2c3e50;
+margin-bottom: 0.5rem;
+}
+.metrica-cambio {
+font-size: 0.85rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+gap: 0.25rem;
+}
+.metrica-cambio.positivo {
+color: #27ae60;
+}
+.metrica-cambio.negativo {
+color: #e74c3c;
+}
+/* Gráficos */
+.graficos-principales {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+gap: 1.5rem;
+margin-bottom: 2rem;
+}
+.grafico-card {
+background: white;
+border-radius: 12px;
+padding: 1.5rem;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.grafico-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1rem;
+padding-bottom: 1rem;
+border-bottom: 1px solid #e9ecef;
+}
+.grafico-header h3 {
+font-size: 1.1rem;
+color: #2c3e50;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+.grafico-content {
+height: 300px;
+display: flex;
+align-items: center;
+justify-content: center;
+background: #f8f9fa;
+border-radius: 8px;
+color: #7f8c8d;
+}
+/* Análisis detallados */
+.analisis-detallados {
+display: grid;
+gap: 1.5rem;
+margin-bottom: 2rem;
+}
+.analisis-row {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+gap: 1.5rem;
+}
+.analisis-card {
+background: white;
+border-radius: 12px;
+padding: 1.5rem;
+box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+.analisis-card.tabla-vendedores {
+grid-column: 1 / -1;
+}
+.analisis-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1.5rem;
+padding-bottom: 1rem;
+border-bottom: 1px solid #e9ecef;
+}
+.analisis-header h3 {
+font-size: 1.1rem;
+color: #2c3e50;
+margin: 0;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+/* Servicios ranking */
+.servicios-ranking {
+display: grid;
+gap: 1rem;
+}
+.servicio-item {
+display: grid;
+grid-template-columns: auto 1fr auto;
+gap: 1rem;
+align-items: center;
+padding: 1rem;
+background: #f8f9fa;
+border-radius: 8px;
+transition: all 0.3s ease;
+}
+.servicio-item:hover {
+background: #e9ecef;
+}
+.servicio-posicion {
+width: 30px;
+height: 30px;
+background: #3498db;
+color: white;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: 600;
+font-size: 0.9rem;
+}
+.servicio-info {
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+.servicio-nombre {
+font-weight: 600;
+color: #2c3e50;
+}
+.servicio-stats {
+font-size: 0.85rem;
+color: #7f8c8d;
+}
+.servicio-barra {
+width: 100px;
+height: 8px;
+background: #e9ecef;
+border-radius: 4px;
+overflow: hidden;
+}
+.servicio-progreso {
+height: 100%;
+background: linear-gradient(90deg, #3498db, #2980b9);
+transition: width 0.3s ease;
+}
+/* Estados gráfico */
+.estados-container {
+display: flex;
+gap: 2rem;
+align-items: center;
+}
+.estados-leyenda {
+display: grid;
+gap: 1rem;
+}
+.estado-item {
+display: flex;
+align-items: center;
+gap: 0.75rem;
+}
+.estado-color {
+width: 16px;
+height: 16px;
+border-radius: 3px;
+}
+.estado-info {
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+.estado-nombre {
+font-weight: 600;
+color: #2c3e50;
+font-size: 0.9rem;
+}
+.estado-valor {
+font-size: 0.8rem;
+color: #7f8c8d;
+}
+/* Tabla vendedores */
+.tabla-wrapper {
+overflow-x: auto;
+}
+.vendedores-tabla {
+width: 100%;
+border-collapse: collapse;
+}
+.vendedores-tabla th {
+background: #f8f9fa;
+padding: 1rem;
+text-align: left;
+font-weight: 600;
+color: #2c3e50;
+border-bottom: 2px solid #e9ecef;
+white-space: nowrap;
+}
+.vendedores-tabla td {
+padding: 1rem;
+border-bottom: 1px solid #e9ecef;
+vertical-align: middle;
+}
+.vendedores-tabla tr:hover {
+background: #f8f9fa;
+}
+.vendedores-tabla tr.top-performer {
+background: linear-gradient(90deg, rgba(52, 152, 219, 0.05), transparent);
+}
+.posicion {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+.numero {
+font-family: monospace;
+font-weight: 600;
+}
+.corona-oro { color: #f1c40f; }
+.corona-plata { color: #95a5a6; }
+.corona-bronce { color: #e67e22; }
+.vendedor-info {
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+.vendedor-nombre {
+font-weight: 600;
+color: #2c3e50;
+}
+.vendedor-rol {
+font-size: 0.85rem;
+color: #7f8c8d;
+}
+.numero.destacado {
+color: #27ae60;
+font-weight: 700;
+}
+.conversion-badge {
+padding: 0.25rem 0.5rem;
+border-radius: 12px;
+font-size: 0.8rem;
+font-weight: 600;
+text-align: center;
+}
+.conversion-badge.excelente {
+background: #d4edda;
+color: #155724;
+}
+.conversion-badge.buena {
+background: #d1ecf1;
+color: #0c5460;
+}
+.conversion-badge.regular {
+background: #fff3cd;
+color: #856404;
+}
+.conversion-badge.baja {
+background: #f8d7da;
+color: #721c24;
+}
+/* Análisis temporal */
+.temporal-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: 1.5rem;
+}
+.temporal-item {
+text-align: center;
+padding: 1rem;
+background: #f8f9fa;
+border-radius: 8px;
+}
+.temporal-label {
+font-size: 0.85rem;
+color: #7f8c8d;
+margin-bottom: 0.5rem;
+}
+.temporal-valor {
+font-size: 1.2rem;
+font-weight: 700;
+color: #2c3e50;
+margin-bottom: 0.25rem;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+}
+.temporal-valor.positiva {
+color: #27ae60;
+}
+.temporal-valor.negativa {
+color: #e74c3c;
+}
+.temporal-detalle {
+font-size: 0.8rem;
+color: #7f8c8d;
+}
+/* Alertas */
+.alertas-section {
+margin-bottom: 2rem;
+}
+.alertas-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+gap: 1.5rem;
+}
+.alerta-card {
+display: flex;
+gap: 1rem;
+padding: 1.5rem;
+border-radius: 12px;
+border-left: 4px solid;
+}
+.alerta-card.success {
+background: #d4edda;
+border-left-color: #27ae60;
+}
+.alerta-card.warning {
+background: #fff3cd;
+border-left-color: #f39c12;
+}
+.alerta-card.info {
+background: #d1ecf1;
+border-left-color: #3498db;
+}
+.alerta-card.danger {
+background: #f8d7da;
+border-left-color: #e74c3c;
+}
+.alerta-icon {
+flex-shrink: 0;
+}
+.alerta-icon i {
+font-size: 1.5rem;
+}
+.alerta-card.success .alerta-icon i { color: #27ae60; }
+.alerta-card.warning .alerta-icon i { color: #f39c12; }
+.alerta-card.info .alerta-icon i { color: #3498db; }
+.alerta-card.danger .alerta-icon i { color: #e74c3c; }
+.alerta-content {
+flex: 1;
+}
+.alerta-titulo {
+font-weight: 600;
+color: #2c3e50;
+margin-bottom: 0.5rem;
+}
+.alerta-descripcion {
+color: #2c3e50;
+margin-bottom: 1rem;
+line-height: 1.4;
+}
+.alerta-accion {
+margin-top: 1rem;
+}
+/* Modal */
+.modal-overlay {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.5);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+padding: 1rem;
+}
+.modal-content {
+background: white;
+border-radius: 12px;
+max-width: 1000px;
+width: 100%;
+max-height: 90vh;
+overflow-y: auto;
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.modal-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 1.5rem;
+border-bottom: 1px solid #e9ecef;
+}
+.modal-header h3 {
+margin: 0;
+color: #2c3e50;
+}
+.btn-close {
+background: none;
+border: none;
+font-size: 1.5rem;
+cursor: pointer;
+color: #7f8c8d;
+padding: 0.5rem;
+border-radius: 50%;
+transition: all 0.3s ease;
+}
+.btn-close:hover {
+background: #f8f9fa;
+color: #e74c3c;
+}
+.modal-body {
+padding: 1.5rem;
+}
+.servicios-detalle-tabla {
+width: 100%;
+border-collapse: collapse;
+}
+.servicios-detalle-tabla th,
+.servicios-detalle-tabla td {
+padding: 1rem;
+text-align: left;
+border-bottom: 1px solid #e9ecef;
+}
+.servicios-detalle-tabla th {
+background: #f8f9fa;
+font-weight: 600;
+color: #2c3e50;
+}
+/* Responsive */
+@media (max-width: 1200px) {
+.metricas-grid {
+grid-template-columns: repeat(2, 1fr);
+}
+.graficos-principales {
+grid-template-columns: 1fr;
+}
+}
+@media (max-width: 768px) {
+.admin-reportes-container {
+padding: 1rem;
+}
+.page-header {
+flex-direction: column;
+align-items: stretch;
+gap: 1rem;
+}
+.header-actions {
+flex-direction: column;
+}
+.filtros-container {
+flex-direction: column;
+align-items: stretch;
+}
+.fechas-custom {
+flex-direction: column;
+}
+.metricas-grid {
+grid-template-columns: 1fr;
+}
+.analisis-row {
+grid-template-columns: 1fr;
+}
+.temporal-grid {
+grid-template-columns: repeat(2, 1fr);
+}
+.alertas-grid {
+grid-template-columns: 1fr;
+}
+.estados-container {
+flex-direction: column;
+}
+.vendedores-tabla {
+font-size: 0.85rem;
+}
+.vendedores-tabla th,
+.vendedores-tabla td {
+padding: 0.5rem;
+}
+}
+@media (max-width: 480px) {
+.temporal-grid {
+grid-template-columns: 1fr;
+}
+.servicios-ranking {
+gap: 0.5rem;
+}
+.servicio-item {
+padding: 0.75rem;
+grid-template-columns: auto 1fr;
+gap: 0.75rem;
+}
+.servicio-barra {
+display: none;
+}
+}
+</style>

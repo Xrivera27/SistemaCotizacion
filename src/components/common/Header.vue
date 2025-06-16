@@ -34,7 +34,14 @@ export default {
         '/shared/cotizacion': 'Crear Cotización',
         '/vendedor/dashboard': 'Dashboard',
         '/vendedor/cotizaciones': 'Mis Cotizaciones',
-        '/admin/dashboard': 'Dashboard Administrativo'
+        '/admin/dashboard': 'Dashboard Administrativo',
+        '/admin/cotizaciones': 'Gestión de Cotizaciones',
+        '/admin/usuarios': 'Gestión de Usuarios',
+        '/admin/reportes': 'Reportes y Análisis',
+        '/admin/clientes': 'Gestion de Clientes',
+        '/admin/servicios': 'Gestion de Servicios',
+        
+        
       };
       return titles[this.$route.path] || 'Sistema de Cotización';
     }
