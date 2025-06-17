@@ -40,7 +40,7 @@
               <input 
                 v-model="terminoBusqueda" 
                 type="text" 
-                placeholder="Buscar por nombre, empresa o RTN..."
+                placeholder="Buscar por nombre, empresa o Documento Fiscal..."
                 class="input-buscar"
               >
             </div>
@@ -64,7 +64,7 @@
                 </p>
                 <small>
                   <i class="fas fa-id-card"></i>
-                  RTN: {{ cliente.rtn }}
+                  Documento Fiscal: {{ cliente.documentofiscal }}
                 </small>
               </div>
               <div class="cliente-contacto">
@@ -145,10 +145,10 @@
             <div class="form-group">
               <label>
                 <i class="fas fa-id-card"></i>
-                RTN *
+                Documento Fiscal *
               </label>
               <input 
-                v-model="clienteForm.rtn" 
+                v-model="clienteForm.documentofiscal" 
                 type="text" 
                 required
                 class="form-input"
@@ -224,7 +224,7 @@ export default {
         telefonoPersonal: '',
         telefonoEmpresa: '',
         nombreEmpresa: '',
-        rtn: '',
+        documentofiscal: '',
         correoPersonal: '',
         correoEmpresa: ''
       }
@@ -243,7 +243,7 @@ export default {
       return this.clientesDelVendedor.filter(cliente => 
         cliente.nombreEncargado.toLowerCase().includes(termino) ||
         cliente.nombreEmpresa.toLowerCase().includes(termino) ||
-        cliente.rtn.includes(termino)
+        cliente.documentofiscal.includes(termino)
       );
     }
   },
@@ -273,7 +273,7 @@ export default {
         telefonoPersonal: '',
         telefonoEmpresa: '',
         nombreEmpresa: '',
-        rtn: '',
+        documentofiscal: '',
         correoPersonal: '',
         correoEmpresa: ''
       };
@@ -297,7 +297,7 @@ export default {
     },
     guardarCliente() {
       // Validaciones básicas
-      if (!this.clienteForm.nombreEncargado || !this.clienteForm.nombreEmpresa || !this.clienteForm.rtn) {
+      if (!this.clienteForm.nombreEncargado || !this.clienteForm.nombreEmpresa || !this.clienteForm.documentofiscal) {
         alert('Por favor completa los campos obligatorios');
         return;
       }

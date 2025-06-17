@@ -90,10 +90,10 @@
             <label class="checkbox-option">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.rtn"
+                v-model="incluirInfo.documentofiscal"
               >
               <span class="checkmark"></span>
-              RTN: {{ cliente.rtn }}
+              Documento Fiscal: {{ cliente.documentofiscal }}
             </label>
 
             <label class="checkbox-option">
@@ -220,7 +220,7 @@ export default {
       incluirInfo: {
         nombreEncargado: true,
         nombreEmpresa: true,
-        rtn: false,
+        documentofiscal: false,
         telefonoEmpresa: false,
         correoEmpresa: true
       }
@@ -268,7 +268,7 @@ export default {
         this.incluirInfo = {
           nombreEncargado: true,
           nombreEmpresa: true,
-          rtn: false,
+          documentoFiscal: false,
           telefonoEmpresa: false,
           correoEmpresa: true
         };
@@ -287,7 +287,7 @@ export default {
       this.incluirInfo = {
         nombreEncargado: true,
         nombreEmpresa: true,
-        rtn: false,
+        documentofiscal: false,
         telefonoEmpresa: false,
         correoEmpresa: true
       };

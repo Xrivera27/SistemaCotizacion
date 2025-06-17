@@ -242,8 +242,8 @@ export const generarPDFConCliente = async (datosEmpresa, cliente, serviciosSelec
       yPosition += 5;
     }
 
-    if (cliente.informacionIncluir?.rtn && cliente.rtn) {
-      pdf.text(`RTN: ${cliente.rtn}`, margin, yPosition);
+    if (cliente.informacionIncluir?.documentofiscal && cliente.documentofiscal) {
+      pdf.text(`Documento Fiscal: ${cliente.documentofiscal}`, margin, yPosition);
       yPosition += 5;
     }
 
