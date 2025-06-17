@@ -28,6 +28,13 @@
         </div>
         
         <div class="filtros-grid">
+          <select v-model="filtros.categoria" class="filter-select">
+            <option value="">Todas las categorías</option>
+            <option v-for="categoria in categoriasActivas" :key="categoria.id" :value="categoria.id">
+              {{ categoria.nombre }}
+            </option>
+          </select>
+
           <select v-model="filtros.rangoPrecio" class="filter-select">
             <option value="">Todos los rangos</option>
             <option value="bajo">Bajo (menos de L. 5,000)</option>
@@ -139,6 +146,7 @@
                   Nombre
                   <span class="sort-icon">{{ getSortIcon('nombre') }}</span>
                 </th>
+                <th>Categoría</th>
                 <th>Descripción</th>
                 <th @click="ordenarPor('precioMinimo')" class="sortable">
                   Precio Mínimo
@@ -161,6 +169,11 @@
                   <div class="servicio-info">
                     <span class="servicio-nombre">{{ servicio.nombre }}</span>
                   </div>
+                </td>
+                <td>
+                  <span class="categoria-badge">
+                    {{ obtenerNombreCategoria(servicio.categoriaId) }}
+                  </span>
                 </td>
                 <td>
                   <div class="descripcion-info">
@@ -230,6 +243,13 @@
                 <i class="fas fa-cogs"></i>
                 {{ servicio.nombre }}
               </h3>
+
+              <div class="categoria-info-card">
+                <span class="categoria-badge">
+                  <i class="fas fa-tag"></i>
+                  {{ obtenerNombreCategoria(servicio.categoriaId) }}
+                </span>
+              </div>
               
               <div class="descripcion-card">
                 <p>{{ servicio.descripcion }}</p>
@@ -288,7 +308,7 @@
         <div class="empty-icon"><i class="fas fa-cogs"></i></div>
         <h3 class="empty-title">No hay servicios</h3>
         <p class="empty-description">
-          {{ filtros.busqueda || filtros.rangoPrecio || filtros.estado 
+          {{ filtros.busqueda || filtros.rangoPrecio || filtros.estado || filtros.categoria
             ? 'No se encontraron servicios con los filtros aplicados.' 
             : 'Aún no se han registrado servicios en el sistema.' }}
         </p>
@@ -387,6 +407,13 @@
               <div class="detalle-item">
                 <strong><i class="fas fa-cogs"></i> Nombre:</strong> {{ modalServicio.nombre }}
               </div>
+              <div class="detalle-item">
+                <strong><i class="fas fa-tags"></i> Categoría:</strong> 
+                <span class="categoria-badge">
+                  <i class="fas fa-tag"></i>
+                  {{ obtenerNombreCategoria(modalServicio.categoriaId) }}
+                </span>
+              </div>
               <div class="detalle-item descripcion-completa">
                 <strong><i class="fas fa-align-left"></i> Descripción:</strong> 
                 <span class="descripcion-texto">{{ modalServicio.descripcion }}</span>
@@ -441,6 +468,21 @@
                   class="form-input"
                   placeholder="Desarrollo Web, Consultoría, etc."
                 >
+              </div>
+
+              <div class="form-group">
+                <label for="categoriaId">Categoría *</label>
+                <select 
+                  id="categoriaId"
+                  v-model="formulario.categoriaId" 
+                  required 
+                  class="form-select"
+                >
+                  <option value="">Selecciona una categoría</option>
+                  <option v-for="categoria in categoriasActivas" :key="categoria.id" :value="categoria.id">
+                    {{ categoria.nombre }}
+                  </option>
+                </select>
               </div>
               
               <div class="form-group full-width">
@@ -535,6 +577,12 @@
               </div>
               <div class="servicio-datos">
                 <h4>{{ servicioParaCambiarEstado.nombre }}</h4>
+                <div class="categoria-info-modal">
+                  <span class="categoria-badge">
+                    <i class="fas fa-tag"></i>
+                    {{ obtenerNombreCategoria(servicioParaCambiarEstado.categoriaId) }}
+                  </span>
+                </div>
                 <p class="servicio-descripcion">{{ truncarTexto(servicioParaCambiarEstado.descripcion, 100) }}</p>
                 <div class="servicio-badges">
                   <span class="servicio-id">#{{ String(servicioParaCambiarEstado.id).padStart(4, '0') }}</span>
@@ -628,78 +676,98 @@ export default {
       
       filtros: {
         busqueda: '',
+        categoria: '',
         rangoPrecio: '',
         estado: ''
       },
       
       formulario: {
         nombre: '',
+        categoriaId: '',
         descripcion: '',
         precioMinimo: '',
         precioRecomendado: '',
         estado: 'activo'
       },
+
+      // Categorías disponibles
+      categorias: [
+        { id: 1, nombre: 'Desarrollo Web', estado: 'activa' },
+        { id: 2, nombre: 'Consultoría Tecnológica', estado: 'activa' },
+        { id: 3, nombre: 'Marketing Digital', estado: 'activa' },
+        { id: 4, nombre: 'Diseño y Creatividad', estado: 'activa' },
+        { id: 5, nombre: 'Aplicaciones Móviles', estado: 'inactiva' },
+        { id: 6, nombre: 'Seguridad Informática', estado: 'activa' },
+        { id: 7, nombre: 'Capacitación y Formación', estado: 'activa' }
+      ],
       
       servicios: [
         {
           id: 1,
-          nombre: 'Desarrollo Web',
+          nombre: 'Desarrollo Web Responsivo',
+          categoriaId: 1,
           descripcion: 'Desarrollo de sitios web responsivos y modernos utilizando las últimas tecnologías. Incluye diseño UX/UI, desarrollo frontend y backend, integración con bases de datos y optimización SEO.',
-          precioMinimo: 15000.00,
-          precioRecomendado: 25000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-01-15'
-        },
-        {
-          id: 2,
-          nombre: 'Consultoría en TI',
-          descripcion: 'Asesoría especializada en tecnologías de la información para optimizar procesos empresariales, implementación de sistemas y transformación digital.',
-          precioMinimo: 5000.00,
-          precioRecomendado: 8000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-01-20'
-        },
-        {
-          id: 3,
-          nombre: 'Marketing Digital',
-          descripcion: 'Estrategias integrales de marketing digital incluyendo manejo de redes sociales, campañas publicitarias, SEO/SEM y análisis de métricas.',
-          precioMinimo: 8000.00,
-          precioRecomendado: 15000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-01-25'
-        },
-        {
-          id: 4,
-          nombre: 'Diseño Gráfico',
-          descripcion: 'Creación de identidad visual corporativa, diseño de logotipos, brochures, material publicitario y elementos gráficos para medios digitales.',
-          precioMinimo: 3000.00,
-          precioRecomendado: 6000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-02-01'
-        },
-        {
-          id: 5,
-          nombre: 'Desarrollo de E-commerce',
-          descripcion: 'Plataformas de comercio electrónico completas con carrito de compras, pasarelas de pago, gestión de inventario y panel administrativo.',
-          precioMinimo: 20000.00,
-          precioRecomendado: 35000.00,
-          estado: 'inactivo',
-          fechaCreacion: '2024-02-05'
-        },
-        {
-          id: 6,
-          nombre: 'Aplicaciones Móviles',
-          descripcion: 'Desarrollo de aplicaciones nativas y multiplataforma para iOS y Android con interfaces intuitivas y funcionalidades avanzadas.',
-          precioMinimo: 25000.00,
-          precioRecomendado: 45000.00,
-          estado: 'activo',
-          fechaCreacion: '2024-02-10'
-        },
-        {
-          id: 7,
-          nombre: 'Auditoría de Sistemas',
-          descripcion: 'Revisión integral de infraestructura tecnológica, evaluación de seguridad, rendimiento y recomendaciones de mejoras.',
-          precioMinimo: 10000.00,
+         precioMinimo: 15000.00,
+         precioRecomendado: 25000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-01-15'
+       },
+       {
+         id: 2,
+         nombre: 'Consultoría en TI',
+         categoriaId: 2,
+         descripcion: 'Asesoría especializada en tecnologías de la información para optimizar procesos empresariales, implementación de sistemas y transformación digital.',
+         precioMinimo: 5000.00,
+         precioRecomendado: 8000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-01-20'
+       },
+       {
+         id: 3,
+         nombre: 'Estrategias de Marketing Digital',
+         categoriaId: 3,
+         descripcion: 'Estrategias integrales de marketing digital incluyendo manejo de redes sociales, campañas publicitarias, SEO/SEM y análisis de métricas.',
+         precioMinimo: 8000.00,
+         precioRecomendado: 15000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-01-25'
+       },
+       {
+         id: 4,
+         nombre: 'Diseño Gráfico Corporativo',
+         categoriaId: 4,
+         descripcion: 'Creación de identidad visual corporativa, diseño de logotipos, brochures, material publicitario y elementos gráficos para medios digitales.',
+         precioMinimo: 3000.00,
+         precioRecomendado: 6000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-02-01'
+       },
+       {
+         id: 5,
+         nombre: 'Desarrollo de E-commerce',
+         categoriaId: 1,
+         descripcion: 'Plataformas de comercio electrónico completas con carrito de compras, pasarelas de pago, gestión de inventario y panel administrativo.',
+         precioMinimo: 20000.00,
+         precioRecomendado: 35000.00,
+         estado: 'inactivo',
+         fechaCreacion: '2024-02-05'
+       },
+       {
+         id: 6,
+         nombre: 'Aplicaciones Móviles',
+         categoriaId: 5,
+         descripcion: 'Desarrollo de aplicaciones nativas y multiplataforma para iOS y Android con interfaces intuitivas y funcionalidades avanzadas.',
+         precioMinimo: 25000.00,
+         precioRecomendado: 45000.00,
+         estado: 'activo',
+         fechaCreacion: '2024-02-10'
+       },
+       {
+         id: 7,
+         nombre: 'Auditoría de Sistemas',
+         categoriaId: 6,
+         descripcion: 'Revisión integral de infraestructura tecnológica, evaluación de seguridad, rendimiento y recomendaciones de mejoras.',
+         precioMinimo: 10000.00,
          precioRecomendado: 18000.00,
          estado: 'activo',
          fechaCreacion: '2024-02-15'
@@ -707,6 +775,7 @@ export default {
        {
          id: 8,
          nombre: 'Capacitación Tecnológica',
+         categoriaId: 7,
          descripcion: 'Programas de entrenamiento personalizados en diversas tecnologías para equipos de trabajo y empresas.',
          precioMinimo: 2500.00,
          precioRecomendado: 5000.00,
@@ -718,6 +787,10 @@ export default {
  },
  
  computed: {
+   categoriasActivas() {
+     return this.categorias.filter(categoria => categoria.estado === 'activa');
+   },
+
    serviciosFiltrados() {
      let resultado = [...this.servicios];
      
@@ -726,6 +799,12 @@ export default {
        resultado = resultado.filter(servicio => 
          servicio.nombre.toLowerCase().includes(busqueda) ||
          servicio.descripcion.toLowerCase().includes(busqueda)
+       );
+     }
+
+     if (this.filtros.categoria) {
+       resultado = resultado.filter(servicio => 
+         servicio.categoriaId === parseInt(this.filtros.categoria)
        );
      }
      
@@ -825,6 +904,7 @@ export default {
    
    formularioValido() {
      return this.formulario.nombre && 
+            this.formulario.categoriaId &&
             this.formulario.descripcion && 
             this.formulario.precioMinimo >= 0 && 
             this.formulario.precioRecomendado >= 0 &&
@@ -834,6 +914,9 @@ export default {
  
  watch: {
    'filtros.busqueda'() {
+     this.paginaActual = 1;
+   },
+   'filtros.categoria'() {
      this.paginaActual = 1;
    },
    'filtros.rangoPrecio'() {
@@ -848,6 +931,11 @@ export default {
  },
  
  methods: {
+   obtenerNombreCategoria(categoriaId) {
+     const categoria = this.categorias.find(c => c.id === categoriaId);
+     return categoria ? categoria.nombre : 'Sin categoría';
+   },
+
    nuevoServicio() {
      this.servicioEditando = null;
      this.limpiarFormulario();
@@ -865,31 +953,25 @@ export default {
      this.modalServicio = null;
    },
 
-   // Nuevo método para mostrar el modal de confirmación
    mostrarModalCambiarEstado(servicio) {
      this.servicioParaCambiarEstado = servicio;
      this.modalCambiarEstado = true;
    },
 
-   // Nuevo método para confirmar el cambio de estado
    confirmarCambiarEstado() {
      if (this.servicioParaCambiarEstado) {
        const estadoAnterior = this.servicioParaCambiarEstado.estado;
        const nuevoEstado = estadoAnterior === 'activo' ? 'inactivo' : 'activo';
        
-       // Cambiar el estado
        this.servicioParaCambiarEstado.estado = nuevoEstado;
        
-       // Mostrar mensaje de éxito
        const accion = nuevoEstado === 'activo' ? 'activado' : 'desactivado';
        alert(`Servicio ${accion} exitosamente`);
        
-       // Cerrar modal
        this.cerrarModalCambiarEstado();
      }
    },
 
-   // Nuevo método para cerrar el modal de confirmación
    cerrarModalCambiarEstado() {
      this.modalCambiarEstado = false;
      this.servicioParaCambiarEstado = null;
@@ -919,6 +1001,7 @@ export default {
      if (this.servicioEditando) {
        Object.assign(this.servicioEditando, {
          nombre: this.formulario.nombre,
+         categoriaId: parseInt(this.formulario.categoriaId),
          descripcion: this.formulario.descripcion,
          precioMinimo: parseFloat(this.formulario.precioMinimo),
          precioRecomendado: parseFloat(this.formulario.precioRecomendado),
@@ -929,6 +1012,7 @@ export default {
        const nuevoServicio = {
          id: Math.max(...this.servicios.map(s => s.id)) + 1,
          nombre: this.formulario.nombre,
+         categoriaId: parseInt(this.formulario.categoriaId),
          descripcion: this.formulario.descripcion,
          precioMinimo: parseFloat(this.formulario.precioMinimo),
          precioRecomendado: parseFloat(this.formulario.precioRecomendado),
@@ -945,6 +1029,7 @@ export default {
    llenarFormulario(servicio) {
      this.formulario = {
        nombre: servicio.nombre,
+       categoriaId: servicio.categoriaId,
        descripcion: servicio.descripcion,
        precioMinimo: servicio.precioMinimo,
        precioRecomendado: servicio.precioRecomendado,
@@ -955,6 +1040,7 @@ export default {
    limpiarFormulario() {
      this.formulario = {
        nombre: '',
+       categoriaId: '',
        descripcion: '',
        precioMinimo: '',
        precioRecomendado: '',
@@ -983,6 +1069,7 @@ export default {
    limpiarFiltros() {
      this.filtros = {
        busqueda: '',
+       categoria: '',
        rangoPrecio: '',
        estado: ''
      };
@@ -1050,202 +1137,202 @@ export default {
 
 <style scoped>
 .admin-servicios-container {
- padding: 2rem;
- max-width: 1400px;
- margin: 0 auto;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .page-header {
- display: flex;
- justify-content: space-between;
- align-items: flex-start;
- margin-bottom: 2rem;
- gap: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
 }
 
 .header-content h1 {
- font-size: 2.5rem;
- font-weight: 700;
- color: #2c3e50;
- margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
 }
 
 .page-subtitle {
- color: #7f8c8d;
- font-size: 1.1rem;
- margin: 0;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin: 0;
 }
 
 .header-actions {
- flex-shrink: 0;
- display: flex;
- gap: 1rem;
+  flex-shrink: 0;
+  display: flex;
+  gap: 1rem;
 }
 
 .btn {
- padding: 0.875rem 1.5rem;
- border: none;
- border-radius: 8px;
- font-weight: 600;
- cursor: pointer;
- transition: all 0.3s ease;
- display: inline-flex;
- align-items: center;
- gap: 0.5rem;
- text-decoration: none;
- font-size: 0.9rem;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-size: 0.9rem;
 }
 
 .btn-primary {
- background: linear-gradient(135deg, #3498db, #2980b9);
- color: white;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
 }
 
 .btn-primary:hover {
- transform: translateY(-2px);
- box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
 }
 
 .btn-primary:disabled {
- background: #bdc3c7;
- cursor: not-allowed;
- transform: none;
- box-shadow: none;
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
- background: #95a5a6;
- color: white;
+  background: #95a5a6;
+  color: white;
 }
 
 .btn-secondary:hover {
- background: #7f8c8d;
+  background: #7f8c8d;
 }
 
 .btn-outline {
- background: transparent;
- color: #3498db;
- border: 2px solid #3498db;
+  background: transparent;
+  color: #3498db;
+  border: 2px solid #3498db;
 }
 
 .btn-outline:hover {
- background: #3498db;
- color: white;
+  background: #3498db;
+  color: white;
 }
 
 .btn-danger {
- background: #e74c3c;
- color: white;
+  background: #e74c3c;
+  color: white;
 }
 
 .btn-danger:hover {
- background: #c0392b;
+  background: #c0392b;
 }
 
 .btn-success {
- background: #27ae60;
- color: white;
+  background: #27ae60;
+  color: white;
 }
 
 .btn-success:hover {
- background: #219a52;
+  background: #219a52;
 }
 
 .btn-sm {
- padding: 0.5rem 1rem;
- font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
 }
 
 .filtros-section {
- background: white;
- border-radius: 12px;
- padding: 1.5rem;
- margin-bottom: 2rem;
- box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .filtros-container {
- display: grid;
- gap: 1rem;
+  display: grid;
+  gap: 1rem;
 }
 
 .search-box {
- position: relative;
- max-width: 400px;
+  position: relative;
+  max-width: 400px;
 }
 
 .search-icon {
- position: absolute;
- left: 1rem;
- top: 50%;
- transform: translateY(-50%);
- font-size: 1.2rem;
- color: #7f8c8d;
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: #7f8c8d;
 }
 
 .search-input {
- width: 100%;
- padding: 0.875rem 1rem 0.875rem 3rem;
- border: 2px solid #e1e8ed;
- border-radius: 8px;
- font-size: 1rem;
- transition: border-color 0.3s ease;
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 3rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
 }
 
 .search-input:focus {
- outline: none;
- border-color: #3498db;
+  outline: none;
+  border-color: #3498db;
 }
 
 .filtros-grid {
- display: flex;
- gap: 1rem;
- flex-wrap: wrap;
- align-items: center;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .filter-select {
- padding: 0.75rem 1rem;
- border: 2px solid #e1e8ed;
- border-radius: 8px;
- font-size: 0.9rem;
- min-width: 180px;
- cursor: pointer;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  min-width: 180px;
+  cursor: pointer;
 }
 
 .estadisticas-grid {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
- gap: 1.5rem;
- margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
- background: white;
- border-radius: 12px;
- padding: 1.5rem;
- display: flex;
- align-items: center;
- gap: 1rem;
- box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
- transition: transform 0.3s ease;
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
 }
 
 .stat-card:hover {
- transform: translateY(-2px);
+  transform: translateY(-2px);
 }
 
 .stat-number {
- font-size: 2rem;
- font-weight: 700;
- color: #2c3e50;
- line-height: 1;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1;
 }
 
 .stat-label {
- color: #7f8c8d;
- font-size: 0.9rem;
- margin-top: 0.25rem;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
 }
 
 .stat-card.total { border-left: 4px solid #3498db; }
@@ -1255,884 +1342,951 @@ export default {
 .stat-card.inactivos { border-left: 4px solid #95a5a6; }
 
 .servicios-section {
- background: white;
- border-radius: 12px;
- padding: 1.5rem;
- box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1.5rem;
- flex-wrap: wrap;
- gap: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .section-title {
- font-size: 1.5rem;
- font-weight: 600;
- color: #2c3e50;
- margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
 }
 
 .view-controls {
- display: flex;
- gap: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .view-btn {
- padding: 0.5rem 1rem;
- border: 2px solid #e1e8ed;
- background: white;
- border-radius: 6px;
- cursor: pointer;
- transition: all 0.3s ease;
- font-size: 0.85rem;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 2px solid #e1e8ed;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .view-btn.active {
- background: #3498db;
- color: white;
- border-color: #3498db;
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
 }
 
 .tabla-wrapper {
- overflow-x: auto;
+  overflow-x: auto;
 }
 
 .servicios-tabla {
- width: 100%;
- border-collapse: collapse;
- margin-bottom: 1rem;
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  min-width: 950px;
 }
 
 .servicios-tabla th {
- background: #f8f9fa;
- padding: 1rem;
- text-align: left;
- font-weight: 600;
- color: #2c3e50;
- border-bottom: 2px solid #e9ecef;
- white-space: nowrap;
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e9ecef;
+  white-space: nowrap;
 }
 
 .servicios-tabla th.sortable {
- cursor: pointer;
- user-select: none;
+  cursor: pointer;
+  user-select: none;
 }
 
 .servicios-tabla th.sortable:hover {
- background: #e9ecef;
+  background: #e9ecef;
 }
 
 .sort-icon {
- margin-left: 0.5rem;
- opacity: 0.5;
+  margin-left: 0.5rem;
+  opacity: 0.5;
 }
 
 .servicios-tabla td {
- padding: 1rem;
- border-bottom: 1px solid #e9ecef;
- vertical-align: middle;
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
 }
 
 .servicio-id {
- font-weight: 600;
- color: #3498db;
- font-family: monospace;
- font-size: 1rem;
+  font-weight: 600;
+  color: #3498db;
+  font-family: monospace;
+  font-size: 1rem;
 }
 
 .servicio-info {
- display: flex;
- flex-direction: column;
- gap: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .servicio-nombre {
- font-weight: 500;
- color: #2c3e50;
- font-size: 1rem;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 1rem;
 }
 
 .descripcion-info {
- max-width: 300px;
+  max-width: 300px;
 }
 
 .descripcion-texto {
- color: #7f8c8d;
- font-size: 0.9rem;
- line-height: 1.4;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .precio {
- font-weight: 600;
- font-family: monospace;
- padding: 0.25rem 0.5rem;
- border-radius: 4px;
- font-size: 0.9rem;
+  font-weight: 600;
+  font-family: monospace;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 .precio.minimo {
- background: #fff3cd;
- color: #856404;
+  background: #fff3cd;
+  color: #856404;
 }
 
 .precio.recomendado {
- background: #d4edda;
- color: #155724;
+  background: #d4edda;
+  color: #155724;
+}
+
+.categoria-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid #bbdefb;
+}
+
+.categoria-badge i {
+  font-size: 0.7rem;
 }
 
 .tarjetas-grid {
- display: grid;
- grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
- gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 1.5rem;
 }
 
 .servicio-card {
- border: 1px solid #e9ecef;
- border-radius: 12px;
- padding: 1.5rem;
- transition: all 0.3s ease;
- background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  background: white;
 }
 
 .servicio-card:hover {
- transform: translateY(-2px);
- box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .card-numero {
- font-weight: 600;
- color: #3498db;
- font-family: monospace;
- font-size: 1.1rem;
+  font-weight: 600;
+  color: #3498db;
+  font-family: monospace;
+  font-size: 1.1rem;
 }
 
 .servicio-nombre-card {
- color: #2c3e50;
- margin-bottom: 1rem;
- font-size: 1.3rem;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.categoria-info-card {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.categoria-info-modal {
+  margin-bottom: 0.5rem;
+}
+
+.categoria-info-modal .categoria-badge {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.6rem;
 }
 
 .descripcion-card {
- margin-bottom: 1.5rem;
- padding: 1rem;
- background: #f8f9fa;
- border-radius: 8px;
- border-left: 4px solid #3498db;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
 }
 
 .descripcion-card p {
- margin: 0;
- color: #2c3e50;
- line-height: 1.5;
+  margin: 0;
+  color: #2c3e50;
+  line-height: 1.5;
 }
 
 .precios-card {
- display: grid;
- gap: 0.75rem;
- margin-bottom: 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .precio-item {
- display: flex;
- justify-content: space-between;
- align-items: center;
- padding: 0.5rem;
- background: #f8f9fa;
- border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
 }
 
 .precio-label {
- color: #7f8c8d;
- font-size: 0.85rem;
- font-weight: 500;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  color: #7f8c8d;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .precio-valor {
- font-weight: 600;
- font-family: monospace;
+  font-weight: 600;
+  font-family: monospace;
 }
 
 .precio-valor.minimo {
- color: #856404;
+  color: #856404;
 }
 
 .precio-valor.recomendado {
- color: #155724;
+  color: #155724;
 }
 
 .card-actions {
- display: flex;
- gap: 0.75rem;
- flex-wrap: wrap;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .card-actions .btn {
- flex: 1;
- justify-content: center;
- min-width: 80px;
+  flex: 1;
+  justify-content: center;
+  min-width: 80px;
 }
 
 .estado-badge {
- padding: 0.375rem 0.75rem;
- border-radius: 20px;
- font-size: 0.8rem;
- font-weight: 600;
- text-transform: uppercase;
- letter-spacing: 0.5px;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .estado-badge.activo {
- background: #d4edda;
- color: #155724;
- border: 1px solid #c3e6cb;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
 }
 
 .estado-badge.inactivo {
- background: #f8d7da;
- color: #721c24;
- border: 1px solid #f5c6cb;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 
+/* BOTONES DE ACCIÓN CORREGIDOS */
 .acciones {
- display: flex;
- gap: 0.5rem;
- flex-wrap: wrap;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .btn-accion {
- width: 32px;
- height: 32px;
- border: none;
- border-radius: 6px;
- cursor: pointer;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 0.9rem;
- transition: all 0.3s ease;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
+.btn-accion:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-accion:active {
+  transform: translateY(0);
+}
+
+/* Botón Ver - Azul */
 .btn-accion.ver {
- background: #e3f2fd;
- color: #1976d2;
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
 }
 
 .btn-accion.ver:hover {
- background: #bbdefb;
+  background: #bbdefb;
+  color: #0d47a1;
+  border-color: #90caf9;
 }
 
+/* Botón Editar - Naranja */
 .btn-accion.editar {
- background: #fff3e0;
- color: #f57c00;
+  background: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffcc02;
 }
 
 .btn-accion.editar:hover {
- background: #ffe0b2;
+  background: #ffe0b2;
+  color: #e65100;
+  border-color: #ffb74d;
 }
 
+/* Botón Deshabilitar - Rojo */
 .btn-accion.deshabilitar {
- background: #ffebee;
- color: #d32f2f;
+  background: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
 }
 
 .btn-accion.deshabilitar:hover {
- background: #ffcdd2;
+  background: #ffcdd2;
+  color: #b71c1c;
+  border-color: #ef9a9a;
 }
 
+/* Botón Habilitar - Verde */
 .btn-accion.habilitar {
- background: #e8f5e8;
- color: #388e3c;
+  background: #e8f5e8;
+  color: #388e3c;
+  border: 1px solid #c8e6c9;
 }
 
 .btn-accion.habilitar:hover {
- background: #c8e6c9;
+  background: #c8e6c9;
+  color: #1b5e20;
+  border-color: #a5d6a7;
+}
+
+/* Iconos dentro de los botones */
+.btn-accion i {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .empty-state {
- text-align: center;
- padding: 4rem 2rem;
- color: #7f8c8d;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #7f8c8d;
 }
 
 .empty-icon {
- font-size: 4rem;
- margin-bottom: 1rem;
- opacity: 0.5;
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
 }
 
 .empty-title {
- font-size: 1.5rem;
- color: #2c3e50;
- margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
 }
 
 .empty-description {
- margin-bottom: 2rem;
- font-size: 1rem;
- line-height: 1.5;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .paginacion-info {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1rem;
- padding: 1rem;
- background: #f8f9fa;
- border-radius: 8px;
- flex-wrap: wrap;
- gap: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .items-info {
- color: #6c757d;
- font-size: 0.9rem;
- font-weight: 500;
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .pagination-jump {
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .pagination-jump label {
- color: #6c757d;
- font-size: 0.85rem;
- font-weight: 500;
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .page-input {
- width: 60px;
- padding: 0.375rem 0.5rem;
- border: 1px solid #ced4da;
- border-radius: 4px;
- text-align: center;
- font-size: 0.85rem;
+  width: 60px;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
 }
 
 .page-input:focus {
- outline: none;
- border-color: #3498db;
- box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
 .paginacion-completa {
- margin-top: 2rem;
- padding-top: 1.5rem;
- border-top: 1px solid #e9ecef;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
 }
 
 .paginacion {
- display: flex;
- justify-content: center;
- align-items: center;
- gap: 0.5rem;
- flex-wrap: wrap;
- margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
 }
 
 .btn-pag {
- padding: 0.5rem 0.75rem;
- border: 1px solid #dee2e6;
- background: white;
- border-radius: 6px;
- cursor: pointer;
- transition: all 0.3s ease;
- font-size: 0.9rem;
- min-width: 40px;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
 }
 
 .btn-pag:hover:not(:disabled) {
- background: #e9ecef;
- transform: translateY(-1px);
+  background: #e9ecef;
+  transform: translateY(-1px);
 }
 
 .btn-pag:disabled {
- opacity: 0.5;
- cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-pag.active {
- background: #3498db;
- color: white;
- border-color: #3498db;
- font-weight: 600;
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+  font-weight: 600;
 }
 
 .paginas {
- display: flex;
- gap: 0.25rem;
- align-items: center;
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
 }
 
 .pagina-separador {
- padding: 0.5rem 0.25rem;
- color: #6c757d;
- font-weight: bold;
+  padding: 0.5rem 0.25rem;
+  color: #6c757d;
+  font-weight: bold;
 }
 
 .paginacion-info-bottom {
- text-align: center;
- margin-top: 1rem;
+  text-align: center;
+  margin-top: 1rem;
 }
 
 .pagina-actual {
- color: #6c757d;
- font-size: 0.9rem;
- font-weight: 500;
- background: #f8f9fa;
- padding: 0.5rem 1rem;
- border-radius: 20px;
+  color: #6c757d;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
 }
 
 .modal-overlay {
- position: fixed;
- top: 0;
- left: 0;
- right: 0;
- bottom: 0;
- background: rgba(0, 0, 0, 0.5);
- display: flex;
- align-items: center;
- justify-content: center;
- z-index: 1000;
- padding: 1rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
 }
 
 .modal-content {
- background: white;
- border-radius: 12px;
- max-width: 800px;
- width: 100%;
- max-height: 90vh;
- overflow-y: auto;
- box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-formulario {
- max-width: 700px;
+  max-width: 700px;
 }
 
 .modal-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- padding: 1.5rem;
- border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .modal-header h3 {
- margin: 0;
- color: #2c3e50;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  margin: 0;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-close {
- background: none;
- border: none;
- font-size: 1.5rem;
- cursor: pointer;
- color: #7f8c8d;
- padding: 0.5rem;
- border-radius: 50%;
- transition: all 0.3s ease;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #7f8c8d;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
 .btn-close:hover {
- background: #f8f9fa;
- color: #e74c3c;
+  background: #f8f9fa;
+  color: #e74c3c;
 }
 
 .modal-body {
- padding: 1.5rem;
+  padding: 1.5rem;
 }
 
 .modal-footer {
- display: flex;
- justify-content: flex-end;
- gap: 1rem;
- padding: 1.5rem;
- border-top: 1px solid #e9ecef;
- background: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
 }
 
 .servicio-detalle {
- padding: 1rem 0;
+  padding: 1rem 0;
 }
 
 .detalle-grid {
- display: grid;
- gap: 1rem;
- margin-bottom: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .detalle-item {
- display: flex;
- justify-content: space-between;
- align-items: flex-start;
- padding: 0.75rem;
- background: #f8f9fa;
- border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
 }
 
 .detalle-item.descripcion-completa {
- flex-direction: column;
- align-items: flex-start;
- gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .detalle-item strong {
- color: #2c3e50;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .formulario-servicio {
- padding: 1rem 0;
+  padding: 1rem 0;
 }
 
 .form-grid {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
- gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
 }
 
 .form-group {
- display: flex;
- flex-direction: column;
- gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .form-group.full-width {
- grid-column: 1 / -1;
+  grid-column: 1 / -1;
 }
 
 .form-group label {
- font-weight: 600;
- color: #2c3e50;
- font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
 }
 
 .form-input,
 .form-select,
 .form-textarea {
- padding: 0.75rem 1rem;
- border: 2px solid #e1e8ed;
- border-radius: 8px;
- font-size: 1rem;
- transition: border-color 0.3s ease;
- font-family: inherit;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  font-family: inherit;
 }
 
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
- outline: none;
- border-color: #3498db;
- box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .form-textarea {
- resize: vertical;
- min-height: 100px;
+  resize: vertical;
+  min-height: 100px;
 }
 
 .precio-validacion {
- margin-top: 1rem;
- padding: 1rem;
- border-radius: 8px;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
 }
 
 .validacion-error {
- background: #f8d7da;
- color: #721c24;
- border: 1px solid #f5c6cb;
- padding: 0.75rem;
- border-radius: 6px;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .validacion-exito {
- background: #d4edda;
- color: #155724;
- border: 1px solid #c3e6cb;
- padding: 0.75rem;
- border-radius: 6px;
- display: flex;
- align-items: center;
- gap: 0.5rem;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* Estilos específicos para el modal de confirmación de servicios */
 .modal-confirmacion {
- max-width: 600px;
+  max-width: 600px;
 }
 
 .confirmacion-content {
- display: flex;
- flex-direction: column;
- gap: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
 .servicio-info-resumen {
- display: flex;
- align-items: center;
- gap: 1rem;
- padding: 1rem;
- background: #f8f9fa;
- border-radius: 8px;
- border-left: 4px solid #3498db;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
 }
 
 .servicio-avatar {
- width: 60px;
- height: 60px;
- background: linear-gradient(135deg, #3498db, #2980b9);
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- color: white;
- font-size: 1.5rem;
- flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .servicio-datos h4 {
- margin: 0 0 0.25rem 0;
- color: #2c3e50;
- font-size: 1.2rem;
+  margin: 0 0 0.25rem 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
 }
 
 .servicio-descripcion {
- margin: 0 0 0.25rem 0;
- color: #7f8c8d;
- font-size: 0.9rem;
- line-height: 1.4;
+  margin: 0 0 0.25rem 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .servicio-badges {
- display: flex;
- gap: 0.5rem;
- align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .servicio-id {
- font-family: monospace;
- background: #e3f2fd;
- color: #1976d2;
- padding: 0.2rem 0.5rem;
- border-radius: 4px;
- font-size: 0.8rem;
- font-weight: 600;
+  font-family: monospace;
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .precio-badge {
- font-family: monospace;
- background: #d4edda;
- color: #155724;
- padding: 0.2rem 0.5rem;
- border-radius: 4px;
- font-size: 0.8rem;
- font-weight: 600;
+  font-family: monospace;
+  background: #d4edda;
+  color: #155724;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .mensaje-confirmacion {
- text-align: center;
- padding: 1.5rem;
+  text-align: center;
+  padding: 1.5rem;
 }
 
 .icono-estado {
- width: 80px;
- height: 80px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- margin: 0 auto 1.5rem;
- font-size: 2rem;
- color: white;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  font-size: 2rem;
+  color: white;
 }
 
 .icono-estado.desactivar {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .icono-estado.activar {
- background: linear-gradient(135deg, #27ae60, #219a52);
+  background: linear-gradient(135deg, #27ae60, #219a52);
 }
 
 .texto-confirmacion {
- max-width: 400px;
- margin: 0 auto;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
 .pregunta-principal {
- font-size: 1.1rem;
- color: #2c3e50;
- margin-bottom: 1rem;
- line-height: 1.5;
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
 .text-danger {
- color: #e74c3c;
+  color: #e74c3c;
 }
 
 .text-success {
- color: #27ae60;
+  color: #27ae60;
 }
 
 .advertencia-estado,
 .info-estado {
- display: flex;
- align-items: flex-start;
- gap: 0.5rem;
- padding: 1rem;
- border-radius: 6px;
- font-size: 0.9rem;
- line-height: 1.4;
- text-align: left;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: left;
 }
 
 .advertencia-estado {
- background: #fff3cd;
- color: #856404;
- border: 1px solid #ffeaa7;
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
 }
 
 .advertencia-estado i {
- color: #f39c12;
- margin-top: 0.1rem;
+  color: #f39c12;
+  margin-top: 0.1rem;
 }
 
 .info-estado {
- background: #d1ecf1;
- color: #0c5460;
- border: 1px solid #bee5eb;
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }
 
 .info-estado i {
- color: #17a2b8;
- margin-top: 0.1rem;
+  color: #17a2b8;
+  margin-top: 0.1rem;
 }
 
 .cambio-estado-visual {
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 1.5rem;
- padding: 1.5rem;
- background: #f8f9fa;
- border-radius: 8px;
- border: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
 .estado-actual,
 .estado-nuevo {
- display: flex;
- flex-direction: column;
- align-items: center;
- gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .label {
- font-size: 0.8rem;
- color: #6c757d;
- font-weight: 500;
- text-transform: uppercase;
- letter-spacing: 0.5px;
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .flecha-cambio {
- color: #6c757d;
- font-size: 1.5rem;
+  color: #6c757d;
+  font-size: 1.5rem;
 }
 
 /* Responsive Design */
 @media (max-width: 1200px) {
- .estadisticas-grid {
-   grid-template-columns: repeat(3, 1fr);
- }
- 
- .confirmacion-content {
-   gap: 1.5rem;
- }
- 
- .cambio-estado-visual {
-   flex-direction: column;
-   gap: 1rem;
- }
- 
- .flecha-cambio {
-   transform: rotate(90deg);
- }
+  .estadisticas-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .confirmacion-content {
+    gap: 1.5rem;
+  }
+  
+  .cambio-estado-visual {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .flecha-cambio {
+    transform: rotate(90deg);
+  }
 }
 
 @media (max-width: 768px) {
- .admin-servicios-container {
-   padding: 1rem;
- }
+  .admin-servicios-container {
+    padding: 1rem;
+  }
 
- .page-header {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 1rem;
- }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
 
- .header-actions {
-   flex-direction: column;
- }
+  .header-actions {
+    flex-direction: column;
+  }
 
- .header-content h1 {
-   font-size: 2rem;
- }
+  .header-content h1 {
+    font-size: 2rem;
+  }
 
- .estadisticas-grid {
-   grid-template-columns: repeat(2, 1fr);
- }
+  .estadisticas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
- .filtros-grid {
-   flex-direction: column;
-   align-items: stretch;
- }
+  .filtros-grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
- .filter-select {
-   min-width: auto;
- }
+  .filter-select {
+    min-width: auto;
+  }
 
- .section-header {
+  .section-header {
    flex-direction: column;
    align-items: stretch;
  }
@@ -2148,7 +2302,7 @@ export default {
  }
 
  .servicios-tabla {
-   min-width: 800px;
+   min-width: 1000px;
  }
 
  .tarjetas-grid {
@@ -2202,6 +2356,18 @@ export default {
  
  .cambio-estado-visual {
    padding: 1rem;
+ }
+
+ /* Ajustar botones de acción en móvil */
+ .acciones {
+   flex-wrap: wrap;
+   justify-content: center;
+ }
+
+ .btn-accion {
+   width: 36px;
+   height: 36px;
+   margin: 2px;
  }
 }
 
@@ -2266,6 +2432,17 @@ export default {
  .info-estado {
    padding: 0.75rem;
    font-size: 0.85rem;
+ }
+
+ /* Botones de acción más pequeños en móviles muy pequeños */
+ .btn-accion {
+   width: 30px;
+   height: 30px;
+   font-size: 0.8rem;
+ }
+
+ .acciones {
+   gap: 0.25rem;
  }
 }
 </style>

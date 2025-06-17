@@ -248,7 +248,7 @@
                    <template v-if="cotizacion.estado === 'esperando' || cotizacion.estado === 'pendiente'">
                      <button 
                        class="btn-accion aceptar"
-                       @click="aceptarCotizacion(cotizacion)"
+                       @click="confirmarAceptacion(cotizacion)"
                        :title="cotizacion.estado === 'esperando' ? 'Aprobar cotización' : 'Marcar como efectiva'"
                      >
                        <i class="fas fa-check"></i>
@@ -265,8 +265,8 @@
                    <button 
                      v-if="cotizacion.pdfGenerado"
                      class="btn-accion imprimir"
-                     @click="descargarPDF(cotizacion)"
-                     title="Descargar PDF"
+                     @click="abrirVistaPreviaPDF(cotizacion)"
+                     title="Vista previa PDF"
                    >
                      <i class="fas fa-file-pdf"></i>
                    </button>
@@ -341,7 +341,7 @@
              
              <!-- Botones de Aceptar/Cancelar en tarjetas -->
              <template v-if="cotizacion.estado === 'esperando' || cotizacion.estado === 'pendiente'">
-               <button class="btn btn-sm btn-success" @click="aceptarCotizacion(cotizacion)">
+               <button class="btn btn-sm btn-success" @click="confirmarAceptacion(cotizacion)">
                  <i class="fas fa-check"></i> 
                  {{ cotizacion.estado === 'esperando' ? 'Aprobar' : 'Efectiva' }}
                </button>
@@ -354,7 +354,7 @@
              <button 
                v-if="cotizacion.pdfGenerado"
                class="btn btn-sm btn-secondary" 
-               @click="descargarPDF(cotizacion)"
+               @click="abrirVistaPreviaPDF(cotizacion)"
              >
                <i class="fas fa-file-pdf"></i> PDF
              </button>
@@ -511,7 +511,7 @@
            
            <!-- Acciones en modal para cotizaciones esperando o pendientes -->
            <div v-if="modalCotizacion.estado === 'esperando' || modalCotizacion.estado === 'pendiente'" class="modal-actions">
-             <button class="btn btn-success" @click="aceptarCotizacion(modalCotizacion)">
+             <button class="btn btn-success" @click="confirmarAceptacion(modalCotizacion)">
                <i class="fas fa-check"></i> 
                {{ modalCotizacion.estado === 'esperando' ? 'Aprobar Cotización' : 'Marcar como Efectiva' }}
              </button>
@@ -525,325 +525,483 @@
      </div>
    </div>
 
-   <!-- Modal de rechazo -->
-   <div v-if="modalRechazo" class="modal-overlay" @click="cerrarModalRechazo">
-     <div class="modal-content modal-rechazo" @click.stop>
+   <!-- Modal de confirmación para aceptación -->
+   <div v-if="modalConfirmacion" class="modal-overlay" @click="cerrarModalConfirmacion">
+     <div class="modal-content modal-confirmacion" @click.stop>
        <div class="modal-header">
-         <h3>{{ cotizacionSeleccionada?.estado === 'esperando' ? 'Rechazar Cotización' : 'Cancelar Cotización' }}</h3>
-         <button class="btn-close" @click="cerrarModalRechazo"><i class="fas fa-times"></i></button>
+         <h3>
+           <i class="fas fa-check-circle text-success"></i>
+           {{ cotizacionSeleccionada?.estado === 'esperando' ? 'Confirmar Aprobación' : 'Confirmar como Efectiva' }}
+         </h3>
+         <button class="btn-close" @click="cerrarModalConfirmacion"><i class="fas fa-times"></i></button>
        </div>
        <div class="modal-body">
-         <div class="rechazo-form">
-           <p>¿Estás seguro que deseas {{ cotizacionSeleccionada?.estado === 'esperando' ? 'rechazar' : 'cancelar' }} la cotización <strong>CT{{ String(cotizacionSeleccionada?.id).padStart(6, '0') }}</strong>?</p>
-           
-           <div class="form-group">
-             <label for="motivo-rechazo">Motivo {{ cotizacionSeleccionada?.estado === 'esperando' ? 'del rechazo' : 'de la cancelación' }} *</label>
-             <textarea 
-               id="motivo-rechazo"
-               v-model="motivoRechazo"
-               class="form-textarea"
-               rows="4"
-               :placeholder="cotizacionSeleccionada?.estado === 'esperando' ? 'Explica brevemente por qué se rechaza esta cotización...' : 'Explica brevemente por qué se cancela esta cotización...'"
-               required
-             ></textarea>
-           </div>
-           
-           <div class="modal-actions">
-             <button class="btn btn-secondary" @click="cerrarModalRechazo">
-               Cancelar
-             </button>
-             <button 
-               class="btn btn-danger" 
-               @click="confirmarRechazo"
-               :disabled="!motivoRechazo.trim()"
-             >
-               <i class="fas fa-times"></i> 
-               {{ cotizacionSeleccionada?.estado === 'esperando' ? 'Confirmar Rechazo' : 'Confirmar Cancelación' }}
-             </button>
+         <div class="confirmacion-content">
+           <div class="confirmacion-info">
+             <div class="info-card">
+               <h4>Cotización a {{ cotizacionSeleccionada?.estado === 'esperando' ? 'aprobar' : 'marcar como efectiva' }}:</h4>
+               <div class="cotizacion-resumen">
+                 <div class="resumen-item">
+                   <strong>Número:</strong> CT{{ String(cotizacionSeleccionada?.id).padStart(6, '0') }}
+                 </div>
+                 <div class="resumen-item">
+                   <strong>Cliente:</strong> {{ cotizacionSeleccionada?.cliente.nombre }}
+                 </div>
+                 <div class="resumen-item">
+                   <strong>Vendedor:</strong> {{ cotizacionSeleccionada?.vendedor.nombre }}
+                 </div>
+                 <div class="resumen-item">
+                   <strong>Total:</strong> 
+                   <span class="monto-destacado">{{ formatearMoneda(cotizacionSeleccionada?.total) }}</span>
+                 </div>
+                 <div class="resumen-item">
+                   <strong>Servicios:</strong> {{ cotizacionSeleccionada?.servicios.join(', ') }}
+                 </div>
+               </div>
+             </div>
+
+             <div class="accion-info">
+               <div class="accion-card" :class="cotizacionSeleccionada?.estado === 'esperando' ? 'aprobacion' : 'efectiva'">
+                 <div class="accion-icon">
+                   <i :class="cotizacionSeleccionada?.estado === 'esperando' ? 'fas fa-check-circle' : 'fas fa-handshake'"></i>
+                 </div>
+                 <div class="accion-text">
+                   <h5>{{ cotizacionSeleccionada?.estado === 'esperando' ? 'Aprobar Cotización' : 'Marcar como Efectiva' }}</h5>
+                   <p>
+                     {{ cotizacionSeleccionada?.estado === 'esperando' 
+                        ? 'La cotización cambiará de "Esperando Aprobación" a "Pendiente" y podrá ser enviada al cliente.' 
+                        : 'La cotización cambiará de "Pendiente" a "Efectiva" indicando que el cliente ha aceptado la propuesta.' }}
+                   </p>
+                 </div>
+               </div>
+             </div>
+
+             <div class="confirmacion-pregunta">
+               <p><strong>¿Estás seguro de que deseas continuar con esta acción?</strong></p>
+               <small class="text-muted">Esta acción actualizará el estado de la cotización y se registrará en el historial.</small>
+             </div>
            </div>
          </div>
        </div>
+       <div class="modal-footer">
+         <button class="btn btn-secondary" @click="cerrarModalConfirmacion">
+           <i class="fas fa-times"></i>
+           Cancelar
+         </button>
+         <button 
+           class="btn"
+           :class="cotizacionSeleccionada?.estado === 'esperando' ? 'btn-success' : 'btn-primary'"
+           @click="confirmarAceptacionFinal"
+         >
+           <i :class="cotizacionSeleccionada?.estado === 'esperando' ? 'fas fa-check' : 'fas fa-handshake'"></i>
+           {{ cotizacionSeleccionada?.estado === 'esperando' ? 'Aprobar Cotización' : 'Marcar como Efectiva' }}
+         </button>
+       </div>
      </div>
    </div>
- </div>
+
+   <!-- Modal de vista previa PDF -->
+   <div v-if="modalPDF" class="modal-overlay" @click="cerrarModalPDF">
+     <div class="modal-pdf-content" @click.stop>
+       <div class="modal-pdf-header">
+         <h3>Vista Previa - Cotización CT{{ String(pdfCotizacion.id).padStart(6, '0') }}</h3>
+         <button class="btn-close" @click="cerrarModalPDF"><i class="fas fa-times"></i></button>
+       </div>
+       <div class="modal-pdf-body">
+         <!-- Simulación de vista previa del PDF -->
+         <div class="pdf-preview">
+           <div class="pdf-header">
+             <div class="company-info">
+               <h2>Mi Empresa S.A.</h2>
+               <p>Dirección de la empresa<br>
+               Teléfono: +504 0000-0000<br>
+               Email: info@miempresa.com</p>
+             </div>
+             <div class="cotizacion-info">
+               <h3>COTIZACIÓN</h3>
+               <p><strong>No:</strong> CT{{ String(pdfCotizacion.id).padStart(6, '0') }}</p>
+               <p><strong>Fecha:</strong> {{ formatearFecha(pdfCotizacion.fechaCreacion) }}</p>
+             </div>
+           </div>
+           
+           <div class="pdf-watermark" v-if="esCopia">
+             <span class="watermark-text">COPIA</span>
+           </div>
+           
+           <div class="cliente-section">
+             <h4>Cliente:</h4>
+             <p><strong>{{ pdfCotizacion.cliente.nombre }}</strong><br>
+             {{ pdfCotizacion.cliente.email }}</p>
+           </div>
+
+           <div class="vendedor-section">
+             <h4>Vendedor:</h4>
+             <p><strong>{{ pdfCotizacion.vendedor.nombre }}</strong><br>
+             {{ pdfCotizacion.vendedor.rol }}</p>
+           </div>
+           
+           <div class="servicios-section">
+             <h4>Servicios:</h4>
+             <ul class="servicios-pdf-list">
+               <li v-for="(servicio, index) in pdfCotizacion.servicios" :key="index">
+                 {{ servicio }}
+               </li>
+             </ul>
+           </div>
+           
+           <div class="total-section">
+             <p><strong>Total: {{ formatearMoneda(pdfCotizacion.total) }}</strong></p>
+           </div>
+         </div>
+       </div>
+       <div class="modal-pdf-footer">
+         <div class="pdf-controls">
+           <button 
+             class="btn btn-toggle"
+             :class="{ 'btn-warning': esCopia, 'btn-success': !esCopia }"
+             @click="alternarTipoPDF"
+           >
+             <i class="fas fa-exchange-alt"></i>
+             {{ esCopia ? 'Cambiar a ORIGINAL' : 'Cambiar a COPIA' }}
+           </button>
+         </div>
+         <div class="pdf-actions">
+           <button class="btn btn-secondary" @click="cerrarModalPDF">
+             <i class="fas fa-times"></i>
+             Cancelar
+           </button>
+             <button class="btn btn-primary" @click="descargarPDF">
+            <i class="fas fa-download"></i>
+            Descargar {{ esCopia ? 'COPIA' : 'ORIGINAL' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de rechazo -->
+  <div v-if="modalRechazo" class="modal-overlay" @click="cerrarModalRechazo">
+    <div class="modal-content modal-rechazo" @click.stop>
+      <div class="modal-header">
+        <h3>{{ cotizacionSeleccionada?.estado === 'esperando' ? 'Rechazar Cotización' : 'Cancelar Cotización' }}</h3>
+        <button class="btn-close" @click="cerrarModalRechazo"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="rechazo-form">
+          <p>¿Estás seguro que deseas {{ cotizacionSeleccionada?.estado === 'esperando' ? 'rechazar' : 'cancelar' }} la cotización <strong>CT{{ String(cotizacionSeleccionada?.id).padStart(6, '0') }}</strong>?</p>
+          
+          <div class="form-group">
+            <label for="motivo-rechazo">Motivo {{ cotizacionSeleccionada?.estado === 'esperando' ? 'del rechazo' : 'de la cancelación' }} *</label>
+            <textarea 
+              id="motivo-rechazo"
+              v-model="motivoRechazo"
+              class="form-textarea"
+              rows="4"
+              :placeholder="cotizacionSeleccionada?.estado === 'esperando' ? 'Explica brevemente por qué se rechaza esta cotización...' : 'Explica brevemente por qué se cancela esta cotización...'"
+              required
+            ></textarea>
+          </div>
+          
+          <div class="modal-actions">
+            <button class="btn btn-secondary" @click="cerrarModalRechazo">
+              Cancelar
+            </button>
+            <button 
+              class="btn btn-danger" 
+              @click="confirmarRechazo"
+              :disabled="!motivoRechazo.trim()"
+            >
+              <i class="fas fa-times"></i> 
+              {{ cotizacionSeleccionada?.estado === 'esperando' ? 'Confirmar Rechazo' : 'Confirmar Cancelación' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </template>
 
 <script>
 export default {
- name: 'AdminCotizaciones',
- data() {
-   return {
-     vistaActual: 'tabla',
-     modalCotizacion: null,
-     modalRechazo: false,
-     cotizacionSeleccionada: null,
-     motivoRechazo: '',
-     paginaActual: 1,
-     itemsPorPagina: 25,
-     paginaSalto: 1,
-     ordenActual: { campo: 'fecha', direccion: 'desc' },
-     
-     filtros: {
-       busqueda: '',
-       estado: '',
-       vendedor: '',
-       periodo: ''
-     },
-     
-     // Datos simulados para demostración
-     cotizaciones: [
-       {
-         id: 1,
-         cliente: {
-           nombre: 'Empresa ABC S.A.',
-           email: 'contacto@empresaabc.com'
-         },
-         servicios: ['Desarrollo Web', 'SEO', 'Marketing Digital'],
-         fechaCreacion: '2024-01-15',
-         vendedor: {
-           nombre: 'Carlos Mendoza',
-           rol: 'Vendedor Senior'
-         },
-         estado: 'efectiva',
-         total: 25000.00,
-         pdfGenerado: true
-       },
-       {
-         id: 2,
-         cliente: {
-           nombre: 'Constructora XYZ',
-           email: 'info@xyz.com'
-         },
-         servicios: ['Consultoría', 'Auditoría'],
-         fechaCreacion: '2024-01-20',
-         vendedor: {
-           nombre: 'Ana García',
-           rol: 'Vendedor'
-         },
-         estado: 'pendiente',
-         total: 35000.00,
-         pdfGenerado: true
-       },
-       {
-         id: 3,
-         cliente: {
-           nombre: 'Comercial DEF',
-           email: 'ventas@def.com'
-         },
-         servicios: ['Diseño Gráfico'],
-         fechaCreacion: '2024-01-25',
-         vendedor: {
-           nombre: 'Luis Rodríguez',
-           rol: 'Vendedor'
-         },
-         estado: 'esperando',
-         total: 1500.00,
-         pdfGenerado: false
-       },
-       {
-         id: 4,
-         cliente: {
-           nombre: 'Industrias GHI',
-           email: 'compras@ghi.com'
-         },
-         servicios: ['ERP', 'Capacitación', 'Soporte', 'Mantenimiento'],
-         fechaCreacion: '2024-02-01',
-         vendedor: {
-           nombre: 'María López',
-           rol: 'Vendedor Senior'
-         },
-         estado: 'cancelada',
-         total: 45000.00,
-         pdfGenerado: true,
-         motivoRechazo: 'El presupuesto excede las expectativas del cliente'
-       },
-       {
-         id: 5,
-         cliente: {
-           nombre: 'Servicios JKL',
-           email: 'info@jkl.com'
-         },
-         servicios: ['E-commerce'],
-         fechaCreacion: '2024-02-05',
-         vendedor: {
-           nombre: 'Pedro Sánchez',
-           rol: 'Vendedor'
-         },
-         estado: 'esperando',
-         total: 800.00,
-         pdfGenerado: false
-       },
-       // Agregar más datos para demostración
-       ...Array.from({ length: 45 }, (_, i) => ({
-         id: i + 6,
-         cliente: {
-           nombre: `Cliente ${i + 6}`,
-           email: `cliente${i + 6}@email.com`
-         },
-         servicios: [
-           'Desarrollo Web', 'Marketing Digital', 'Consultoría', 'Diseño Gráfico', 'E-commerce'
-         ].slice(0, Math.floor(Math.random() * 3) + 1),
-         fechaCreacion: `2024-0${Math.floor(Math.random() * 9) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-         vendedor: {
-           nombre: ['Carlos Mendoza', 'Ana García', 'Luis Rodríguez', 'María López', 'Pedro Sánchez'][Math.floor(Math.random() * 5)],
-           rol: ['Vendedor', 'Vendedor Senior'][Math.floor(Math.random() * 2)]
-         },
-         estado: ['esperando', 'pendiente', 'efectiva', 'cancelada'][Math.floor(Math.random() * 4)],
-         total: Math.floor(Math.random() * 50000) + 1000,
-         pdfGenerado: Math.random() > 0.3,
-         motivoRechazo: Math.random() > 0.7 ? 'Motivo de ejemplo para cotización rechazada' : null
-       }))
-     ]
-   }
- },
- 
- computed: {
-   vendedoresUnicos() {
-     const vendedores = [...new Set(this.cotizaciones.map(c => c.vendedor.nombre))];
-     return vendedores.sort();
-   },
+name: 'AdminCotizaciones',
+data() {
+  return {
+    vistaActual: 'tabla',
+    modalCotizacion: null,
+    modalPDF: false,
+    pdfCotizacion: null,
+    esCopia: true, // Por defecto inicia como copia
+    modalConfirmacion: false, // Nuevo modal de confirmación
+    modalRechazo: false,
+    cotizacionSeleccionada: null,
+    motivoRechazo: '',
+    paginaActual: 1,
+    itemsPorPagina: 25,
+    paginaSalto: 1,
+    ordenActual: { campo: 'fecha', direccion: 'desc' },
+    
+    filtros: {
+      busqueda: '',
+      estado: '',
+      vendedor: '',
+      periodo: ''
+    },
+    
+    // Datos simulados para demostración
+    cotizaciones: [
+      {
+        id: 1,
+        cliente: {
+          nombre: 'Empresa ABC S.A.',
+          email: 'contacto@empresaabc.com'
+        },
+        servicios: ['Desarrollo Web', 'SEO', 'Marketing Digital'],
+        fechaCreacion: '2024-01-15',
+        vendedor: {
+          nombre: 'Carlos Mendoza',
+          rol: 'Vendedor Senior'
+        },
+        estado: 'efectiva',
+        total: 25000.00,
+        pdfGenerado: true
+      },
+      {
+        id: 2,
+        cliente: {
+          nombre: 'Constructora XYZ',
+          email: 'info@xyz.com'
+        },
+        servicios: ['Consultoría', 'Auditoría'],
+        fechaCreacion: '2024-01-20',
+        vendedor: {
+          nombre: 'Ana García',
+          rol: 'Vendedor'
+        },
+        estado: 'pendiente',
+        total: 35000.00,
+        pdfGenerado: true
+      },
+      {
+        id: 3,
+        cliente: {
+          nombre: 'Comercial DEF',
+          email: 'ventas@def.com'
+        },
+        servicios: ['Diseño Gráfico'],
+        fechaCreacion: '2024-01-25',
+        vendedor: {
+          nombre: 'Luis Rodríguez',
+          rol: 'Vendedor'
+        },
+        estado: 'esperando',
+        total: 1500.00,
+        pdfGenerado: false
+      },
+      {
+        id: 4,
+        cliente: {
+          nombre: 'Industrias GHI',
+          email: 'compras@ghi.com'
+        },
+        servicios: ['ERP', 'Capacitación', 'Soporte', 'Mantenimiento'],
+        fechaCreacion: '2024-02-01',
+        vendedor: {
+          nombre: 'María López',
+          rol: 'Vendedor Senior'
+        },
+        estado: 'cancelada',
+        total: 45000.00,
+        pdfGenerado: true,
+        motivoRechazo: 'El presupuesto excede las expectativas del cliente'
+      },
+      {
+        id: 5,
+        cliente: {
+          nombre: 'Servicios JKL',
+          email: 'info@jkl.com'
+        },
+        servicios: ['E-commerce'],
+        fechaCreacion: '2024-02-05',
+        vendedor: {
+          nombre: 'Pedro Sánchez',
+          rol: 'Vendedor'
+        },
+        estado: 'esperando',
+        total: 800.00,
+        pdfGenerado: false
+      },
+      // Agregar más datos para demostración
+      ...Array.from({ length: 45 }, (_, i) => ({
+        id: i + 6,
+        cliente: {
+          nombre: `Cliente ${i + 6}`,
+          email: `cliente${i + 6}@email.com`
+        },
+        servicios: [
+          'Desarrollo Web', 'Marketing Digital', 'Consultoría', 'Diseño Gráfico', 'E-commerce'
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        fechaCreacion: `2024-0${Math.floor(Math.random() * 9) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+        vendedor: {
+          nombre: ['Carlos Mendoza', 'Ana García', 'Luis Rodríguez', 'María López', 'Pedro Sánchez'][Math.floor(Math.random() * 5)],
+          rol: ['Vendedor', 'Vendedor Senior'][Math.floor(Math.random() * 2)]
+        },
+        estado: ['esperando', 'pendiente', 'efectiva', 'cancelada'][Math.floor(Math.random() * 4)],
+        total: Math.floor(Math.random() * 50000) + 1000,
+        pdfGenerado: Math.random() > 0.3,
+        motivoRechazo: Math.random() > 0.7 ? 'Motivo de ejemplo para cotización rechazada' : null
+      }))
+    ]
+  }
+},
 
-   cotizacionesFiltradas() {
-     let resultado = [...this.cotizaciones];
-     
-     // Filtro por búsqueda
-     if (this.filtros.busqueda) {
-       const busqueda = this.filtros.busqueda.toLowerCase();
-       resultado = resultado.filter(cotizacion => 
-         `CT${String(cotizacion.id).padStart(6, '0')}`.toLowerCase().includes(busqueda) ||
-         cotizacion.cliente.nombre.toLowerCase().includes(busqueda) ||
-         cotizacion.cliente.email.toLowerCase().includes(busqueda) ||
-         cotizacion.vendedor.nombre.toLowerCase().includes(busqueda)
-       );
-     }
-     
-     // Filtro por estado
-     if (this.filtros.estado) {
-       resultado = resultado.filter(cotizacion => 
-         cotizacion.estado === this.filtros.estado
-       );
-     }
+computed: {
+  vendedoresUnicos() {
+    const vendedores = [...new Set(this.cotizaciones.map(c => c.vendedor.nombre))];
+    return vendedores.sort();
+  },
 
-     // Filtro por vendedor
-     if (this.filtros.vendedor) {
-       resultado = resultado.filter(cotizacion => 
-         cotizacion.vendedor.nombre === this.filtros.vendedor
-       );
-     }
-     
-     // Filtro por período
-     if (this.filtros.periodo) {
-       const hoy = new Date();
-       resultado = resultado.filter(cotizacion => {
-         const fecha = new Date(cotizacion.fechaCreacion);
-         
-         if (this.filtros.periodo === 'hoy') {
-           return fecha.toDateString() === hoy.toDateString();
-         }
-         
-         if (this.filtros.periodo === 'semana') {
-           const semanaAtras = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
-           return fecha >= semanaAtras;
-         }
-         
-         if (this.filtros.periodo === 'mes') {
-           return fecha.getMonth() === hoy.getMonth() && 
-                  fecha.getFullYear() === hoy.getFullYear();
-         }
-         
-         if (this.filtros.periodo === 'trimestre') {
-           const trimestre = Math.floor(hoy.getMonth() / 3);
-           const fechaTrimestre = Math.floor(fecha.getMonth() / 3);
-           return fechaTrimestre === trimestre && 
-                  fecha.getFullYear() === hoy.getFullYear();
-         }
-         
-         return true;
-       });
-     }
-     
-     // Ordenamiento
-     resultado.sort((a, b) => {
-       let valorA = a[this.ordenActual.campo];
-       let valorB = b[this.ordenActual.campo];
-       
-       if (this.ordenActual.campo === 'cliente') {
-         valorA = a.cliente.nombre;
-         valorB = b.cliente.nombre;
-       }
+  cotizacionesFiltradas() {
+    let resultado = [...this.cotizaciones];
+    
+    // Filtro por búsqueda
+    if (this.filtros.busqueda) {
+      const busqueda = this.filtros.busqueda.toLowerCase();
+      resultado = resultado.filter(cotizacion => 
+        `CT${String(cotizacion.id).padStart(6, '0')}`.toLowerCase().includes(busqueda) ||
+        cotizacion.cliente.nombre.toLowerCase().includes(busqueda) ||
+        cotizacion.cliente.email.toLowerCase().includes(busqueda) ||
+        cotizacion.vendedor.nombre.toLowerCase().includes(busqueda)
+      );
+    }
+    
+    // Filtro por estado
+    if (this.filtros.estado) {
+      resultado = resultado.filter(cotizacion => 
+        cotizacion.estado === this.filtros.estado
+      );
+    }
 
-       if (this.ordenActual.campo === 'vendedor') {
-         valorA = a.vendedor.nombre;
-         valorB = b.vendedor.nombre;
-       }
-       
-       if (this.ordenActual.campo === 'fecha') {
-         valorA = new Date(a.fechaCreacion);
-         valorB = new Date(b.fechaCreacion);
-       }
-       
-       if (valorA < valorB) {
-         return this.ordenActual.direccion === 'asc' ? -1 : 1;
-       }
-       if (valorA > valorB) {
-         return this.ordenActual.direccion === 'asc' ? 1 : -1;
-       }
-       return 0;
-     });
-     
-     return resultado;
-   },
-   
-   cotizacionesPaginadas() {
-     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-     const fin = inicio + this.itemsPorPagina;
-     return this.cotizacionesFiltradas.slice(inicio, fin);
-   },
-   
-   totalPaginas() {
-     return Math.ceil(this.cotizacionesFiltradas.length / this.itemsPorPagina);
-   },
-   
-   paginasVisibles() {
-     const total = this.totalPaginas;
-     const actual = this.paginaActual;
-     const rango = 2;
-     
-     let inicio = Math.max(1, actual - rango);
-     let fin = Math.min(total, actual + rango);
-     
-     if (fin - inicio < 4) {
-       if (inicio === 1) {
-         fin = Math.min(total, inicio + 4);
-       } else if (fin === total) {
-         inicio = Math.max(1, fin - 4);
-       }
-     }
-     
-     const paginas = [];
-     for (let i = inicio; i <= fin; i++) {
-       paginas.push(i);
-     }
-     return paginas;
-   },
-   
-   rangoInicio() {
-     return (this.paginaActual - 1) * this.itemsPorPagina + 1;
-   },
-   
-   rangoFin() {
-     return Math.min(this.paginaActual * this.itemsPorPagina, this.cotizacionesFiltradas.length);
-   },
-   
-   estadisticas() {
-     const vendedoresActivos = new Set(this.cotizaciones.map(c => c.vendedor.nombre)).size;
-     const ingresosTotales = this.cotizaciones
-       .filter(c => c.estado === 'efectiva')
-       .reduce((total, c) => total + c.total, 0);
+    // Filtro por vendedor
+    if (this.filtros.vendedor) {
+      resultado = resultado.filter(cotizacion => 
+        cotizacion.vendedor.nombre === this.filtros.vendedor
+      );
+    }
+    
+    // Filtro por período
+    if (this.filtros.periodo) {
+      const hoy = new Date();
+      resultado = resultado.filter(cotizacion => {
+        const fecha = new Date(cotizacion.fechaCreacion);
+        
+        if (this.filtros.periodo === 'hoy') {
+          return fecha.toDateString() === hoy.toDateString();
+        }
+        
+        if (this.filtros.periodo === 'semana') {
+          const semanaAtras = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return fecha >= semanaAtras;
+        }
+        
+        if (this.filtros.periodo === 'mes') {
+          return fecha.getMonth() === hoy.getMonth() && 
+                 fecha.getFullYear() === hoy.getFullYear();
+        }
+        
+        if (this.filtros.periodo === 'trimestre') {
+          const trimestre = Math.floor(hoy.getMonth() / 3);
+          const fechaTrimestre = Math.floor(fecha.getMonth() / 3);
+          return fechaTrimestre === trimestre && 
+                 fecha.getFullYear() === hoy.getFullYear();
+        }
+        
+        return true;
+      });
+    }
+    
+    // Ordenamiento
+    resultado.sort((a, b) => {
+      let valorA = a[this.ordenActual.campo];
+      let valorB = b[this.ordenActual.campo];
+      
+      if (this.ordenActual.campo === 'cliente') {
+        valorA = a.cliente.nombre;
+        valorB = b.cliente.nombre;
+      }
 
-     return {
-       total: this.cotizaciones.length,
-       esperandoAprobacion: this.cotizaciones.filter(c => c.estado === 'esperando').length,
+      if (this.ordenActual.campo === 'vendedor') {
+        valorA = a.vendedor.nombre;
+        valorB = b.vendedor.nombre;
+      }
+      
+      if (this.ordenActual.campo === 'fecha') {
+        valorA = new Date(a.fechaCreacion);
+        valorB = new Date(b.fechaCreacion);
+      }
+      
+      if (valorA < valorB) {
+        return this.ordenActual.direccion === 'asc' ? -1 : 1;
+      }
+      if (valorA > valorB) {
+        return this.ordenActual.direccion === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+    
+    return resultado;
+  },
+  
+  cotizacionesPaginadas() {
+    const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+    const fin = inicio + this.itemsPorPagina;
+    return this.cotizacionesFiltradas.slice(inicio, fin);
+  },
+  
+  totalPaginas() {
+    return Math.ceil(this.cotizacionesFiltradas.length / this.itemsPorPagina);
+  },
+  
+  paginasVisibles() {
+    const total = this.totalPaginas;
+    const actual = this.paginaActual;
+    const rango = 2;
+    
+    let inicio = Math.max(1, actual - rango);
+    let fin = Math.min(total, actual + rango);
+    
+    if (fin - inicio < 4) {
+      if (inicio === 1) {
+        fin = Math.min(total, inicio + 4);
+      } else if (fin === total) {
+        inicio = Math.max(1, fin - 4);
+      }
+    }
+    
+    const paginas = [];
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    return paginas;
+  },
+  
+  rangoInicio() {
+    return (this.paginaActual - 1) * this.itemsPorPagina + 1;
+  },
+  
+  rangoFin() {
+    return Math.min(this.paginaActual * this.itemsPorPagina, this.cotizacionesFiltradas.length);
+  },
+  
+  estadisticas() {
+    const vendedoresActivos = new Set(this.cotizaciones.map(c => c.vendedor.nombre)).size;
+    const ingresosTotales = this.cotizaciones
+      .filter(c => c.estado === 'efectiva')
+      .reduce((total, c) => total + c.total, 0);
+
+    return {
+      total: this.cotizaciones.length,
+      esperandoAprobacion: this.cotizaciones.filter(c => c.estado === 'esperando').length,
       pendientes: this.cotizaciones.filter(c => c.estado === 'pendiente').length,
       efectivas: this.cotizaciones.filter(c => c.estado === 'efectiva').length,
       canceladas: this.cotizaciones.filter(c => c.estado === 'cancelada').length,
@@ -876,36 +1034,70 @@ watch: {
 
 methods: {
   nuevaCotizacion() {
-    this.$router.push('/shared/cotizacion');
+    alert('Navegando a nueva cotización...');
   },
   
   verCotizacion(cotizacion) {
     this.modalCotizacion = cotizacion;
   },
 
-  // Método para aceptar cotización - flujo corregido
-  aceptarCotizacion(cotizacion) {
-    const accion = cotizacion.estado === 'esperando' ? 'aprobar' : 'marcar como efectiva';
+  // Nueva función para mostrar modal de confirmación
+  confirmarAceptacion(cotizacion) {
+    this.cotizacionSeleccionada = cotizacion;
+    this.modalConfirmacion = true;
+  },
+
+  // Función para cerrar modal de confirmación
+  cerrarModalConfirmacion() {
+    this.modalConfirmacion = false;
+    this.cotizacionSeleccionada = null;
+  },
+
+  // Función final para aceptar cotización después de confirmación
+  confirmarAceptacionFinal() {
+    const cotizacion = this.cotizacionSeleccionada;
     const nuevoEstado = cotizacion.estado === 'esperando' ? 'pendiente' : 'efectiva';
     
-    if (confirm(`¿Estás seguro que deseas ${accion} la cotización CT${String(cotizacion.id).padStart(6, '0')}?`)) {
-      const index = this.cotizaciones.findIndex(c => c.id === cotizacion.id);
-      if (index !== -1) {
-        this.cotizaciones[index].estado = nuevoEstado;
-        this.cotizaciones[index].fechaAprobacion = new Date().toISOString().split('T')[0];
-        
-        const mensaje = cotizacion.estado === 'esperando' 
-          ? `Cotización CT${String(cotizacion.id).padStart(6, '0')} aprobada exitosamente`
-          : `Cotización CT${String(cotizacion.id).padStart(6, '0')} marcada como efectiva`;
-        
-        alert(mensaje);
-        
-        // Cerrar modal si está abierto
-        if (this.modalCotizacion && this.modalCotizacion.id === cotizacion.id) {
-          this.modalCotizacion = null;
-        }
+    const index = this.cotizaciones.findIndex(c => c.id === cotizacion.id);
+    if (index !== -1) {
+      this.cotizaciones[index].estado = nuevoEstado;
+      this.cotizaciones[index].fechaAprobacion = new Date().toISOString().split('T')[0];
+      
+      const mensaje = cotizacion.estado === 'esperando' 
+        ? `Cotización CT${String(cotizacion.id).padStart(6, '0')} aprobada exitosamente`
+        : `Cotización CT${String(cotizacion.id).padStart(6, '0')} marcada como efectiva`;
+      
+      alert(mensaje);
+      
+      // Cerrar modales
+      this.cerrarModalConfirmacion();
+      if (this.modalCotizacion && this.modalCotizacion.id === cotizacion.id) {
+        this.modalCotizacion = null;
       }
     }
+  },
+
+  // Nueva función para abrir vista previa del PDF
+  abrirVistaPreviaPDF(cotizacion) {
+    if (!cotizacion.pdfGenerado) {
+      alert('Esta cotización no tiene PDF generado');
+      return;
+    }
+    this.pdfCotizacion = cotizacion;
+    this.esCopia = true; // Siempre inicia como copia
+    this.modalPDF = true;
+  },
+
+  // Nueva función para alternar entre copia y original
+  alternarTipoPDF() {
+    this.esCopia = !this.esCopia;
+  },
+
+  // Nueva función para cerrar modal PDF
+  cerrarModalPDF() {
+    this.modalPDF = false;
+    this.pdfCotizacion = null;
+    this.esCopia = true;
   },
 
   rechazarCotizacion(cotizacion) {
@@ -943,13 +1135,11 @@ methods: {
     this.motivoRechazo = '';
   },
   
-  descargarPDF(cotizacion) {
-    if (!cotizacion.pdfGenerado) {
-      alert('Esta cotización no tiene PDF generado');
-      return;
-    }
-    console.log('Descargando PDF:', `CT${String(cotizacion.id).padStart(6, '0')}`);
-    alert(`Descargando PDF de CT${String(cotizacion.id).padStart(6, '0')}`);
+  descargarPDF() {
+    const tipo = this.esCopia ? 'COPIA' : 'ORIGINAL';
+    console.log(`Descargando PDF ${tipo} de:`, `CT${String(this.pdfCotizacion.id).padStart(6, '0')}`);
+    alert(`Descargando PDF ${tipo} de CT${String(this.pdfCotizacion.id).padStart(6, '0')}`);
+    this.cerrarModalPDF();
   },
   
   exportarDatos() {
@@ -1046,7 +1236,6 @@ methods: {
 </script>
 
 <style scoped>
-/* Reutilizamos la mayoría de los estilos del componente base */
 .admin-cotizaciones-container {
 padding: 2rem;
 max-width: 1400px;
@@ -1153,6 +1342,21 @@ font-size: 0.85rem;
 opacity: 0.6;
 cursor: not-allowed;
 transform: none !important;
+}
+
+.btn-toggle {
+padding: 0.75rem 1.5rem;
+font-weight: 600;
+border-radius: 8px;
+}
+
+.btn-warning {
+background: #f39c12;
+color: white;
+}
+
+.btn-warning:hover {
+background: #e67e22;
 }
 
 /* Nuevos estilos para botones de acción */
@@ -1820,7 +2024,7 @@ padding: 0.5rem 1rem;
 border-radius: 20px;
 }
 
-/* Modal */
+/* Modal base */
 .modal-overlay {
 position: fixed;
 top: 0;
@@ -1849,15 +2053,153 @@ box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 max-width: 500px;
 }
 
-.modal-header {
+/* Modal de confirmación específico */
+.modal-confirmacion {
+max-width: 600px;
+}
+
+.confirmacion-content {
+display: flex;
+flex-direction: column;
+gap: 1.5rem;
+}
+
+.info-card {
+background: #f8f9fa;
+border-radius: 8px;
+padding: 1.5rem;
+border-left: 4px solid #3498db;
+}
+
+.info-card h4 {
+color: #2c3e50;
+margin: 0 0 1rem 0;
+font-size: 1.1rem;
+}
+
+.cotizacion-resumen {
+display: grid;
+gap: 0.75rem;
+}
+
+.resumen-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 0.5rem 0;
+border-bottom: 1px solid #e9ecef;
+}
+
+.resumen-item:last-child {
+border-bottom: none;
+}
+
+.resumen-item strong {
+color: #2c3e50;
+font-weight: 600;
+min-width: 80px;
+}
+
+.monto-destacado {
+color: #27ae60;
+font-weight: 700;
+font-family: monospace;
+font-size: 1.1rem;
+}
+
+.accion-info {
+margin: 1rem 0;
+}
+
+.accion-card {
+display: flex;
+align-items: center;
+gap: 1rem;
+padding: 1.5rem;
+border-radius: 8px;
+border: 2px solid;
+}
+
+.accion-card.aprobacion {
+background: #d4edda;
+border-color: #c3e6cb;
+color: #155724;
+}
+
+.accion-card.efectiva {
+background: #d1ecf1;
+border-color: #bee5eb;
+color: #0c5460;
+}
+
+.accion-icon {
+font-size: 2rem;
+flex-shrink: 0;
+}
+
+.accion-text h5 {
+margin: 0 0 0.5rem 0;
+font-size: 1.1rem;
+font-weight: 600;
+}
+
+.accion-text p {
+margin: 0;
+line-height: 1.4;
+font-size: 0.9rem;
+}
+
+.confirmacion-pregunta {
+text-align: center;
+padding: 1rem;
+background: #fff3cd;
+border-radius: 8px;
+border: 1px solid #ffeaa7;
+}
+
+.confirmacion-pregunta p {
+margin: 0 0 0.5rem 0;
+color: #856404;
+}
+
+.confirmacion-pregunta small {
+color: #6c757d;
+font-style: italic;
+}
+
+.text-success {
+color: #27ae60 !important;
+}
+
+.text-muted {
+color: #6c757d !important;
+}
+
+/* Modal PDF específico */
+.modal-pdf-content {
+background: white;
+border-radius: 12px;
+max-width: 900px;
+width: 100%;
+max-height: 95vh;
+overflow-y: auto;
+box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+display: flex;
+flex-direction: column;
+}
+
+.modal-header,
+.modal-pdf-header {
 display: flex;
 justify-content: space-between;
 align-items: center;
 padding: 1.5rem;
 border-bottom: 1px solid #e9ecef;
+flex-shrink: 0;
 }
 
-.modal-header h3 {
+.modal-header h3,
+.modal-pdf-header h3 {
 margin: 0;
 color: #2c3e50;
 }
@@ -1880,6 +2222,138 @@ color: #e74c3c;
 
 .modal-body {
 padding: 1.5rem;
+}
+
+.modal-footer {
+padding: 1.5rem;
+border-top: 1px solid #e9ecef;
+display: flex;
+justify-content: flex-end;
+gap: 1rem;
+flex-wrap: wrap;
+}
+
+.modal-pdf-body {
+padding: 1.5rem;
+flex: 1;
+overflow-y: auto;
+}
+
+.modal-pdf-footer {
+padding: 1.5rem;
+border-top: 1px solid #e9ecef;
+background: #f8f9fa;
+display: flex;
+justify-content: space-between;
+align-items: center;
+flex-wrap: wrap;
+gap: 1rem;
+flex-shrink: 0;
+}
+
+.pdf-controls {
+display: flex;
+align-items: center;
+}
+
+.pdf-actions {
+display: flex;
+gap: 1rem;
+}
+
+/* Vista previa del PDF */
+.pdf-preview {
+background: white;
+border: 1px solid #ddd;
+border-radius: 8px;
+padding: 2rem;
+position: relative;
+min-height: 600px;
+font-family: Arial, sans-serif;
+}
+
+.pdf-watermark {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%) rotate(-45deg);
+z-index: 1;
+pointer-events: none;
+}
+
+.watermark-text {
+font-size: 4rem;
+font-weight: bold;
+color: rgba(231, 76, 60, 0.1);
+text-transform: uppercase;
+letter-spacing: 2rem;
+}
+
+.pdf-header {
+display: flex;
+justify-content: space-between;
+margin-bottom: 2rem;
+position: relative;
+z-index: 2;
+}
+
+.company-info h2 {
+color: #2c3e50;
+margin-bottom: 0.5rem;
+}
+
+.company-info p {
+color: #7f8c8d;
+line-height: 1.4;
+}
+
+.cotizacion-info {
+text-align: right;
+}
+
+.cotizacion-info h3 {
+color: #3498db;
+margin-bottom: 0.5rem;
+}
+
+.cliente-section,
+.vendedor-section,
+.servicios-section {
+margin-bottom: 2rem;
+position: relative;
+z-index: 2;
+}
+
+.cliente-section h4,
+.vendedor-section h4,
+.servicios-section h4 {
+color: #2c3e50;
+margin-bottom: 0.5rem;
+}
+
+.servicios-pdf-list {
+margin: 0;
+padding-left: 1.5rem;
+position: relative;
+z-index: 2;
+}
+
+.servicios-pdf-list li {
+margin-bottom: 0.5rem;
+color: #2c3e50;
+}
+
+.total-section {
+text-align: right;
+position: relative;
+z-index: 2;
+border-top: 2px solid #3498db;
+padding-top: 1rem;
+}
+
+.total-section p {
+font-size: 1.2rem;
+color: #2c3e50;
 }
 
 .cotizacion-detalle {
@@ -1970,6 +2444,27 @@ flex-wrap: wrap;
 .estadisticas-grid {
   grid-template-columns: repeat(3, 1fr);
 }
+
+.modal-confirmacion {
+  max-width: 95%;
+  margin: 1rem;
+}
+
+.resumen-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.accion-card {
+  flex-direction: column;
+  text-align: center;
+  gap: 1rem;
+}
+
+.confirmacion-content {
+  gap: 1rem;
+}
 }
 
 @media (max-width: 768px) {
@@ -2028,71 +2523,405 @@ flex-wrap: wrap;
 }
 
 .card-actions {
-  justify-content: stretch;
+ justify-content: stretch;
 }
 
 .card-actions .btn {
-  flex: 1;
-  justify-content: center;
+ flex: 1;
+ justify-content: center;
 }
 
 .detalle-item {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
+ flex-direction: column;
+ align-items: flex-start;
+ gap: 0.5rem;
 }
 
 .acciones {
-  justify-content: center;
+ justify-content: center;
 }
 
 .modal-actions {
-  justify-content: stretch;
+ justify-content: stretch;
 }
 
 .modal-actions .btn {
-  flex: 1;
-  justify-content: center;
+ flex: 1;
+ justify-content: center;
+}
+
+.modal-pdf-footer {
+ flex-direction: column;
+ align-items: stretch;
+}
+
+.pdf-actions {
+ justify-content: stretch;
+}
+
+.pdf-actions .btn {
+ flex: 1;
+}
+
+.watermark-text {
+ font-size: 2.5rem;
+ letter-spacing: 1rem;
+}
+
+.modal-footer {
+ justify-content: stretch;
+}
+
+.modal-footer .btn {
+ flex: 1;
+ justify-content: center;
 }
 }
 
 @media (max-width: 480px) {
 .estadisticas-grid {
-  grid-template-columns: 1fr;
+ grid-template-columns: 1fr;
 }
 
 .filtros-section,
 .cotizaciones-section {
-  padding: 1rem;
+ padding: 1rem;
 }
 
 .stat-card {
-  padding: 1rem;
+ padding: 1rem;
 }
 
 .cotizacion-card {
-  padding: 1rem;
+ padding: 1rem;
 }
 
-.modal-content {
-  margin: 0.5rem;
+.modal-content,
+.modal-pdf-content {
+ margin: 0.5rem;
 }
 
 .btn-pag {
-  min-width: 35px;
-  padding: 0.375rem 0.5rem;
+ min-width: 35px;
+ padding: 0.375rem 0.5rem;
 }
 
 .acciones {
-  flex-direction: column;
-  gap: 0.25rem;
+ flex-direction: column;
+ gap: 0.25rem;
 }
 
 .btn-accion {
-  width: 100%;
-  height: auto;
-  padding: 0.5rem;
-  border-radius: 4px;
+ width: 100%;
+ height: auto;
+ padding: 0.5rem;
+ border-radius: 4px;
+}
+
+.pdf-preview {
+ padding: 1rem;
+}
+
+.pdf-header {
+ flex-direction: column;
+ gap: 1rem;
+}
+
+.cotizacion-info {
+ text-align: left;
+}
+
+.watermark-text {
+ font-size: 2rem;
+ letter-spacing: 0.5rem;
+}
+
+.modal-confirmacion {
+ margin: 0.5rem;
+}
+
+.confirmacion-content {
+ gap: 1rem;
+}
+
+.info-card {
+ padding: 1rem;
+}
+
+.accion-card {
+ padding: 1rem;
+ flex-direction: column;
+ text-align: center;
+}
+
+.accion-icon {
+ font-size: 1.5rem;
+}
+
+.confirmacion-pregunta {
+ padding: 0.75rem;
+}
+
+.resumen-item {
+ flex-direction: column;
+ align-items: flex-start;
+ gap: 0.25rem;
+ padding: 0.25rem 0;
+}
+
+.resumen-item strong {
+ min-width: auto;
+}
+
+.modal-footer {
+ flex-direction: column;
+ gap: 0.5rem;
+}
+
+.modal-footer .btn {
+ width: 100%;
+ justify-content: center;
+}
+}
+
+/* Estilos adicionales para elementos específicos */
+.text-warning {
+color: #f39c12 !important;
+}
+
+.btn-success {
+background: #27ae60;
+color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+background: #219a52;
+transform: translateY(-1px);
+}
+
+/* Animaciones y transiciones adicionales */
+@keyframes fadeIn {
+0% { opacity: 0; transform: translateY(-10px); }
+100% { opacity: 1; transform: translateY(0); }
+}
+
+.modal-overlay {
+animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content,
+.modal-pdf-content {
+animation: fadeIn 0.4s ease-out;
+}
+
+.confirmacion-content {
+animation: fadeIn 0.5s ease-out;
+}
+
+/* Mejoras de usabilidad */
+.btn:focus {
+outline: none;
+box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.btn-accion:focus {
+outline: none;
+box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+}
+
+.form-textarea:focus,
+.search-input:focus,
+.filter-select:focus,
+.page-input:focus {
+box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Estados de loading y disabled */
+.btn.loading {
+position: relative;
+color: transparent;
+}
+
+.btn.loading::after {
+content: '';
+position: absolute;
+width: 16px;
+height: 16px;
+top: 50%;
+left: 50%;
+margin-left: -8px;
+margin-top: -8px;
+border: 2px solid transparent;
+border-top-color: currentColor;
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+to {
+ transform: rotate(360deg);
+}
+}
+
+.btn:disabled,
+.btn-accion:disabled {
+opacity: 0.6;
+cursor: not-allowed;
+transform: none !important;
+}
+
+/* Mejoras visuales para estados hover */
+.cotizacion-card:hover .card-numero {
+color: #2980b9;
+}
+
+.stat-card:hover .stat-number {
+color: #3498db;
+}
+
+.btn-accion:hover:not(:disabled) {
+transform: translateY(-1px);
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para tooltips si se implementan */
+.tooltip {
+position: relative;
+}
+
+.tooltip::after {
+content: attr(title);
+position: absolute;
+bottom: 100%;
+left: 50%;
+transform: translateX(-50%);
+background: #2c3e50;
+color: white;
+padding: 0.5rem;
+border-radius: 4px;
+font-size: 0.8rem;
+white-space: nowrap;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.3s ease;
+z-index: 1000;
+}
+
+.tooltip:hover::after {
+opacity: 1;
+}
+
+/* Estilos para scroll personalizado */
+.modal-content::-webkit-scrollbar,
+.modal-pdf-content::-webkit-scrollbar,
+.tabla-wrapper::-webkit-scrollbar {
+width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track,
+.modal-pdf-content::-webkit-scrollbar-track,
+.tabla-wrapper::-webkit-scrollbar-track {
+background: #f1f1f1;
+border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb,
+.modal-pdf-content::-webkit-scrollbar-thumb,
+.tabla-wrapper::-webkit-scrollbar-thumb {
+background: #c1c1c1;
+border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover,
+.modal-pdf-content::-webkit-scrollbar-thumb:hover,
+.tabla-wrapper::-webkit-scrollbar-thumb:hover {
+background: #a1a1a1;
+}
+
+/* Estilos para impresión */
+@media print {
+.header-actions,
+.filtros-section,
+.paginacion-completa,
+.modal-overlay {
+ display: none !important;
+}
+
+.admin-cotizaciones-container {
+ padding: 0;
+ max-width: none;
+}
+
+.cotizaciones-section {
+ box-shadow: none;
+ border: 1px solid #ddd;
+}
+
+.btn-accion {
+ display: none;
+}
+}
+
+/* Estilos para modo oscuro (si se implementa) */
+@media (prefers-color-scheme: dark) {
+.admin-cotizaciones-container {
+ background: #1a1a1a;
+ color: #e0e0e0;
+}
+
+.modal-content,
+.modal-pdf-content {
+ background: #2c2c2c;
+ color: #e0e0e0;
+}
+
+.cotizaciones-tabla th {
+ background: #3c3c3c;
+ color: #e0e0e0;
+}
+
+.estado-badge {
+ filter: brightness(0.8);
+}
+}
+
+/* Estilos para alta resolución */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+.watermark-text {
+ -webkit-font-smoothing: antialiased;
+ -moz-osx-font-smoothing: grayscale;
+}
+}
+
+/* Estilos para reducir movimiento si el usuario lo prefiere */
+@media (prefers-reduced-motion: reduce) {
+* {
+ animation-duration: 0.01ms !important;
+ animation-iteration-count: 1 !important;
+ transition-duration: 0.01ms !important;
+}
+
+.btn:hover,
+.btn-accion:hover,
+.cotizacion-card:hover,
+.stat-card:hover {
+ transform: none !important;
+}
+}
+
+/* Mejoras de contraste para accesibilidad */
+@media (prefers-contrast: high) {
+.btn {
+ border: 2px solid currentColor;
+}
+
+.estado-badge {
+ border-width: 2px;
+ font-weight: 700;
+}
+
+.modal-overlay {
+ background: rgba(0, 0, 0, 0.8);
 }
 }
 </style>

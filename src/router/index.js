@@ -17,6 +17,7 @@ import AdminDashboard from '@/views/admin/Dashboard.vue';
 import MisCotizacione from '@/views/admin/MisCotizaciones.vue';
 import MisUsuarios from '@/views/admin/MisUsuarios.vue';
 import MisClientes from '@/views/admin/MisClientes.vue';
+import MisCategorias from '@/views/admin/MisCategorias.vue';
 import MisServicios from '@/views/admin/MisServicios.vue';
 import MisReportes from '@/views/admin/MisReportes.vue';
 
@@ -107,6 +108,12 @@ const routes = [
         path: '/admin/clientes',
         name: 'MisClientes',
         component: MisClientes
+      },
+
+      {
+        path: '/admin/categorias',
+        name: 'MisCategorias',
+        component: MisCategorias
       },
 
        {
