@@ -62,20 +62,16 @@
         <div class="cantidad-controls">
           <button @click="decrementarGB" :disabled="cantidadGB <= 0" class="btn-cantidad">-</button>
           <input 
-            v-model.number="cantidadGBInput" 
+            v-model.number="cantidadGB" 
             type="number" 
             min="0" 
-            step="100"
+            step="1"
             class="input-cantidad gb-input"
             @input="actualizarCantidadGB"
-            @blur="redondearGB"
             placeholder="GB"
           >
           <button @click="incrementarGB" class="btn-cantidad">+</button>
         </div>
-        <small v-if="cantidadGBInput !== cantidadGB && cantidadGBInput > 0" class="gb-redondeo">
-          Se redondeará a: {{ cantidadGB }} GB
-        </small>
       </div>
 
       <!-- Para servicios normales -->
@@ -144,8 +140,7 @@ export default {
     return {
       precioVentaLocal: this.precioVenta || 0,
       cantidadEquiposLocal: this.cantidadEquipos || 0,
-      cantidadGB: 0,
-      cantidadGBInput: 0
+      cantidadGB: 0
     };
   },
   computed: {
@@ -168,12 +163,11 @@ export default {
     cantidadEquipos(newVal) {
       this.cantidadEquiposLocal = newVal || 0;
     },
-    // NUEVO: Escuchar cambios en modelValue para resetear GB
+    // Escuchar cambios en modelValue para resetear GB
     modelValue(newVal) {
       if (this.esServicioBackup && newVal === 0) {
         // Si es un servicio de backup y el valor se resetea a 0, limpiar GB
         this.cantidadGB = 0;
-        this.cantidadGBInput = 0;
       }
     }
   },
@@ -209,47 +203,37 @@ export default {
       this.$emit('update:cantidadEquipos', this.cantidadEquiposLocal);
     },
 
-    // Métodos para servicios de backup (GB)
-    redondearAMultiploDe100(cantidad) {
-      if (cantidad <= 0) return 0;
-      return Math.ceil(cantidad / 100) * 100;
-    },
+    // Métodos para servicios de backup (GB) - MODIFICADO
     incrementarGB() {
-      this.cantidadGBInput += 100;
+      this.cantidadGB = Math.floor(this.cantidadGB) + 1; // Asegurar número entero
       this.actualizarCantidadGB();
     },
     decrementarGB() {
-      if (this.cantidadGBInput >= 100) {
-        this.cantidadGBInput -= 100;
+      if (this.cantidadGB >= 1) {
+        this.cantidadGB = Math.floor(this.cantidadGB) - 1; // Asegurar número entero
         this.actualizarCantidadGB();
       }
     },
     actualizarCantidadGB() {
-      if (this.cantidadGBInput < 0) {
-        this.cantidadGBInput = 0;
+      // Asegurar que sea un número entero positivo
+      if (this.cantidadGB < 0) {
+        this.cantidadGB = 0;
+      } else {
+        // Convertir a entero si no lo es
+        this.cantidadGB = Math.floor(this.cantidadGB) || 0;
       }
-      
-      // Redondear automáticamente a múltiplo de 100
-      this.cantidadGB = this.redondearAMultiploDe100(this.cantidadGBInput);
       
       // Para servicios de backup, emitimos como cantidad de servidores
       // y ponemos equipos en 0
       this.$emit('update:modelValue', this.cantidadGB);
       this.$emit('update:cantidadEquipos', 0);
     },
-    redondearGB() {
-      // Al salir del campo, actualizar el input con el valor redondeado
-      if (this.cantidadGBInput > 0) {
-        this.cantidadGBInput = this.cantidadGB;
-      }
-    },
     actualizarPrecioVenta() {
       this.$emit('update:precioVenta', this.precioVentaLocal || 0);
     },
-    // NUEVO: Método para limpiar datos internos
+    // Método para limpiar datos internos
     limpiarDatosInternos() {
       this.cantidadGB = 0;
-      this.cantidadGBInput = 0;
       this.precioVentaLocal = this.servicio.precioVenta || 0;
       this.cantidadEquiposLocal = 0;
     }
