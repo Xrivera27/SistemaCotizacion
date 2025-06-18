@@ -509,7 +509,6 @@ export default {
 </script>
 
 <style scoped>
-/* CSS existente más los nuevos estilos para filtros y paginación */
 .cotizacion-form-container {
   width: 100%;
   max-width: 1400px;
@@ -518,14 +517,119 @@ export default {
   box-sizing: border-box;
 }
 
-/* Filtros */
-.filtros-container {
-  background: rgba(52, 152, 219, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 1rem;
+/* Años selector - Más sobrio */
+.años-selector {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  border: 2px solid rgba(52, 152, 219, 0.2);
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.años-container {
+  text-align: center;
+}
+
+.años-container label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #495057;
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.años-container label i {
+  color: #6c757d;
+  font-size: 1.1em;
+}
+
+.años-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.btn-años {
+  width: 3rem;
+  height: 3rem;
+  border: 2px solid #6c757d;
+  background: white;
+  color: #495057;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-años:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #495057;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-años:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: #adb5bd;
+  border-color: #dee2e6;
+}
+
+.input-años {
+  width: 4rem;
+  height: 3rem;
+  text-align: center;
+  border: 2px solid #ced4da;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  background: white;
+  color: #495057;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.input-años:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.años-info {
+  color: #6c757d;
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  font-style: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.años-info i {
+  color: #007bff;
+  font-size: 0.9em;
+}
+
+/* Filtros - Diseño corporativo */
+.filtros-container {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .filtros-header {
@@ -533,20 +637,31 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .filtros-header h3 {
-  color: #2c3e50;
+  color: #495057;
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 600;
+}
+
+.filtros-header h3 i {
+  color: #6c757d;
 }
 
 .servicios-count {
-  color: #7f8c8d;
+  color: #6c757d;
   font-weight: 500;
   font-size: 0.9rem;
+  background: #f8f9fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid #e9ecef;
 }
 
 .filtros-content {
@@ -573,14 +688,16 @@ export default {
   width: 100%;
   padding: 0.75rem 3rem 0.75rem 2.5rem;
   border: 2px solid #e9ecef;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  background: white;
 }
 
 .input-busqueda:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .btn-limpiar-busqueda {
@@ -593,7 +710,8 @@ export default {
   color: #6c757d;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .btn-limpiar-busqueda:hover {
@@ -606,10 +724,16 @@ export default {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #495057;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.categorias-filter label i,
+.precio-filter label i {
+  color: #6c757d;
 }
 
 .select-categoria,
@@ -617,27 +741,39 @@ export default {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #e9ecef;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   font-size: 1rem;
   background: white;
+  color: #495057;
+  transition: all 0.2s;
+}
+
+.select-categoria:focus,
+.select-precio:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .btn-limpiar-filtros {
-  background: #e74c3c;
+  background: linear-gradient(135deg, #6c757d, #495057);
   color: white;
   border: none;
   padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-limpiar-filtros:hover {
-  background: #c0392b;
+  background: linear-gradient(135deg, #5a6268, #343a40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Servicios Section */
@@ -652,14 +788,24 @@ export default {
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .servicios-header h3 {
-  color: #2c3e50;
+  color: #495057;
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 600;
+}
+
+.servicios-header h3 i {
+  color: #6c757d;
 }
 
 .paginacion-info {
@@ -672,6 +818,7 @@ export default {
 .resultados-info {
   color: #6c757d;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .items-por-pagina {
@@ -683,31 +830,49 @@ export default {
 .items-por-pagina label {
   color: #495057;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .select-items {
-  padding: 0.4rem;
+  padding: 0.4rem 0.8rem;
   border: 1px solid #ced4da;
-  border-radius: 0.25rem;
+  border-radius: 6px;
   background: white;
+  color: #495057;
+  font-weight: 500;
+}
+
+/* Servicios Grid */
+.servicios-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  grid-template-columns: 1fr;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* No resultados */
 .no-resultados {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 4rem 1rem;
   color: #6c757d;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
 }
 
 .no-resultados-content i {
   font-size: 3rem;
   margin-bottom: 1rem;
-  opacity: 0.5;
+  opacity: 0.4;
+  color: #adb5bd;
 }
 
 .no-resultados-content h4 {
   margin-bottom: 0.5rem;
   color: #495057;
+  font-weight: 600;
 }
 
 .btn-link {
@@ -716,13 +881,14 @@ export default {
   color: #007bff;
   text-decoration: underline;
   cursor: pointer;
+  font-weight: 500;
 }
 
 .btn-link:hover {
   color: #0056b3;
 }
 
-/* Paginación */
+/* Paginación - Diseño profesional */
 .paginacion-container {
   display: flex;
   justify-content: space-between;
@@ -730,6 +896,11 @@ export default {
   margin-top: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .paginacion {
@@ -743,22 +914,25 @@ export default {
   border: 1px solid #dee2e6;
   background: white;
   color: #495057;
-  border-radius: 0.375rem;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .btn-paginacion:hover:not(:disabled) {
-  background: #e9ecef;
+  background: #f8f9fa;
   border-color: #adb5bd;
+  color: #212529;
 }
 
 .btn-paginacion:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  color: #adb5bd;
 }
 
 .numeros-pagina {
@@ -773,17 +947,19 @@ export default {
   border: 1px solid #dee2e6;
   background: white;
   color: #495057;
-  border-radius: 0.375rem;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .btn-numero:hover {
-  background: #e9ecef;
+  background: #f8f9fa;
   border-color: #adb5bd;
+  color: #212529;
 }
 
 .btn-numero.activa {
@@ -806,43 +982,138 @@ export default {
 .ir-a-pagina label {
   color: #495057;
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .input-pagina {
   width: 4rem;
   padding: 0.4rem;
   border: 1px solid #ced4da;
-  border-radius: 0.25rem;
+  border-radius: 6px;
   text-align: center;
+  color: #495057;
+}
+
+.input-pagina:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .btn-ir {
   padding: 0.4rem 0.8rem;
-  background: #28a745;
+  background: #007bff;
   color: white;
   border: none;
-  border-radius: 0.25rem;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
 .btn-ir:hover {
-  background: #218838;
+  background: #0056b3;
+}
+
+/* Form Actions - Botón limpiar en rojo */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.btn-calcular, .btn-limpiar {
+  padding: 0.875rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-calcular {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.btn-calcular:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e7e34, #17a2b8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.btn-calcular:disabled {
+  background: linear-gradient(135deg, #6c757d, #adb5bd);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón limpiar en rojo */
+.btn-limpiar {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+}
+
+.btn-limpiar:hover {
+  background: linear-gradient(135deg, #c82333, #a71e2a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+.btn-limpiar:active {
+  background: linear-gradient(135deg, #a71e2a, #8b1a1a);
+  transform: translateY(0);
+}
+
+.btn-calcular i,
+.btn-limpiar i {
+  font-size: 1.1em;
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .filtros-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .busqueda-container {
+    grid-column: 1 / -1;
+  }
+  
+  .filtros-actions {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+}
+
 @media (max-width: 768px) {
   .filtros-content {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
   
   .servicios-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 1rem;
   }
   
   .paginacion-info {
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
   
   .paginacion-container {
@@ -850,463 +1121,166 @@ export default {
     align-items: center;
   }
   
-  .numeros-pagina {
-    flex-wrap: wrap;
-    justify-content: center;
+  .servicios-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn-calcular, .btn-limpiar {
+    min-width: 150px;
+    padding: 0.75rem 1.5rem;
   }
 }
 
-/* CSS existente del componente... */
-.años-selector {
-  background: rgba(52, 152, 219, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  border: 2px solid rgba(52, 152, 219, 0.2);
-}
-
-.años-container {
-  text-align: center;
-}
-
-.años-container label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: #2c3e50;
-  font-size: clamp(1rem, 3vw, 1.2rem);
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.años-container label i {
-  color: #3498db;
-  font-size: 1.1em;
-}
-
-.años-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.btn-años {
-  width: 3rem;
-  height: 3rem;
-  border: 2px solid #3498db;
-  background: rgba(52, 152, 219, 0.1);
-  color: #3498db;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.btn-años:hover:not(:disabled) {
-  background: rgba(52, 152, 219, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-}
-
-.btn-años:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-  color: #95a5a6;
-}
-
-.input-años {
-  width: 4rem;
-  height: 3rem;
-  text-align: center;
-  border: 2px solid #3498db;
-  border-radius: 0.75rem;
-  font-size: 1.3rem;
-  font-weight: bold;
-  background: white;
-  color: #2c3e50;
-}
-
-.input-años:focus {
-  outline: none;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
-}
-
-.años-info {
- color: #34495e;
- font-size: clamp(0.85rem, 2.5vw, 1rem);
- font-style: italic;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.5rem;
-}
-
-.años-info i {
- color: #3498db;
- font-size: 0.9em;
-}
-
-.servicios-grid {
- display: grid;
- gap: 1rem;
- margin-bottom: 2rem;
- grid-template-columns: 1fr;
- width: 100%;
- box-sizing: border-box;
-}
-
-.form-actions {
- display: flex;
- justify-content: center;
- gap: 1rem;
- margin-bottom: 2rem;
- flex-wrap: wrap;
-}
-
-.btn-calcular, .btn-limpiar {
- padding: 0.75rem 1.5rem;
- border: none;
- border-radius: 0.5rem;
- font-size: clamp(0.9rem, 2.5vw, 1rem);
- font-weight: 600;
- cursor: pointer;
- transition: all 0.3s ease;
- text-transform: uppercase;
- letter-spacing: 0.5px;
- min-width: 150px;
- flex: 1;
- max-width: 200px;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.5rem;
-}
-
-.btn-calcular {
- background: linear-gradient(135deg, #11998e, #38ef7d);
- color: white;
- box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
-}
-
-.btn-calcular:hover:not(:disabled) {
- transform: translateY(-2px);
- box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6);
-}
-
-.btn-calcular:disabled {
- background: #bdc3c7;
- cursor: not-allowed;
- transform: none;
- box-shadow: none;
-}
-
-.btn-calcular:disabled i {
- color: #7f8c8d;
-}
-
-.btn-limpiar {
- background: linear-gradient(135deg, #fc4a1a, #f7b733);
- color: white;
- box-shadow: 0 4px 15px rgba(252, 74, 26, 0.4);
-}
-
-.btn-limpiar:hover {
- transform: translateY(-2px);
- box-shadow: 0 6px 20px rgba(252, 74, 26, 0.6);
-}
-
-.btn-calcular i,
-.btn-limpiar i {
- font-size: 1.1em;
-}
-
-/* Responsive adicional para filtros */
-@media (max-width: 1200px) {
- .filtros-content {
-   grid-template-columns: 1fr 1fr;
-   gap: 1rem;
- }
- 
- .busqueda-container {
-   grid-column: 1 / -1;
- }
- 
- .filtros-actions {
-   grid-column: 1 / -1;
-   text-align: center;
- }
-}
-
-@media (max-width: 768px) {
- .cotizacion-form-container {
-   padding: 0;
- }
- 
- .servicios-grid {
-   gap: 1.5rem;
-   grid-template-columns: 1fr;
- }
- 
- .años-selector {
-   padding: 2rem;
- }
- 
- .filtros-container {
-   padding: 1rem;
- }
- 
- .filtros-header {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 0.5rem;
- }
- 
- .filtros-content {
-   grid-template-columns: 1fr;
- }
- 
- .servicios-header {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 1rem;
- }
- 
- .paginacion-info {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 0.5rem;
- }
- 
- .resultados-info {
-   text-align: center;
- }
- 
- .items-por-pagina {
-   justify-content: center;
- }
- 
- .paginacion {
-   justify-content: center;
-   flex-wrap: wrap;
- }
- 
- .btn-paginacion {
-   padding: 0.4rem 0.8rem;
-   font-size: 0.9rem;
- }
- 
- .btn-numero {
-   width: 2.2rem;
-   height: 2.2rem;
- }
- 
- .ir-a-pagina {
-   justify-content: center;
-   flex-wrap: wrap;
- }
-}
-
-@media (min-width: 480px) {
- .cotizacion-form-container {
-   padding: 0;
- }
- 
- .servicios-grid {
-   gap: 1.5rem;
- }
- 
- .años-selector {
-   padding: 2rem;
- }
-}
-
 @media (min-width: 768px) {
- .servicios-grid {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 1.5rem;
- }
- 
- .btn-calcular, .btn-limpiar {
-   padding: 1rem 2rem;
-   font-size: 1rem;
-   flex: none;
-   min-width: 180px;
- }
-}
-
-@media (min-width: 1024px) {
- .servicios-grid {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 2rem;
- }
+  .servicios-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (min-width: 1200px) {
- .servicios-grid {
-   grid-template-columns: repeat(3, 1fr);
-   gap: 1.5rem;
- }
-}
-
-@media (min-width: 1600px) {
- .servicios-grid {
-   grid-template-columns: repeat(3, 1fr);
-   gap: 2rem;
- }
+  .servicios-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 320px) {
- .servicios-grid {
-   gap: 1rem;
- }
- 
- .años-selector {
-   padding: 1rem;
- }
- 
- .filtros-container {
-   padding: 0.75rem;
- }
- 
- .años-controls {
-   gap: 0.5rem;
- }
- 
- .btn-años {
-   width: 2.5rem;
-   height: 2.5rem;
-   font-size: 1rem;
- }
- 
- .input-años {
-   width: 3.5rem;
-   height: 2.5rem;
-   font-size: 1.1rem;
- }
- 
- .años-info {
-   font-size: 0.8rem;
- }
- 
- .btn-calcular, .btn-limpiar {
-   min-width: 120px;
-   font-size: 0.85rem;
-   gap: 0.4rem;
- }
- 
- .btn-calcular i,
- .btn-limpiar i {
-   font-size: 1em;
- }
- 
- .filtros-header h3 {
-   font-size: 1rem;
- }
- 
- .servicios-count {
-   font-size: 0.8rem;
- }
- 
- .input-busqueda {
-   padding: 0.6rem 2.5rem 0.6rem 2rem;
-   font-size: 0.9rem;
- }
- 
- .search-icon {
-   left: 0.75rem;
- }
- 
- .btn-limpiar-busqueda {
-   right: 0.4rem;
- }
- 
- .select-categoria,
- .select-precio {
-   padding: 0.6rem;
-   font-size: 0.9rem;
- }
- 
- .btn-limpiar-filtros {
-   padding: 0.6rem 0.8rem;
-   font-size: 0.9rem;
- }
- 
- .resultados-info {
-   font-size: 0.8rem;
- }
- 
- .items-por-pagina label {
-   font-size: 0.9rem;
- }
- 
- .no-resultados-content i {
-   font-size: 2rem;
- }
- 
- .no-resultados-content h4 {
-   font-size: 1rem;
- }
- 
- .paginacion-container {
-   gap: 0.5rem;
- }
- 
- .btn-paginacion {
-   padding: 0.4rem 0.6rem;
-   font-size: 0.8rem;
- }
- 
- .btn-numero {
-   width: 2rem;
-   height: 2rem;
-   font-size: 0.8rem;
- }
- 
- .input-pagina {
-   width: 3rem;
-   padding: 0.3rem;
-   font-size: 0.8rem;
- }
- 
- .btn-ir {
-   padding: 0.3rem 0.6rem;
-   font-size: 0.8rem;
- }
- 
- .ir-a-pagina label {
-   font-size: 0.8rem;
- }
+  .años-selector {
+    padding: 1rem;
+  }
+  
+  .filtros-container {
+    padding: 0.75rem;
+  }
+  
+  .años-controls {
+    gap: 0.5rem;
+  }
+  
+  .btn-años {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1rem;
+  }
+  
+  .input-años {
+    width: 3.5rem;
+    height: 2.5rem;
+    font-size: 1.1rem;
+  }
+  
+  .años-info {
+    font-size: 0.8rem;
+  }
+  
+  .btn-calcular, .btn-limpiar {
+    min-width: 120px;
+    font-size: 0.85rem;
+    gap: 0.4rem;
+    padding: 0.7rem 1.2rem;
+  }
+  
+  .btn-calcular i,
+  .btn-limpiar i {
+    font-size: 1em;
+  }
+  
+  .filtros-header h3 {
+    font-size: 1rem;
+  }
+  
+  .servicios-count {
+    font-size: 0.8rem;
+  }
+  
+  .input-busqueda {
+    padding: 0.6rem 2.5rem 0.6rem 2rem;
+    font-size: 0.9rem;
+  }
+  
+  .search-icon {
+    left: 0.75rem;
+  }
+  
+  .btn-limpiar-busqueda {
+    right: 0.4rem;
+  }
+  
+  .select-categoria,
+  .select-precio {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .btn-limpiar-filtros {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .resultados-info {
+    font-size: 0.8rem;
+  }
+  
+  .items-por-pagina label {
+    font-size: 0.9rem;
+  }
+  
+  .no-resultados-content i {
+    font-size: 2rem;
+  }
+  
+  .no-resultados-content h4 {
+    font-size: 1rem;
+  }
+  
+  .paginacion-container {
+    gap: 0.5rem;
+  }
+  
+  .btn-paginacion {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .btn-numero {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
+  }
+  
+  .input-pagina {
+    width: 3rem;
+    padding: 0.3rem;
+    font-size: 0.8rem;
+  }
+  
+  .btn-ir {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .ir-a-pagina label {
+    font-size: 0.8rem;
+  }
 }
 
 .cotizacion-form-container * {
- box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 /* Animaciones para transiciones suaves */
 .servicios-grid {
- transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .filtros-container,
 .años-selector {
- transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 /* Estados de carga */
 .servicios-grid.loading {
- opacity: 0.7;
- pointer-events: none;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 /* Mejoras de accesibilidad */
@@ -1314,22 +1288,24 @@ export default {
 .btn-paginacion:focus,
 .input-busqueda:focus,
 .select-categoria:focus,
-.select-precio:focus {
- outline: 2px solid #007bff;
- outline-offset: 2px;
+.select-precio:focus,
+.btn-calcular:focus,
+.btn-limpiar:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
 /* Estilos para impresión */
 @media print {
- .filtros-container,
- .paginacion-container,
- .form-actions {
-   display: none;
- }
- 
- .servicios-grid {
-   grid-template-columns: repeat(2, 1fr);
-   gap: 1rem;
- }
+  .filtros-container,
+  .paginacion-container,
+  .form-actions {
+    display: none;
+  }
+  
+  .servicios-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
 }
 </style>
