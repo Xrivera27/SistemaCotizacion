@@ -26,27 +26,45 @@
               <strong>Equipos:</strong> {{ item.servicio.equipos }}
             </div>
             <div class="cantidades-info">
-              <div class="cantidad-item">
-                <span class="cantidad-label">
-                  <i class="fas fa-server"></i>
-                  Servidores:
-                </span>
-                <span class="cantidad-valor">{{ item.cantidadServidores }}</span>
-              </div>
-              <div class="cantidad-item">
-                <span class="cantidad-label">
-                  <i class="fas fa-cogs"></i>
-                  Equipos:
-                </span>
-                <span class="cantidad-valor">{{ item.cantidadEquipos }}</span>
-              </div>
+              <!-- Mostrar información diferente para servicios de backup -->
+              <template v-if="esServicioBackup(item.servicio)">
+                <div class="cantidad-item gb-item">
+                  <span class="cantidad-label">
+                    <i class="fas fa-hdd"></i>
+                    Almacenamiento:
+                  </span>
+                  <span class="cantidad-valor gb-valor">{{ item.cantidadServidores }} GB</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="cantidad-item">
+                  <span class="cantidad-label">
+                    <i class="fas fa-server"></i>
+                    Servidores:
+                  </span>
+                  <span class="cantidad-valor">{{ item.cantidadServidores }}</span>
+                </div>
+                <div class="cantidad-item">
+                  <span class="cantidad-label">
+                    <i class="fas fa-cogs"></i>
+                    Equipos:
+                  </span>
+                  <span class="cantidad-valor">{{ item.cantidadEquipos }}</span>
+                </div>
+              </template>
             </div>
             <div class="precios-detalle">
               <span class="precio-minimo">Mín: ${{ item.servicio.precioMinimo }}/año</span>
               <span class="precio-venta-usado">Venta: ${{ item.precioVentaFinal }}/año</span>
             </div>
             <div class="calculo-detalle">
-              <small>{{ totalUnidades(item) }} unidad(es) × ${{ item.precioVentaFinal }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</small>
+              <!-- Mostrar cálculo diferente para servicios de backup -->
+              <small v-if="esServicioBackup(item.servicio)">
+                {{ item.cantidadServidores }} GB × ${{ item.precioVentaFinal }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+              </small>
+              <small v-else>
+                {{ totalUnidades(item) }} unidad(es) × ${{ item.precioVentaFinal }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+              </small>
             </div>
           </div>
         </div>
@@ -86,13 +104,17 @@
         Resumen Financiero ({{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }})
       </h3>
       <div class="metricas">
-        <div class="metrica">
+        <div class="metrica" v-if="totalServidores > 0">
           <span class="metrica-label">Total de Servidores:</span>
           <span class="metrica-valor">{{ totalServidores }} unidades</span>
         </div>
-        <div class="metrica">
+        <div class="metrica" v-if="totalEquipos > 0">
           <span class="metrica-label">Total de Equipos:</span>
           <span class="metrica-valor">{{ totalEquipos }} unidades</span>
+        </div>
+        <div class="metrica" v-if="totalGB > 0">
+          <span class="metrica-label">Total de Almacenamiento:</span>
+          <span class="metrica-valor">{{ totalGB }} GB</span>
         </div>
         <div class="metrica">
           <span class="metrica-label">Margen vs Mínimo:</span>
@@ -209,7 +231,11 @@ export default {
    },
    totalServidores() {
      return this.serviciosSeleccionados.reduce((total, item) => {
-       return total + (item.cantidadServidores || 0);
+       // Solo contar servidores para servicios que NO son de backup
+       if (!this.esServicioBackup(item.servicio)) {
+         return total + (item.cantidadServidores || 0);
+       }
+       return total;
      }, 0);
    },
    totalEquipos() {
@@ -217,9 +243,20 @@ export default {
        return total + (item.cantidadEquipos || 0);
      }, 0);
    },
+   totalGB() {
+     return this.serviciosSeleccionados.reduce((total, item) => {
+       // Solo contar GB para servicios de backup
+       if (this.esServicioBackup(item.servicio)) {
+         return total + (item.cantidadServidores || 0);
+       }
+       return total;
+     }, 0);
+   },
    precioMinimoAnual() {
      return this.serviciosSeleccionados.reduce((total, item) => {
-       const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+       const totalUnidades = this.esServicioBackup(item.servicio) 
+         ? (item.cantidadServidores || 0)  // Para backup, usar solo cantidadServidores (que representa GB)
+         : (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
        return total + (totalUnidades * item.servicio.precioMinimo);
      }, 0);
    },
@@ -243,13 +280,21 @@ export default {
    },
    hayPreciosPorDebajoMinimo() {
      return this.serviciosSeleccionados.some(item => {
-       const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+       const totalUnidades = this.esServicioBackup(item.servicio) 
+         ? (item.cantidadServidores || 0)  // Para backup, usar solo cantidadServidores (que representa GB)
+         : (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
        return totalUnidades > 0 && item.precioVentaFinal < item.servicio.precioMinimo;
      });
    }
  },
  methods: {
+   esServicioBackup(servicio) {
+     return servicio.categoria === 'backup' || servicio.categoria === 'respaldo';
+   },
    totalUnidades(item) {
+     if (this.esServicioBackup(item.servicio)) {
+       return item.cantidadServidores || 0; // Para backup, solo cantidadServidores (que representa GB)
+     }
      return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
    },
    calcularSubtotalAnual(item) {
@@ -376,7 +421,30 @@ export default {
 </script>
 
 <style scoped>
-/* MISMO CSS DEL ANTERIOR - Con pequeños ajustes para iconos */
+/* Todo el CSS anterior, más estos estilos adicionales para GB */
+
+.gb-item {
+  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid #9c27b0;
+}
+
+.gb-item .cantidad-label {
+  color: #673ab7 !important;
+  font-weight: 700;
+}
+
+.gb-valor {
+  background: white;
+  color: #4a148c !important;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #9c27b0;
+}
+
+/* Resto del CSS original... */
 .resultados-container {
  background: white;
  border-radius: 0.75rem;
@@ -716,121 +784,121 @@ export default {
  justify-content: space-between;
  align-items: center;
  padding: 0.75rem;
- background: white;
- border-radius: 0.5rem;
- border-left: 4px solid #3498db;
- flex-wrap: wrap;
- gap: 0.5rem;
+background: white;
+border-radius: 0.5rem;
+border-left: 4px solid #3498db;
+flex-wrap: wrap;
+gap: 0.5rem;
 }
 
 .metrica-label {
- font-weight: 500;
- color: #34495e;
- font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+font-weight: 500;
+color: #34495e;
+font-size: clamp(0.8rem, 2.5vw, 0.9rem);
 }
 
 .metrica-valor {
- font-weight: bold;
- color: #2c3e50;
- font-size: clamp(0.9rem, 2.5vw, 1rem);
+font-weight: bold;
+color: #2c3e50;
+font-size: clamp(0.9rem, 2.5vw, 1rem);
 }
 
 .metrica-valor.ganancia {
- color: #27ae60;
+color: #27ae60;
 }
 
 .metrica-valor.destacado {
- color: #e74c3c;
- font-size: clamp(1rem, 3vw, 1.1rem);
+color: #e74c3c;
+font-size: clamp(1rem, 3vw, 1.1rem);
 }
 
 .metrica-valor.destacado-total {
- color: #8e24aa;
- font-size: clamp(1.1rem, 3.5vw, 1.3rem);
- background: #f3e5f5;
- padding: 0.25rem 0.5rem;
- border-radius: 0.25rem;
+color: #8e24aa;
+font-size: clamp(1.1rem, 3.5vw, 1.3rem);
+background: #f3e5f5;
+padding: 0.25rem 0.5rem;
+border-radius: 0.25rem;
 }
 
 .selector-precio-pdf {
- background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- padding: 1.5rem;
- border-radius: 0.75rem;
- margin-bottom: 2rem;
- border: 2px solid #dee2e6;
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+padding: 1.5rem;
+border-radius: 0.75rem;
+margin-bottom: 2rem;
+border: 2px solid #dee2e6;
 }
 
 .selector-precio-pdf h3 {
- color: #495057;
- margin-bottom: 1rem;
- font-size: clamp(1rem, 3vw, 1.2rem);
- text-align: center;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.5rem;
+color: #495057;
+margin-bottom: 1rem;
+font-size: clamp(1rem, 3vw, 1.2rem);
+text-align: center;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
 }
 
 .selector-precio-pdf h3 i {
- color: #007bff;
+color: #007bff;
 }
 
 .opciones-precio-pdf {
- display: grid;
- grid-template-columns: 1fr;
- gap: 1rem;
+display: grid;
+grid-template-columns: 1fr;
+gap: 1rem;
 }
 
 .precio-radio-option {
- display: flex;
- align-items: center;
- padding: 1rem;
- background: white;
- border: 2px solid #dee2e6;
- border-radius: 0.5rem;
- cursor: pointer;
- transition: all 0.3s ease;
- gap: 1rem;
+display: flex;
+align-items: center;
+padding: 1rem;
+background: white;
+border: 2px solid #dee2e6;
+border-radius: 0.5rem;
+cursor: pointer;
+transition: all 0.3s ease;
+gap: 1rem;
 }
 
 .precio-radio-option:hover {
- border-color: #007bff;
- box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+border-color: #007bff;
+box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
 }
 
 .precio-radio-option input[type="radio"] {
- display: none;
+display: none;
 }
 
 .radio-custom {
- width: 20px;
- height: 20px;
- border: 2px solid #dee2e6;
- border-radius: 50%;
- position: relative;
- flex-shrink: 0;
- transition: all 0.3s ease;
+width: 20px;
+height: 20px;
+border: 2px solid #dee2e6;
+border-radius: 50%;
+position: relative;
+flex-shrink: 0;
+transition: all 0.3s ease;
 }
 
 .precio-radio-option input[type="radio"]:checked + .radio-custom {
- border-color: #007bff;
- background: #007bff;
+border-color: #007bff;
+background: #007bff;
 }
 
 .precio-radio-option input[type="radio"]:checked + .radio-custom::after {
- content: '';
- position: absolute;
- top: 50%;
- left: 50%;
- transform: translate(-50%, -50%);
- width: 8px;
- height: 8px;
- background: white;
- border-radius: 50%;
+content: '';
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+width: 8px;
+height: 8px;
+background: white;
+border-radius: 50%;
 }
 
 .precio-info {
- flex: 1;
+flex: 1;
 display: flex;
 flex-direction: column;
 }

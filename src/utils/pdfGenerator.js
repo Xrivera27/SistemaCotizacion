@@ -2,6 +2,11 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Función para detectar si es servicio de backup
+const esServicioBackup = (servicio) => {
+  return servicio.categoria === 'backup' || servicio.categoria === 'respaldo';
+};
+
 // Función original para generar PDF desde elemento HTML
 export const generarPDFDesdeElemento = async (elementoId, nombreArchivo = 'cotizacion.pdf') => {
   const elemento = document.getElementById(elementoId);
@@ -43,6 +48,22 @@ export const generarPDFDesdeElemento = async (elementoId, nombreArchivo = 'cotiz
     alert('Error al generar el PDF');
     throw error;
   }
+};
+
+// Función para calcular unidades según tipo de servicio
+const calcularUnidades = (item) => {
+  if (esServicioBackup(item.servicio)) {
+    return item.cantidadServidores || 0; // Para backup, cantidadServidores representa GB
+  }
+  return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+};
+
+// Función para obtener texto de unidades según tipo de servicio
+const obtenerTextoUnidades = (item) => {
+  if (esServicioBackup(item.servicio)) {
+    return `Almacenamiento: ${item.cantidadServidores || 0} GB`;
+  }
+  return `Servidores: ${item.cantidadServidores || 0} | Equipos: ${item.cantidadEquipos || 0}`;
 };
 
 // Función para generar PDF personalizado básico (sin cliente)
@@ -99,7 +120,7 @@ export const generarPDF = async (datosEmpresa, serviciosSeleccionados, añosCont
 
     // Tabla de servicios
     serviciosSeleccionados.forEach((item, index) => {
-      const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+      const totalUnidades = calcularUnidades(item);
       const subtotalAnual = totalUnidades * item.precioVentaFinal;
       const subtotalTotal = subtotalAnual * añosContrato;
 
@@ -125,10 +146,10 @@ export const generarPDF = async (datosEmpresa, serviciosSeleccionados, añosCont
       pdf.text(`Equipos: ${item.servicio.equipos}`, margin + 5, yPosition);
       yPosition += 5;
 
-      // Cantidades y precio
+      // Cantidades y precio (adaptado según tipo de servicio)
       pdf.setFontSize(10);
       pdf.setTextColor(44, 62, 80);
-      pdf.text(`Servidores: ${item.cantidadServidores} | Equipos: ${item.cantidadEquipos}`, margin + 5, yPosition);
+      pdf.text(obtenerTextoUnidades(item), margin + 5, yPosition);
       pdf.text(`$${subtotalTotal.toLocaleString()}`, pageWidth - 50, yPosition);
       yPosition += 8;
 
@@ -145,16 +166,39 @@ export const generarPDF = async (datosEmpresa, serviciosSeleccionados, añosCont
     pdf.text('RESUMEN FINANCIERO:', margin, yPosition);
     yPosition += 10;
 
-    // Calcular totales
-    const totalServidores = serviciosSeleccionados.reduce((total, item) => total + (item.cantidadServidores || 0), 0);
-    const totalEquipos = serviciosSeleccionados.reduce((total, item) => total + (item.cantidadEquipos || 0), 0);
+    // Calcular totales separados
+    const totalServidores = serviciosSeleccionados.reduce((total, item) => {
+      return !esServicioBackup(item.servicio) ? total + (item.cantidadServidores || 0) : total;
+    }, 0);
+    
+    const totalEquipos = serviciosSeleccionados.reduce((total, item) => {
+      return total + (item.cantidadEquipos || 0);
+    }, 0);
+    
+    const totalGB = serviciosSeleccionados.reduce((total, item) => {
+      return esServicioBackup(item.servicio) ? total + (item.cantidadServidores || 0) : total;
+    }, 0);
+    
     const precioAnual = precioFinal / añosContrato;
 
     pdf.setFontSize(10);
-    pdf.text(`Total de Servidores: ${totalServidores} unidades`, margin, yPosition);
-    yPosition += 6;
-    pdf.text(`Total de Equipos: ${totalEquipos} unidades`, margin, yPosition);
-    yPosition += 6;
+    
+    // Solo mostrar métricas que tienen valores
+    if (totalServidores > 0) {
+      pdf.text(`Total de Servidores: ${totalServidores} unidades`, margin, yPosition);
+      yPosition += 6;
+    }
+    
+    if (totalEquipos > 0) {
+      pdf.text(`Total de Equipos: ${totalEquipos} unidades`, margin, yPosition);
+      yPosition += 6;
+    }
+    
+    if (totalGB > 0) {
+      pdf.text(`Total de Almacenamiento: ${totalGB} GB`, margin, yPosition);
+      yPosition += 6;
+    }
+    
     pdf.text(`Precio anual: $${precioAnual.toLocaleString()}/año`, margin, yPosition);
     yPosition += 10;
 
@@ -277,7 +321,7 @@ export const generarPDFConCliente = async (datosEmpresa, cliente, serviciosSelec
 
     // Tabla de servicios
     serviciosSeleccionados.forEach((item, index) => {
-      const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+      const totalUnidades = calcularUnidades(item);
       const subtotalAnual = totalUnidades * item.precioVentaFinal;
       const subtotalTotal = subtotalAnual * añosContrato;
 
@@ -317,12 +361,22 @@ export const generarPDFConCliente = async (datosEmpresa, cliente, serviciosSelec
       });
       yPosition += 1;
 
-      // Cantidades y precio
+      // Cantidades y precio (adaptado según tipo de servicio)
       pdf.setFontSize(10);
       pdf.setTextColor(44, 62, 80);
-      pdf.text(`Servidores: ${item.cantidadServidores} | Equipos: ${item.cantidadEquipos}`, margin + 5, yPosition);
+      pdf.text(obtenerTextoUnidades(item), margin + 5, yPosition);
       pdf.text(`$${subtotalTotal.toLocaleString()}`, pageWidth - 50, yPosition);
       yPosition += 8;
+
+      // Cálculo detallado
+      pdf.setFontSize(8);
+      pdf.setTextColor(127, 140, 141);
+      if (esServicioBackup(item.servicio)) {
+        pdf.text(`(${item.cantidadServidores || 0} GB × $${item.precioVentaFinal}/año × ${añosContrato} año${añosContrato > 1 ? 's' : ''})`, margin + 5, yPosition);
+      } else {
+        pdf.text(`(${totalUnidades} unidad(es) × $${item.precioVentaFinal}/año × ${añosContrato} año${añosContrato > 1 ? 's' : ''})`, margin + 5, yPosition);
+      }
+      yPosition += 6;
 
       // Línea separadora
       pdf.setDrawColor(236, 240, 241);
@@ -343,16 +397,39 @@ export const generarPDFConCliente = async (datosEmpresa, cliente, serviciosSelec
     pdf.text('RESUMEN FINANCIERO:', margin, yPosition);
     yPosition += 10;
 
-    // Calcular totales
-    const totalServidores = serviciosSeleccionados.reduce((total, item) => total + (item.cantidadServidores || 0), 0);
-    const totalEquipos = serviciosSeleccionados.reduce((total, item) => total + (item.cantidadEquipos || 0), 0);
+    // Calcular totales separados
+    const totalServidores = serviciosSeleccionados.reduce((total, item) => {
+      return !esServicioBackup(item.servicio) ? total + (item.cantidadServidores || 0) : total;
+    }, 0);
+    
+    const totalEquipos = serviciosSeleccionados.reduce((total, item) => {
+      return total + (item.cantidadEquipos || 0);
+    }, 0);
+    
+    const totalGB = serviciosSeleccionados.reduce((total, item) => {
+      return esServicioBackup(item.servicio) ? total + (item.cantidadServidores || 0) : total;
+    }, 0);
+    
     const precioAnual = precioFinal / añosContrato;
 
     pdf.setFontSize(10);
-    pdf.text(`Total de Servidores: ${totalServidores} unidades`, margin, yPosition);
-    yPosition += 6;
-    pdf.text(`Total de Equipos: ${totalEquipos} unidades`, margin, yPosition);
-    yPosition += 6;
+    
+    // Solo mostrar métricas que tienen valores
+    if (totalServidores > 0) {
+      pdf.text(`Total de Servidores: ${totalServidores} unidades`, margin, yPosition);
+      yPosition += 6;
+    }
+    
+    if (totalEquipos > 0) {
+      pdf.text(`Total de Equipos: ${totalEquipos} unidades`, margin, yPosition);
+      yPosition += 6;
+    }
+    
+    if (totalGB > 0) {
+      pdf.text(`Total de Almacenamiento: ${totalGB} GB`, margin, yPosition);
+      yPosition += 6;
+    }
+    
     pdf.text(`Precio anual: $${precioAnual.toLocaleString()}/año`, margin, yPosition);
     yPosition += 10;
 
@@ -386,7 +463,12 @@ export const generarPDFConCliente = async (datosEmpresa, cliente, serviciosSelec
     pdf.text('• Precios incluyen soporte técnico 24/7 durante toda la duración del contrato', margin, yPosition);
     yPosition += 4;
     pdf.text('• Los servicios se activarán dentro de 48 horas después de la confirmación', margin, yPosition);
-  
+    yPosition += 4;
+    
+    if (totalGB > 0) {
+      pdf.text('• El almacenamiento de backup incluye redundancia geográfica y cifrado', margin, yPosition);
+      yPosition += 4;
+    }
 
     // FOOTER
     yPosition = pageHeight - 25;
@@ -431,10 +513,11 @@ export const validarDatosParaPDF = (serviciosSeleccionados, cliente = null) => {
     errores.push('Debe seleccionar al menos un servicio');
   }
 
-  serviciosSeleccionados.forEach((item) => { // Eliminé 'index' ya que no se usa
-    const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
+  serviciosSeleccionados.forEach((item) => {
+    const totalUnidades = calcularUnidades(item);
     if (totalUnidades === 0) {
-      errores.push(`El servicio ${item.servicio.nombre} no tiene cantidades definidas`);
+      const tipoUnidad = esServicioBackup(item.servicio) ? 'GB de almacenamiento' : 'cantidades';
+      errores.push(`El servicio ${item.servicio.nombre} no tiene ${tipoUnidad} definidas`);
     }
     if (!item.precioVentaFinal || item.precioVentaFinal <= 0) {
       errores.push(`El servicio ${item.servicio.nombre} no tiene precio de venta válido`);

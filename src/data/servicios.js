@@ -11,7 +11,6 @@ export const servicios = [
     precioModerado: 480, // 40 * 12
     precioVenta: 0,
     categoria: 'hosting',
-    icon: '☁️'
   },
   {
     id: 2,
@@ -23,7 +22,6 @@ export const servicios = [
     precioModerado: 960, // 80 * 12
     precioVenta: 0,
     categoria: 'hosting',
-    icon: '⚡'
   },
   {
     id: 3,
@@ -35,7 +33,6 @@ export const servicios = [
     precioModerado: 720, // 60 * 12
     precioVenta: 0,
     categoria: 'database',
-    icon: '🗄️'
   },
   {
     id: 4,
@@ -47,7 +44,6 @@ export const servicios = [
     precioModerado: 276, // 23 * 12
     precioVenta: 0,
     categoria: 'cdn',
-    icon: '🌐'
   },
   {
     id: 5,
@@ -59,7 +55,6 @@ export const servicios = [
     precioModerado: 360, // 30 * 12
     precioVenta: 0,
     categoria: 'backup',
-    icon: '💾'
   },
   {
     id: 6,
@@ -71,7 +66,6 @@ export const servicios = [
     precioModerado: 600, // 50 * 12
     precioVenta: 0,
     categoria: 'monitoring',
-    icon: '📊'
   },
   {
     id: 7,
@@ -83,7 +77,6 @@ export const servicios = [
     precioModerado: 840, // 70 * 12
     precioVenta: 0,
     categoria: 'load-balancer',
-    icon: '⚖️'
   },
   {
     id: 8,
@@ -95,6 +88,5 @@ export const servicios = [
     precioModerado: 420, // 35 * 12
     precioVenta: 0,
     categoria: 'security',
-    icon: '🛡️'
   }
 ];
