@@ -4,8 +4,10 @@
       <!-- Logo y título -->
       <div class="login-header">
         <div class="logo-login">
-          <span class="logo-circle">CT</span>
-          <h1 class="brand-name">CloudTech</h1>
+          <span class="logo-circle">P</span>
+          <div class="brand-info">
+            <h1 class="brand-name">Perdomo y Asociados</h1>
+          </div>
         </div>
         <p class="login-subtitle">Sistema de Cotización</p>
       </div>
@@ -19,7 +21,7 @@
           <div class="form-group">
             <label for="usuario" class="form-label">Usuario o Email</label>
             <div class="input-container">
-              <span class="input-icon">👤</span>
+              <i class="fas fa-user input-icon"></i>
               <input
                 id="usuario"
                 v-model="loginForm.usuario"
@@ -37,7 +39,7 @@
           <div class="form-group">
             <label for="password" class="form-label">Contraseña</label>
             <div class="input-container">
-              <span class="input-icon">🔒</span>
+              <i class="fas fa-lock input-icon"></i>
               <input
                 id="password"
                 v-model="loginForm.password"
@@ -52,7 +54,7 @@
                 class="toggle-password"
                 @click="togglePassword"
               >
-                {{ showPassword ? '🙈' : '👁️' }}
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
               </button>
             </div>
             <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
@@ -80,7 +82,7 @@
 
           <!-- Mensaje de error general -->
           <div v-if="generalError" class="alert alert-error">
-            <span class="alert-icon">⚠️</span>
+            <i class="fas fa-exclamation-triangle alert-icon"></i>
             {{ generalError }}
           </div>
 
@@ -125,7 +127,7 @@
           <div class="form-group">
             <label for="email-forgot" class="form-label">Email</label>
             <div class="input-container">
-              <span class="input-icon">📧</span>
+              <i class="fas fa-envelope input-icon"></i>
               <input
                 id="email-forgot"
                 v-model="forgotForm.email"
@@ -141,13 +143,13 @@
 
           <!-- Mensaje de éxito -->
           <div v-if="emailSent" class="alert alert-success">
-            <span class="alert-icon">✅</span>
+            <i class="fas fa-check-circle alert-icon"></i>
             Se ha enviado un enlace de recuperación a tu email.
           </div>
 
           <!-- Mensaje de error -->
           <div v-if="generalError" class="alert alert-error">
-            <span class="alert-icon">⚠️</span>
+            <i class="fas fa-exclamation-triangle alert-icon"></i>
             {{ generalError }}
           </div>
 
@@ -174,11 +176,17 @@
       </div>
     </div>
 
-    <!-- Decoración de fondo -->
+    <!-- Decoración de fondo profesional -->
     <div class="background-decoration">
-      <div class="circle circle-1"></div>
-      <div class="circle circle-2"></div>
-      <div class="circle circle-3"></div>
+      <div class="geometric-pattern"></div>
+      <div class="grid-overlay"></div>
+      <div class="accent-line accent-line-1"></div>
+      <div class="accent-line accent-line-2"></div>
+      <div class="floating-elements">
+        <div class="element element-1"></div>
+        <div class="element element-2"></div>
+        <div class="element element-3"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -522,7 +530,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #334155 35%, #475569 100%);
   padding: 2rem;
   position: relative;
   overflow: hidden;
@@ -538,53 +546,132 @@ export default {
   z-index: 1;
 }
 
-.circle {
+/* Patrón geométrico sutil */
+.geometric-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%), 
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%), 
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.02) 75%);
+  background-size: 60px 60px;
+  background-position: 0 0, 0 30px, 30px -30px, -30px 0px;
+}
+
+/* Grid overlay profesional */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100px 100px;
+}
+
+/* Líneas de acento elegantes */
+.accent-line {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+  height: 1px;
+}
+
+.accent-line-1 {
+  top: 20%;
+  left: 0;
+  right: 0;
+  animation: pulse-line 4s ease-in-out infinite;
+}
+
+.accent-line-2 {
+  bottom: 30%;
+  left: 0;
+  right: 0;
+  animation: pulse-line 4s ease-in-out infinite 2s;
+}
+
+/* Elementos flotantes sutiles */
+.floating-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.element {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
 }
 
-.circle-1 {
-  width: 300px;
-  height: 300px;
-  top: -150px;
-  right: -150px;
-  animation: float 6s ease-in-out infinite;
-}
-
-.circle-2 {
+.element-1 {
   width: 200px;
   height: 200px;
-  bottom: -100px;
-  left: -100px;
-  animation: float 8s ease-in-out infinite reverse;
+  top: 10%;
+  right: 5%;
+  animation: float-professional 12s ease-in-out infinite;
 }
 
-.circle-3 {
+.element-2 {
   width: 150px;
   height: 150px;
-  top: 50%;
-  left: -75px;
-  animation: float 10s ease-in-out infinite;
+  bottom: 15%;
+  left: 8%;
+  animation: float-professional 15s ease-in-out infinite reverse;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(180deg); }
+.element-3 {
+  width: 100px;
+  height: 100px;
+  top: 60%;
+  right: 15%;
+  animation: float-professional 18s ease-in-out infinite;
+}
+
+@keyframes float-professional {
+  0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); opacity: 0.3; }
+  33% { transform: translateY(-15px) translateX(10px) rotate(120deg); opacity: 0.5; }
+  66% { transform: translateY(10px) translateX(-5px) rotate(240deg); opacity: 0.2; }
+}
+
+@keyframes pulse-line {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
+  50% { opacity: 0.6; transform: scaleX(1); }
 }
 
 .login-wrapper {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(25px);
+  border-radius: 16px;
   padding: 3rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   width: 100%;
   max-width: 450px;
   position: relative;
   z-index: 2;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #d4af37, #f4d03f, #d4af37);
+  border-radius: 16px 16px 0 0;
 }
 
 .login-header {
@@ -604,28 +691,29 @@ export default {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3498db, #2980b9);
+  background: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #d4af37;
   font-size: 1.8rem;
   font-weight: bold;
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    0 0 0 2px #d4af37,
+    inset 0 2px 4px rgba(212, 175, 55, 0.2);
 }
 
 .brand-name {
   font-size: 2.2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #000000;
   margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .login-subtitle {
-  color: #7f8c8d;
+  color: #64748b;
   font-size: 1rem;
   margin: 0;
   font-weight: 500;
@@ -634,13 +722,13 @@ export default {
 .form-title {
   font-size: 1.8rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1e293b;
   margin-bottom: 1.5rem;
   text-align: center;
 }
 
 .form-description {
-  color: #7f8c8d;
+  color: #64748b;
   margin-bottom: 2rem;
   text-align: center;
   line-height: 1.5;
@@ -653,7 +741,7 @@ export default {
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #2c3e50;
+  color: #1e293b;
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -667,15 +755,16 @@ export default {
 .input-icon {
   position: absolute;
   left: 1rem;
-  font-size: 1.2rem;
+  color: #64748b;
+  font-size: 1rem;
   z-index: 1;
 }
 
 .form-input {
   width: 100%;
   padding: 1rem 1rem 1rem 3rem;
-  border: 2px solid #e1e8ed;
-  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 1rem;
   transition: all 0.3s ease;
   background: #ffffff;
@@ -683,13 +772,17 @@ export default {
 
 .form-input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+  border-color: #1e293b;
+  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
+}
+
+.form-input:focus ~ .input-icon {
+  color: #1e293b;
 }
 
 .form-input.error {
-  border-color: #e74c3c;
-  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .toggle-password {
@@ -697,20 +790,22 @@ export default {
   right: 1rem;
   background: none;
   border: none;
-  font-size: 1.2rem;
+  color: #64748b;
+  font-size: 1rem;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .toggle-password:hover {
   background: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
 }
 
 .error-message {
   display: block;
-  color: #e74c3c;
+  color: #ef4444;
   font-size: 0.85rem;
   margin-top: 0.5rem;
   font-weight: 500;
@@ -730,7 +825,7 @@ export default {
   align-items: center;
   cursor: pointer;
   font-size: 0.9rem;
-  color: #2c3e50;
+  color: #1e293b;
 }
 
 .checkbox-input {
@@ -740,7 +835,7 @@ export default {
 .checkbox-mark {
   width: 20px;
   height: 20px;
-  border: 2px solid #bdc3c7;
+  border: 2px solid #cbd5e1;
   border-radius: 4px;
   margin-right: 0.5rem;
   position: relative;
@@ -748,8 +843,8 @@ export default {
 }
 
 .checkbox-input:checked + .checkbox-mark {
-  background: #3498db;
-  border-color: #3498db;
+  background: #1e293b;
+  border-color: #1e293b;
 }
 
 .checkbox-input:checked + .checkbox-mark::after {
@@ -766,7 +861,7 @@ export default {
 .forgot-link {
   background: none;
   border: none;
-  color: #3498db;
+  color: #1e293b;
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;
@@ -774,7 +869,7 @@ export default {
 }
 
 .forgot-link:hover {
-  color: #2980b9;
+  color: #334155;
 }
 
 .alert {
@@ -789,15 +884,15 @@ export default {
 }
 
 .alert-error {
-  background: #fdf2f2;
-  color: #e74c3c;
+  background: #fef2f2;
+  color: #ef4444;
   border: 1px solid #fecaca;
 }
 
 .alert-success {
-  background: #f0f9ff;
-  color: #27ae60;
-  border: 1px solid #bfdbfe;
+  background: #f0fdf4;
+  color: #22c55e;
+  border: 1px solid #bbf7d0;
 }
 
 .alert-icon {
@@ -807,10 +902,10 @@ export default {
 .btn-login {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #3498db, #2980b9);
+  background: linear-gradient(135deg, #1e293b, #334155);
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -823,7 +918,7 @@ export default {
 
 .btn-login:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 8px 25px rgba(30, 41, 59, 0.25);
 }
 
 .btn-login:disabled {
@@ -834,10 +929,10 @@ export default {
 
 .btn-secondary {
   padding: 1rem 2rem;
-  background: #95a5a6;
+  background: #64748b;
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -845,7 +940,7 @@ export default {
 }
 
 .btn-secondary:hover {
-  background: #7f8c8d;
+  background: #475569;
   transform: translateY(-1px);
 }
 
@@ -878,15 +973,15 @@ export default {
 .demo-users {
   margin-top: 2rem;
   padding: 1.5rem;
-  background: rgba(52, 152, 219, 0.05);
-  border-radius: 12px;
-  border: 1px solid rgba(52, 152, 219, 0.1);
+  background: rgba(30, 41, 59, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(30, 41, 59, 0.1);
 }
 
 .demo-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #1e293b;
   margin-bottom: 1rem;
   text-align: center;
 }
@@ -898,15 +993,16 @@ export default {
 
 .demo-user {
   font-size: 0.85rem;
-  color: #34495e;
+  color: #334155;
   padding: 0.5rem;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
   text-align: center;
+  border: 1px solid rgba(30, 41, 59, 0.05);
 }
 
 .demo-user strong {
-  color: #2c3e50;
+  color: #1e293b;
 }
 
 /* Responsive */
@@ -940,6 +1036,10 @@ export default {
   .demo-grid {
     gap: 0.5rem;
   }
+  
+  .element-1, .element-2, .element-3 {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
@@ -959,6 +1059,109 @@ export default {
 
   .demo-users {
     padding: 1rem;
+  }
+  
+  .geometric-pattern {
+    background-size: 40px 40px;
+  }
+  
+  .grid-overlay {
+    background-size: 60px 60px;
+  }
+}
+
+/* Mejoras adicionales para la profesionalidad */
+.login-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.login-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+}
+
+/* Efecto de profundidad en el formulario */
+.login-form-container {
+  position: relative;
+}
+
+.login-form-container::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border-radius: 20px;
+  z-index: -1;
+  filter: blur(10px);
+}
+
+/* Animaciones mejoradas */
+.login-wrapper {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Efectos de hover mejorados */
+.form-input:hover {
+  border-color: #cbd5e1;
+}
+
+.checkbox-container:hover .checkbox-mark {
+  border-color: #1e293b;
+  transform: scale(1.05);
+}
+
+/* Estados de focus mejorados para accesibilidad */
+.form-input:focus,
+.btn-login:focus,
+.btn-secondary:focus,
+.forgot-link:focus,
+.toggle-password:focus {
+  outline: 2px solid #1e293b;
+  outline-offset: 2px;
+}
+
+/* Sombras más sutiles y profesionales */
+.logo-circle:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 12px 30px rgba(0, 0, 0, 0.4),
+    0 0 0 3px #d4af37,
+    inset 0 2px 4px rgba(212, 175, 55, 0.3);
+}
+
+/* Transición suave para cambios de vista */
+.login-form-container {
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 </style>

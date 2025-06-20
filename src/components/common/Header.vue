@@ -38,6 +38,7 @@ export default {
         '/admin/dashboard': 'Dashboard',
         '/admin/usuarios': 'Usuarios',
         '/admin/clientes': 'Clientes',
+        '/admin/categorias': 'Categorías',
         '/admin/servicios': 'Servicios',
         '/admin/cotizaciones': 'Cotizaciones',
         '/admin/reportes': 'Reportes',
