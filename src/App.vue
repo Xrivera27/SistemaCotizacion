@@ -5,54 +5,126 @@
 </template>
 
 <script>
+import authService from '@/services/auth';
+
 export default {
   name: 'App',
-  mounted() {
+  async mounted() {
+    console.log('🚀 App mounted - Verificando autenticación...');
+    
     // Verificar autenticación al cargar la app
-    this.checkAuthentication();
+    await this.checkAuthentication();
+    
+    // Configurar listener para cambios de visibilidad (para heartbeat)
+    this.setupVisibilityListener();
   },
+  
   methods: {
     handleLoginSuccess(userData) {
-      // Manejar el login exitoso desde el componente Login
-      console.log('Usuario logueado:', userData);
-    },
-    
-    checkAuthentication() {
-      const currentRoute = this.$route.path;
-      const user = localStorage.getItem('cloudtech_user') || sessionStorage.getItem('cloudtech_user');
+      console.log('✅ Usuario logueado desde App:', userData);
       
-      if (!user && currentRoute !== '/login') {
+      // Aquí puedes hacer cualquier configuración global post-login
+      // Por ejemplo, configurar interceptores adicionales, analytics, etc.
+    },
+    
+    async checkAuthentication() {
+      const currentRoute = this.$route.path;
+      
+      console.log('🔍 Verificando autenticación para ruta:', currentRoute);
+      
+      // Si estamos en login, no verificar
+      if (currentRoute === '/login') {
+        console.log('📍 En página de login, saltando verificación');
+        return;
+      }
+      
+      try {
+        // Verificar autenticación con el backend
+        const result = await authService.checkAuth();
+        
+        if (result.success) {
+          console.log('✅ Usuario autenticado:', result.user);
+          
+          // Iniciar heartbeat si no está activo
+          authService.startHeartbeat(5);
+          
+          // Verificar si está en la ruta correcta según su rol
+          const expectedPath = authService.getRedirectPath(result.user.tipo_usuario);
+          
+          if (currentRoute === '/' || currentRoute === '') {
+            console.log('🔀 Redirigiendo desde root a:', expectedPath);
+            this.$router.push(expectedPath);
+          }
+          
+        } else {
+          console.log('❌ No hay sesión válida, redirigiendo a login');
+          
+          // Detener heartbeat
+          authService.stopHeartbeat();
+          
+          // Redirigir a login
+          this.$router.push('/login');
+        }
+        
+      } catch (error) {
+        console.error('💥 Error verificando autenticación:', error);
+        
+        // En caso de error, redirigir a login por seguridad
+        authService.stopHeartbeat();
         this.$router.push('/login');
-      } else if (user && currentRoute === '/login') {
-        const userData = JSON.parse(user);
-        this.redirectByRole(userData.rol);
       }
     },
     
-    redirectByRole(rol) {
-      switch(rol) {
-        case 1: // Administrador
-          this.$router.push('/admin/dashboard');
-          break;
-        case 2: // Vendedor
-          this.$router.push('/vendedor/dashboard');
-          break;
-        case 3: // Lic SuperUsuario
-          this.$router.push('/super/dashboard');
-          break;
-        default:
-          this.$router.push('/vendedor/dashboard');
-      }
+    setupVisibilityListener() {
+      // Manejar cuando la página se vuelve visible (para renovar token si es necesario)
+      document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden && authService.isAuthenticated()) {
+          console.log('👁️ Página visible, verificando sesión...');
+          
+          try {
+            const result = await authService.renewToken();
+            
+            if (!result.success) {
+              console.warn('⚠️ Token no se pudo renovar, cerrando sesión');
+              await this.handleSessionExpired();
+            }
+          } catch (error) {
+            console.error('❌ Error renovando token:', error);
+            await this.handleSessionExpired();
+          }
+        }
+      });
+    },
+    
+    async handleSessionExpired() {
+      console.log('⏰ Sesión expirada, cerrando sesión...');
+      
+      // Cerrar sesión
+      await authService.logout();
+      
+      // Redirigir a login
+      this.$router.push('/login');
+      
+      // Opcional: mostrar notificación
+      // this.showNotification('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
     }
   },
   
   watch: {
     // Observar cambios en la ruta para verificar autenticación
-    '$route'(to) {
+    '$route'(to, from) {
+      console.log('🛣️ Cambio de ruta:', from.path, '→', to.path);
+      
+      // Solo verificar si no vamos a login
       if (to.path !== '/login') {
         this.checkAuthentication();
       }
     }
+  },
+  
+  beforeUnmount() {
+    // Limpiar listeners y detener heartbeat al destruir el componente
+    authService.stopHeartbeat();
   }
 }
 </script>

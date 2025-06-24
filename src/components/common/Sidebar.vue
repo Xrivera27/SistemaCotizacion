@@ -42,8 +42,9 @@
          <span>{{ usuarioActual.iniciales }}</span>
        </div>
        <div class="user-details">
-         <p class="user-name">{{ usuarioActual.nombre }}</p>
+         <p class="user-name">{{ usuarioActual.nombre_completo || usuarioActual.nombre }}</p>
          <p class="user-role">{{ usuarioActual.rolTexto }}</p>
+         <p class="user-email" v-if="usuarioActual.correo">{{ usuarioActual.correo }}</p>
        </div>
      </div>
 
@@ -85,13 +86,18 @@
 
      <!-- Footer del sidebar -->
      <div class="sidebar-footer">
+    
+
        <button 
          class="btn-logout"
          @click="mostrarModalCerrarSesion"
          :title="isOpen ? 'Cerrar sesión' : 'Cerrar sesión'"
+         :disabled="isLoggingOut"
        >
-         <i class="fas fa-sign-out-alt logout-icon"></i>
-         <span class="logout-text" v-if="isOpen">Cerrar Sesión</span>
+         <i class="fas logout-icon" :class="isLoggingOut ? 'fa-spinner fa-spin' : 'fa-sign-out-alt'"></i>
+         <span class="logout-text" v-if="isOpen">
+           {{ isLoggingOut ? 'Cerrando...' : 'Cerrar Sesión' }}
+         </span>
        </button>
      </div>
    </aside>
@@ -123,21 +129,48 @@
                <span>{{ usuarioActual.iniciales }}</span>
              </div>
              <div class="user-details-logout">
-               <p class="user-name-logout">{{ usuarioActual.nombre }}</p>
+               <p class="user-name-logout">{{ usuarioActual.nombre_completo || usuarioActual.nombre }}</p>
                <p class="user-role-logout">{{ usuarioActual.rolTexto }}</p>
+               <p class="user-email-logout" v-if="usuarioActual.correo">{{ usuarioActual.correo }}</p>
+             </div>
+           </div>
+
+           <!-- Opciones de cierre de sesión -->
+           <div class="logout-options" v-if="isOpen">
+             <div class="logout-option">
+               <label class="checkbox-container">
+                 <input 
+                   type="checkbox" 
+                   v-model="logoutAllSessions"
+                   class="checkbox-input"
+                 />
+                 <span class="checkbox-mark"></span>
+                 <span class="checkbox-text">Cerrar todas las sesiones activas</span>
+               </label>
+               <p class="option-description">
+                 Esto cerrará tu sesión en todos los dispositivos donde hayas iniciado sesión.
+               </p>
              </div>
            </div>
          </div>
        </div>
        
        <div class="modal-footer">
-         <button class="btn btn-secondary" @click="cerrarModalCerrarSesion">
+         <button 
+           class="btn btn-secondary" 
+           @click="cerrarModalCerrarSesion"
+           :disabled="isLoggingOut"
+         >
            <i class="fas fa-times"></i>
            Cancelar
          </button>
-         <button class="btn btn-danger" @click="confirmarCerrarSesion">
-           <i class="fas fa-sign-out-alt"></i>
-           Sí, Cerrar Sesión
+         <button 
+           class="btn btn-danger" 
+           @click="confirmarCerrarSesion"
+           :disabled="isLoggingOut"
+         >
+           <i class="fas" :class="isLoggingOut ? 'fa-spinner fa-spin' : 'fa-sign-out-alt'"></i>
+           {{ isLoggingOut ? 'Cerrando...' : 'Sí, Cerrar Sesión' }}
          </button>
        </div>
      </div>
@@ -146,6 +179,8 @@
 </template>
 
 <script>
+import authService from '@/services/auth';
+
 export default {
  name: 'AppSidebar',
  props: {
@@ -160,18 +195,25 @@ export default {
      isMobile: false,
      rutaActiva: this.$route.path,
      modalCerrarSesion: false,
+     isLoggingOut: false,
+     logoutAllSessions: false,
+     isOnline: navigator.onLine,
      usuarioActual: {
-       nombre: 'Carlos Mendoza',
-       rol: 2,
-       iniciales: 'CM',
-       rolTexto: 'Vendedor'
+       id: null,
+       nombre_completo: 'Usuario',
+       correo: '',
+       usuario: '',
+       tipo_usuario: 'vendedor',
+       telefono: '',
+       iniciales: 'U',
+       rolTexto: 'Usuario'
      }
    };
  },
  computed: {
    menuItems() {
      const menus = {
-       1: [ // Administrador
+       'admin': [ // Administrador
          {
            id: 'dashboard-admin',
            texto: 'Dashboard',
@@ -207,7 +249,6 @@ export default {
            texto: 'Cotizaciones',
            icono: 'fas fa-file-invoice',
            ruta: '/admin/cotizaciones',
-           
          },
          {
            id: 'reportes-admin',
@@ -228,7 +269,7 @@ export default {
            ruta: '/admin/configuracion'
          }
        ],
-       2: [ // Vendedor
+       'vendedor': [ // Vendedor
          {
            id: 'dashboard-vendedor',
            texto: 'Dashboard',
@@ -254,7 +295,7 @@ export default {
            ruta: '/vendedor/configuracion'
          }
        ],
-       3: [ // Lic SuperUsuario
+       'super_usuario': [ // SuperUsuario
          {
            id: 'dashboard-super',
            texto: 'Dashboard',
@@ -266,7 +307,6 @@ export default {
            texto: 'Cotizaciones',
            icono: 'fas fa-file-invoice',
            ruta: '/super/cotizaciones',
-           
          },
          {
            id: 'crear-cotizacion-super',
@@ -289,16 +329,19 @@ export default {
        ]
      };
 
-     return menus[this.usuarioActual.rol] || [];
+     return menus[this.usuarioActual.tipo_usuario] || menus['vendedor'];
    }
  },
  mounted() {
    this.checkMobile();
    this.loadUserData();
+   this.setupConnectionListener();
    window.addEventListener('resize', this.checkMobile);
  },
  beforeUnmount() {
    window.removeEventListener('resize', this.checkMobile);
+   window.removeEventListener('online', this.handleOnline);
+   window.removeEventListener('offline', this.handleOffline);
  },
  watch: {
    $route(to) {
@@ -306,28 +349,85 @@ export default {
    }
  },
  methods: {
-   loadUserData() {
-     // Cargar datos del usuario desde localStorage o sessionStorage
-     const user = localStorage.getItem('cloudtech_user') || sessionStorage.getItem('cloudtech_user');
-     if (user) {
-       const userData = JSON.parse(user);
-       this.usuarioActual = {
-         nombre: userData.nombre,
-         rol: userData.rol,
-         iniciales: userData.iniciales,
-         rolTexto: userData.rolTexto || this.getRolTexto(userData.rol),
-         departamento: userData.departamento || ''
-       };
+   async loadUserData() {
+     console.log('📊 Cargando datos del usuario...');
+     
+     try {
+       // Primero intentar obtener del servicio de auth
+       const currentUser = authService.getCurrentUser();
+       
+       if (currentUser) {
+         this.usuarioActual = {
+           id: currentUser.id,
+           nombre_completo: currentUser.nombre_completo || currentUser.nombre,
+           correo: currentUser.correo,
+           usuario: currentUser.usuario,
+           tipo_usuario: currentUser.tipo_usuario,
+           telefono: currentUser.telefono,
+           iniciales: this.generateInitials(currentUser.nombre_completo || currentUser.nombre),
+           rolTexto: this.getTipoUsuarioTexto(currentUser.tipo_usuario)
+         };
+         
+         console.log('✅ Datos del usuario cargados:', this.usuarioActual);
+       } else {
+         console.warn('⚠️ No se encontraron datos del usuario');
+         
+         // Verificar autenticación con el backend
+         const result = await authService.checkAuth();
+         
+         if (result.success) {
+           this.usuarioActual = {
+             id: result.user.id,
+             nombre_completo: result.user.nombre_completo,
+             correo: result.user.correo,
+             usuario: result.user.usuario,
+             tipo_usuario: result.user.tipo_usuario,
+             telefono: result.user.telefono,
+             iniciales: this.generateInitials(result.user.nombre_completo),
+             rolTexto: this.getTipoUsuarioTexto(result.user.tipo_usuario)
+           };
+         }
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cargando datos del usuario:', error);
      }
    },
    
-   getRolTexto(rol) {
-     const roles = {
-       1: 'Administrador',
-       2: 'Vendedor',
-       3: 'SuperUsuario'
+   generateInitials(nombreCompleto) {
+     if (!nombreCompleto) return 'U';
+     
+     const nombres = nombreCompleto.trim().split(' ');
+     
+     if (nombres.length >= 2) {
+       return (nombres[0][0] + nombres[1][0]).toUpperCase();
+     } else {
+       return nombres[0].substring(0, 2).toUpperCase();
+     }
+   },
+   
+   getTipoUsuarioTexto(tipoUsuario) {
+     const tipos = {
+       'admin': 'Administrador',
+       'vendedor': 'Vendedor',
+       'super_usuario': 'SuperUsuario'
      };
-     return roles[rol] || 'Usuario';
+     return tipos[tipoUsuario] || 'Usuario';
+   },
+   
+   setupConnectionListener() {
+     window.addEventListener('online', this.handleOnline);
+     window.addEventListener('offline', this.handleOffline);
+   },
+   
+   handleOnline() {
+     this.isOnline = true;
+     console.log('🌐 Conexión restaurada');
+   },
+   
+   handleOffline() {
+     this.isOnline = false;
+     console.log('📴 Conexión perdida');
    },
    
    checkMobile() {
@@ -353,37 +453,68 @@ export default {
    // MÉTODOS PARA EL MODAL
    mostrarModalCerrarSesion() {
      this.modalCerrarSesion = true;
+     this.logoutAllSessions = false;
    },
    
    cerrarModalCerrarSesion() {
-     this.modalCerrarSesion = false;
+     if (!this.isLoggingOut) {
+       this.modalCerrarSesion = false;
+       this.logoutAllSessions = false;
+     }
    },
    
-   confirmarCerrarSesion() {
+   async confirmarCerrarSesion() {
+     if (this.isLoggingOut) return;
+     
+     this.isLoggingOut = true;
+     
      try {
-       // Limpiar todo el almacenamiento de sesión
-       localStorage.removeItem('cloudtech_user');
-       localStorage.removeItem('cloudtech_remember');
-       sessionStorage.removeItem('cloudtech_user');
+       console.log('🚪 Iniciando proceso de cierre de sesión...');
        
-       // Log de la acción
-       console.log('Sesión cerrada correctamente');
+       if (this.logoutAllSessions) {
+         console.log('🔄 Cerrando todas las sesiones...');
+         await authService.logoutAll();
+       } else {
+         console.log('🔄 Cerrando sesión actual...');
+         await authService.logout();
+       }
+       
+       console.log('✅ Sesión cerrada correctamente');
        
        // Cerrar modal
        this.modalCerrarSesion = false;
        
-       // Redirigir al login
-       this.$router.push('/login');
+       // Detener heartbeat
+       authService.stopHeartbeat();
+       
+       // Pequeño delay para que se vea el cambio
+       setTimeout(() => {
+         // Redirigir al login
+         this.$router.push('/login');
+       }, 500);
        
      } catch (error) {
-       console.error('Error al cerrar sesión:', error);
-       // Aún así intentar redirigir
-       this.$router.push('/login');
+       console.error('❌ Error al cerrar sesión:', error);
+       
+       // Incluso si hay error, limpiar localmente y redirigir
+       authService.clearLocalUserData();
+       authService.stopHeartbeat();
+       
+       this.modalCerrarSesion = false;
+       
+       setTimeout(() => {
+         this.$router.push('/login');
+       }, 500);
+       
+     } finally {
+       this.isLoggingOut = false;
+       this.logoutAllSessions = false;
      }
    }
  }
 }
 </script>
+
 
 <style scoped>
 .sidebar-container {
@@ -578,6 +709,15 @@ export default {
  text-overflow: ellipsis;
 }
 
+.user-email {
+ margin: 0;
+ font-size: 0.75rem;
+ color: #95a5a6;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+}
+
 .sidebar-nav {
  flex: 1;
  overflow-y: auto;
@@ -703,6 +843,37 @@ export default {
  padding: 1rem 0.5rem;
 }
 
+/* Indicador de conexión */
+.connection-status {
+ margin-bottom: 1rem;
+ padding: 0.5rem;
+ border-radius: 0.5rem;
+ background: rgba(255, 255, 255, 0.05);
+}
+
+.status-indicator {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-size: 0.8rem;
+}
+
+.status-indicator.online {
+ color: #27ae60;
+}
+
+.status-indicator.offline {
+ color: #e74c3c;
+}
+
+.status-indicator i {
+ font-size: 0.9rem;
+}
+
+.status-text {
+ font-weight: 500;
+}
+
 .btn-logout {
  width: 100%;
  background: rgba(231, 76, 60, 0.2);
@@ -720,12 +891,17 @@ export default {
  font-weight: 500;
 }
 
+.btn-logout:disabled {
+ opacity: 0.6;
+ cursor: not-allowed;
+}
+
 .sidebar-cerrado .btn-logout {
  padding: 0.75rem 0.5rem;
  min-height: 45px;
 }
 
-.btn-logout:hover {
+.btn-logout:hover:not(:disabled) {
  background: rgba(231, 76, 60, 0.3);
  border-color: rgba(231, 76, 60, 0.5);
  transform: translateY(-1px);
@@ -784,281 +960,442 @@ export default {
 }
 
 .modal-title {
- margin: 0;
- color: #2c3e50;
- font-size: 1.3rem;
- font-weight: 600;
- display: flex;
- align-items: center;
- gap: 0.75rem;
+margin: 0;
+color: #2c3e50;
+font-size: 1.3rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+gap: 0.75rem;
 }
 
 .modal-title i {
- color: #e74c3c;
- font-size: 1.2rem;
+color: #e74c3c;
+font-size: 1.2rem;
 }
 
 .btn-close {
- background: none;
- border: none;
- font-size: 1.3rem;
- cursor: pointer;
- color: #7f8c8d;
- padding: 0.5rem;
- border-radius: 50%;
- transition: all 0.3s ease;
- width: 40px;
- height: 40px;
- display: flex;
- align-items: center;
- justify-content: center;
+background: none;
+border: none;
+font-size: 1.3rem;
+cursor: pointer;
+color: #7f8c8d;
+padding: 0.5rem;
+border-radius: 50%;
+transition: all 0.3s ease;
+width: 40px;
+height: 40px;
+display: flex;
+align-items: center;
+justify-content: center;
 }
 
 .btn-close:hover {
- background: #e9ecef;
- color: #e74c3c;
- transform: scale(1.1);
+background: #e9ecef;
+color: #e74c3c;
+transform: scale(1.1);
 }
 
 .modal-body {
- padding: 2rem;
+padding: 2rem;
 }
 
 .logout-content {
- text-align: center;
+text-align: center;
 }
 
 .logout-icon-large {
- font-size: 4rem;
- color: #f39c12;
- margin-bottom: 1.5rem;
+font-size: 4rem;
+color: #f39c12;
+margin-bottom: 1.5rem;
 }
 
 .logout-message h4 {
- color: #2c3e50;
- margin-bottom: 0.75rem;
- font-size: 1.3rem;
- font-weight: 600;
+color: #2c3e50;
+margin-bottom: 0.75rem;
+font-size: 1.3rem;
+font-weight: 600;
 }
 
 .logout-message p {
- color: #7f8c8d;
- margin-bottom: 2rem;
- line-height: 1.5;
- font-size: 1rem;
+color: #7f8c8d;
+margin-bottom: 2rem;
+line-height: 1.5;
+font-size: 1rem;
 }
 
 .user-info-logout {
- display: flex;
- align-items: center;
- gap: 1rem;
- background: #f8f9fa;
- padding: 1.5rem;
- border-radius: 12px;
- border-left: 4px solid #3498db;
+display: flex;
+align-items: center;
+gap: 1rem;
+background: #f8f9fa;
+padding: 1.5rem;
+border-radius: 12px;
+border-left: 4px solid #3498db;
+margin-bottom: 1.5rem;
 }
 
 .user-avatar-logout {
- width: 50px;
- height: 50px;
- border-radius: 50%;
- background: linear-gradient(135deg, #3498db, #2980b9);
- display: flex;
- align-items: center;
- justify-content: center;
- font-weight: bold;
- font-size: 1.2rem;
- color: white;
- flex-shrink: 0;
+width: 50px;
+height: 50px;
+border-radius: 50%;
+background: linear-gradient(135deg, #3498db, #2980b9);
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+font-size: 1.2rem;
+color: white;
+flex-shrink: 0;
 }
 
 .user-details-logout {
- flex: 1;
- text-align: left;
+flex: 1;
+text-align: left;
 }
 
 .user-name-logout {
- margin: 0;
- font-size: 1.1rem;
- font-weight: 600;
- color: #2c3e50;
+margin: 0;
+font-size: 1.1rem;
+font-weight: 600;
+color: #2c3e50;
 }
 
 .user-role-logout {
- margin: 0;
- font-size: 0.9rem;
- color: #7f8c8d;
+margin: 0;
+font-size: 0.9rem;
+color: #7f8c8d;
+}
+
+.user-email-logout {
+margin: 0;
+font-size: 0.85rem;
+color: #95a5a6;
+}
+
+/* Opciones de logout */
+.logout-options {
+margin-top: 1.5rem;
+text-align: left;
+}
+
+.logout-option {
+background: #f8f9fa;
+padding: 1rem;
+border-radius: 8px;
+border: 1px solid #e9ecef;
+}
+
+.checkbox-container {
+display: flex;
+align-items: flex-start;
+cursor: pointer;
+font-size: 0.9rem;
+color: #2c3e50;
+gap: 0.75rem;
+}
+
+.checkbox-input {
+display: none;
+}
+
+.checkbox-mark {
+width: 20px;
+height: 20px;
+border: 2px solid #cbd5e1;
+border-radius: 4px;
+position: relative;
+transition: all 0.3s ease;
+flex-shrink: 0;
+margin-top: 2px;
+}
+
+.checkbox-input:checked + .checkbox-mark {
+background: #e74c3c;
+border-color: #e74c3c;
+}
+
+.checkbox-input:checked + .checkbox-mark::after {
+content: '✓';
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+color: white;
+font-size: 0.8rem;
+font-weight: bold;
+}
+
+.checkbox-text {
+font-weight: 600;
+color: #2c3e50;
+}
+
+.option-description {
+margin: 0.5rem 0 0 2.75rem;
+font-size: 0.8rem;
+color: #7f8c8d;
+line-height: 1.4;
 }
 
 .modal-footer {
- display: flex;
- justify-content: flex-end;
- gap: 1rem;
- padding: 1.5rem 2rem;
- border-top: 1px solid #e9ecef;
- background: #f8f9fa;
- border-radius: 0 0 16px 16px;
+display: flex;
+justify-content: flex-end;
+gap: 1rem;
+padding: 1.5rem 2rem;
+border-top: 1px solid #e9ecef;
+background: #f8f9fa;
+border-radius: 0 0 16px 16px;
 }
 
 .btn {
- padding: 0.75rem 1.5rem;
- border: none;
- border-radius: 8px;
- font-weight: 600;
- cursor: pointer;
- transition: all 0.3s ease;
- display: inline-flex;
- align-items: center;
- gap: 0.5rem;
- font-size: 0.9rem;
- min-width: 120px;
- justify-content: center;
+padding: 0.75rem 1.5rem;
+border: none;
+border-radius: 8px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s ease;
+display: inline-flex;
+align-items: center;
+gap: 0.5rem;
+font-size: 0.9rem;
+min-width: 120px;
+justify-content: center;
+}
+
+.btn:disabled {
+opacity: 0.6;
+cursor: not-allowed;
+transform: none !important;
 }
 
 .btn-secondary {
- background: #95a5a6;
- color: white;
+background: #95a5a6;
+color: white;
 }
 
-.btn-secondary:hover {
- background: #7f8c8d;
- transform: translateY(-1px);
+.btn-secondary:hover:not(:disabled) {
+background: #7f8c8d;
+transform: translateY(-1px);
 }
 
 .btn-danger {
- background: #e74c3c;
- color: white;
+background: #e74c3c;
+color: white;
 }
 
-.btn-danger:hover {
- background: #c0392b;
- transform: translateY(-1px);
- box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+.btn-danger:hover:not(:disabled) {
+background: #c0392b;
+transform: translateY(-1px);
+box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 /* Tooltips mejorados */
 [title] {
- position: relative;
+position: relative;
 }
 
 /* Scrollbar personalizada */
 .sidebar-nav::-webkit-scrollbar {
- width: 4px;
+width: 4px;
 }
 
 .sidebar-nav::-webkit-scrollbar-track {
- background: rgba(255, 255, 255, 0.1);
+background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
- background: rgba(255, 255, 255, 0.3);
- border-radius: 4px;
+background: rgba(255, 255, 255, 0.3);
+border-radius: 4px;
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
- background: rgba(255, 255, 255, 0.5);
+background: rgba(255, 255, 255, 0.5);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
- .sidebar-abierto {
-   width: 280px;
-   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
- }
- 
- .sidebar-cerrado {
-   width: 0;
-   overflow: hidden;
- }
+.sidebar-abierto {
+  width: 280px;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+}
 
- .sidebar-header {
-   padding: 1rem;
- }
+.sidebar-cerrado {
+  width: 0;
+  overflow: hidden;
+}
 
- .user-info {
-   padding: 0.75rem 1rem;
- }
+.sidebar-header {
+  padding: 1rem;
+}
 
- .nav-link {
-   padding: 1rem;
-   margin: 0;
-   border-radius: 0;
- }
+.user-info {
+  padding: 0.75rem 1rem;
+}
 
- .nav-link:hover {
-   transform: none;
- }
+.nav-link {
+  padding: 1rem;
+  margin: 0;
+  border-radius: 0;
+}
 
- .sidebar-footer {
-   padding: 1rem;
- }
+.nav-link:hover {
+  transform: none;
+}
 
- .btn-toggle {
-   width: 38px;
-   height: 38px;
-   font-size: 0.9rem;
- }
+.sidebar-footer {
+  padding: 1rem;
+}
 
- .modal-content {
-   margin: 0.5rem;
-   max-width: calc(100vw - 1rem);
- }
+.btn-toggle {
+  width: 38px;
+  height: 38px;
+  font-size: 0.9rem;
+}
 
- .modal-header,
- .modal-footer {
-   padding: 1rem 1.5rem;
- }
+.connection-status {
+  display: none;
+}
 
- .modal-body {
-   padding: 1.5rem;
- }
+.modal-content {
+  margin: 0.5rem;
+  max-width: calc(100vw - 1rem);
+}
 
- .modal-footer {
-   flex-direction: column;
- }
+.modal-header,
+.modal-footer {
+  padding: 1rem 1.5rem;
+}
 
- .btn {
-   width: 100%;
- }
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  flex-direction: column;
+}
+
+.btn {
+  width: 100%;
+}
+
+.user-info-logout {
+  flex-direction: column;
+  text-align: center;
+  gap: 1rem;
+}
+
+.user-details-logout {
+  text-align: center;
+}
 }
 
 @media (max-width: 480px) {
- .sidebar-abierto {
-   width: 100vw;
- }
+.sidebar-abierto {
+  width: 100vw;
+}
 
- .user-name {
-   font-size: 0.9rem;
- }
+.user-name {
+  font-size: 0.9rem;
+}
 
- .user-role {
-   font-size: 0.75rem;
- }
+.user-role {
+  font-size: 0.75rem;
+}
 
- .nav-text {
-   font-size: 0.85rem;
- }
+.user-email {
+  font-size: 0.7rem;
+}
 
- .modal-title {
-   font-size: 1.1rem;
- }
+.nav-text {
+  font-size: 0.85rem;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+}
 
 .logout-message h4 {
   font-size: 1.1rem;
 }
 
 .logout-message p {
- font-size: 0.9rem;
+  font-size: 0.9rem;
 }
 
-.user-info-logout {
- flex-direction: column;
- text-align: center;
- gap: 1rem;
+.checkbox-text {
+  font-size: 0.85rem;
 }
 
-.user-details-logout {
- text-align: center;
+.option-description {
+  font-size: 0.75rem;
 }
+}
+
+/* Animaciones para loading */
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+.fa-spin {
+animation: spin 1s linear infinite;
+}
+
+/* Estados de conexión */
+.status-indicator {
+transition: all 0.3s ease;
+}
+
+.status-indicator.online i {
+text-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
+}
+
+.status-indicator.offline i {
+text-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+}
+
+/* Mejoras de accesibilidad */
+.btn:focus,
+.checkbox-container:focus {
+outline: 2px solid #3498db;
+outline-offset: 2px;
+}
+
+/* Transiciones suaves */
+.sidebar * {
+transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Efectos hover mejorados */
+.checkbox-container:hover .checkbox-mark {
+border-color: #e74c3c;
+transform: scale(1.05);
+}
+
+.user-info:hover .user-avatar {
+transform: scale(1.05);
+}
+
+/* Indicadores visuales mejorados */
+.nav-link.active {
+position: relative;
+overflow: hidden;
+}
+
+.nav-link.active::after {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+0% { transform: translateX(-100%); }
+100% { transform: translateX(100%); }
 }
 </style>
