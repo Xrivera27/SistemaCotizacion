@@ -106,10 +106,10 @@
              <strong>Admin:</strong> admin / admin123
            </div>
            <div class="demo-user">
-             <strong>Vendedor:</strong> carlos / carlos123
+             <strong>Vendedor:</strong> juan.perez / 123456
            </div>
            <div class="demo-user">
-             <strong>SuperUser:</strong> super / super123
+             <strong>SuperUser:</strong> roberto.super / super123
            </div>
          </div>
        </div>

@@ -8,8 +8,6 @@
     </div>
     
     <div class="header-right">
-      
-      
       <div class="user-menu">
         <button class="btn-user" @click="toggleUserMenu">
           <span class="user-avatar">{{ userInitials }}</span>
@@ -20,15 +18,36 @@
 </template>
 
 <script>
+import authService from '@/services/auth';
+
 export default {
   name: 'AppHeader',
   data() {
     return {
-      notificationCount: 3,
-      userInitials: 'CM'
+      notificationCount: 3
     };
   },
+  
   computed: {
+    userInitials() {
+      const currentUser = authService.getCurrentUser();
+      
+      if (currentUser && currentUser.nombre_completo) {
+        const nombres = currentUser.nombre_completo.trim().split(' ');
+        
+        if (nombres.length >= 2) {
+          // Si tiene al menos 2 nombres, tomar las primeras 2 iniciales
+          return (nombres[0][0] + nombres[1][0]).toUpperCase();
+        } else if (nombres.length === 1) {
+          // Si solo tiene un nombre, tomar las primeras 2 letras
+          return nombres[0].substring(0, 2).toUpperCase();
+        }
+      }
+      
+      // Fallback si no hay nombre completo
+      return 'U';
+    },
+    
     pageTitle() {
       const titles = {
         // Rutas compartidas
@@ -58,6 +77,7 @@ export default {
       return titles[this.$route.path] || 'Sistema de Cotización';
     }
   },
+  
   methods: {
     toggleSidebar() {
       this.$emit('toggle-sidebar');
@@ -119,34 +139,6 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.btn-notification {
-  position: relative;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 50%;
-  transition: background 0.2s;
-}
-
-.btn-notification:hover {
-  background: #f8f9fa;
-}
-
-.notification-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: #e74c3c;
-  color: white;
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
 }
 
 .btn-user {

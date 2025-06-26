@@ -1,837 +1,664 @@
 <template>
-  <div class="admin-cotizaciones-container">
-    <!-- Header de la página -->
-    <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">Gestión de Cotizaciones</h1>
-        <p class="page-subtitle">Supervisión y control de todas las cotizaciones del sistema</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn btn-primary" @click="nuevaCotizacion">
-          <i class="fas fa-plus btn-icon"></i>
-          Nueva Cotización
-        </button>
-      </div>
-    </div>
+ <div class="admin-cotizaciones-container">
+   <!-- Loading overlay -->
+   <div v-if="loading" class="loading-overlay">
+     <div class="loading-spinner">
+       <i class="fas fa-spinner fa-spin"></i>
+       <span>{{ loadingMessage }}</span>
+     </div>
+   </div>
 
-    <!-- Filtros y búsqueda -->
-    <div class="filtros-section">
-      <div class="filtros-container">
-        <div class="search-box">
-          <i class="fas fa-search search-icon"></i>
-          <input
-            v-model="filtros.busqueda"
-            type="text"
-            placeholder="Buscar por CT número, cliente, vendedor..."
-            class="search-input"
-          />
-        </div>
-        
-        <div class="filtros-grid">
-          <select v-model="filtros.estado" class="filter-select">
-            <option value="">Todos los estados</option>
-            <option value="esperando">Esperando Aprobación</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="efectiva">Efectiva</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-          
-          <select v-model="filtros.vendedor" class="filter-select">
-            <option value="">Todos los vendedores</option>
-            <option v-for="vendedor in vendedoresUnicos" :key="vendedor" :value="vendedor">
-              {{ vendedor }}
-            </option>
-          </select>
-          
-          <select v-model="filtros.periodo" class="filter-select">
-            <option value="">Todo el tiempo</option>
-            <option value="hoy">Hoy</option>
-            <option value="semana">Esta semana</option>
-            <option value="mes">Este mes</option>
-            <option value="trimestre">Este trimestre</option>
-          </select>
+   <!-- Header de la página -->
+   <div class="page-header">
+     <div class="header-content">
+       <h1 class="page-title">Gestión de Cotizaciones</h1>
+       <p class="page-subtitle">Supervisión y control de todas las cotizaciones del sistema</p>
+     </div>
+     <div class="header-actions">
+       <button class="btn btn-primary" @click="nuevaCotizacion">
+         <i class="fas fa-plus btn-icon"></i>
+         Nueva Cotización
+       </button>
+       <button class="btn btn-secondary" @click="cargarCotizaciones">
+         <i class="fas fa-sync-alt btn-icon"></i>
+         Actualizar
+       </button>
+     </div>
+   </div>
 
-          <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
-            <option value="10">10 por página</option>
-            <option value="25">25 por página</option>
-            <option value="50">50 por página</option>
-            <option value="100">100 por página</option>
-          </select>
-          
-          <button class="btn btn-secondary" @click="limpiarFiltros">
-            Limpiar Filtros
-          </button>
-        </div>
-      </div>
-    </div>
+   <!-- Filtros y búsqueda -->
+   <div class="filtros-section">
+     <div class="filtros-container">
+       <div class="search-box">
+         <i class="fas fa-search search-icon"></i>
+         <input
+           v-model="filtros.busqueda"
+           type="text"
+           placeholder="Buscar por CT número, cliente, vendedor..."
+           class="search-input"
+           @input="buscarCotizaciones"
+         />
+       </div>
+       
+       <div class="filtros-grid">
+         <select v-model="filtros.estado" class="filter-select" @change="aplicarFiltros">
+           <option value="">Todos los estados</option>
+           <option value="pendiente">Pendiente</option>
+           <option value="pendiente_aprobacion">Esperando Aprobación</option>
+           <option value="efectiva">Efectiva</option>
+           <option value="rechazada">Rechazada</option>
+         </select>
+         
+         <select v-model="filtros.vendedor" class="filter-select" @change="aplicarFiltros">
+           <option value="">Todos los vendedores</option>
+           <option v-for="vendedor in vendedoresUnicos" :key="vendedor" :value="vendedor">
+             {{ vendedor }}
+           </option>
+         </select>
+         
+         <select v-model="filtros.periodo" class="filter-select" @change="aplicarFiltros">
+           <option value="">Todo el tiempo</option>
+           <option value="hoy">Hoy</option>
+           <option value="semana">Esta semana</option>
+           <option value="mes">Este mes</option>
+           <option value="trimestre">Este trimestre</option>
+         </select>
 
-    <!-- Estadísticas rápidas -->
-    <div class="estadisticas-grid">
-      <div class="stat-card total">
-        <div class="stat-content">
-          <div class="stat-number">{{ estadisticas.total }}</div>
-          <div class="stat-label">Total Cotizaciones</div>
-        </div>
-      </div>
-      
-      <div class="stat-card esperando">
-        <div class="stat-content">
-          <div class="stat-number">{{ estadisticas.esperandoAprobacion }}</div>
-          <div class="stat-label">Esperando Aprobación</div>
-        </div>
-      </div>
-      
-      <div class="stat-card pendientes">
-        <div class="stat-content">
-          <div class="stat-number">{{ estadisticas.pendientes }}</div>
-          <div class="stat-label">Pendientes</div>
-        </div>
-      </div>
-      
-      <div class="stat-card efectivas">
-        <div class="stat-content">
-          <div class="stat-number">{{ estadisticas.efectivas }}</div>
-          <div class="stat-label">Efectivas</div>
-        </div>
-      </div>
+         <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
+           <option value="10">10 por página</option>
+           <option value="25">25 por página</option>
+           <option value="50">50 por página</option>
+           <option value="100">100 por página</option>
+         </select>
+         
+         <button class="btn btn-secondary" @click="limpiarFiltros">
+           Limpiar Filtros
+         </button>
+       </div>
+     </div>
+   </div>
 
-      <div class="stat-card vendedores">
-        <div class="stat-content">
-          <div class="stat-number">{{ estadisticas.vendedoresActivos }}</div>
-          <div class="stat-label">Vendedores Activos</div>
-        </div>
-      </div>
-    </div>
+   <!-- Estadísticas rápidas -->
+   <div class="estadisticas-grid">
+     <div class="stat-card total">
+       <div class="stat-content">
+         <div class="stat-number">{{ estadisticas.total || 0 }}</div>
+         <div class="stat-label">Total Cotizaciones</div>
+       </div>
+     </div>
+     
+     <div class="stat-card esperando">
+       <div class="stat-content">
+         <div class="stat-number">{{ estadisticas.esperando || 0 }}</div>
+         <div class="stat-label">Esperando Aprobación</div>
+       </div>
+     </div>
+     
+     <div class="stat-card pendientes">
+       <div class="stat-content">
+         <div class="stat-number">{{ estadisticas.pendientes || 0 }}</div>
+         <div class="stat-label">Pendientes</div>
+       </div>
+     </div>
+     
+     <div class="stat-card efectivas">
+       <div class="stat-content">
+         <div class="stat-number">{{ estadisticas.efectivas || 0 }}</div>
+         <div class="stat-label">Efectivas</div>
+       </div>
+     </div>
 
-    <!-- Tabla de cotizaciones -->
-    <div class="cotizaciones-section">
-      <div class="section-header">
-        <h2 class="section-title">
-          {{ cotizacionesFiltradas.length }} Cotizaciones encontradas
-        </h2>
-        <div class="view-controls">
-          <button 
-            class="view-btn"
-            :class="{ active: vistaActual === 'tabla' }"
-            @click="vistaActual = 'tabla'"
-          >
-            <i class="fas fa-table"></i> Tabla
-          </button>
-          <button 
-            class="view-btn"
-            :class="{ active: vistaActual === 'tarjetas' }"
-            @click="vistaActual = 'tarjetas'"
-          >
-            <i class="fas fa-th-large"></i> Tarjetas
-          </button>
-        </div>
-      </div>
+     <div class="stat-card vendedores">
+       <div class="stat-content">
+         <div class="stat-number">{{ vendedoresUnicos.length }}</div>
+         <div class="stat-label">Vendedores Activos</div>
+       </div>
+     </div>
+   </div>
 
-      <!-- Información de paginación superior -->
-      <div class="paginacion-info">
-        <span class="items-info">
-          Mostrando {{ rangoInicio }} - {{ rangoFin }} de {{ cotizacionesFiltradas.length }} cotizaciones
-        </span>
-        <div class="pagination-jump">
-          <label for="jump-page">Ir a página:</label>
-          <input 
-            id="jump-page"
-            type="number" 
-            v-model.number="paginaSalto" 
-            @keyup.enter="irAPagina"
-            :min="1" 
-            :max="totalPaginas"
-            class="page-input"
-          >
-          <button class="btn btn-sm btn-outline" @click="irAPagina">
-            <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
+   <!-- Tabla de cotizaciones -->
+   <div class="cotizaciones-section">
+     <div class="section-header">
+       <h2 class="section-title">
+         {{ pagination ? pagination.totalItems : cotizaciones.length }} Cotizaciones encontradas
+       </h2>
+       <div class="view-controls">
+         <button 
+           class="view-btn"
+           :class="{ active: vistaActual === 'tabla' }"
+           @click="vistaActual = 'tabla'"
+         >
+           <i class="fas fa-table"></i> Tabla
+         </button>
+         <button 
+           class="view-btn"
+           :class="{ active: vistaActual === 'tarjetas' }"
+           @click="vistaActual = 'tarjetas'"
+         >
+           <i class="fas fa-th-large"></i> Tarjetas
+         </button>
+       </div>
+     </div>
 
-      <!-- Vista de tabla -->
-      <div v-if="vistaActual === 'tabla'" class="tabla-container">
-        <div class="tabla-wrapper">
-          <table class="cotizaciones-tabla">
-            <thead>
-              <tr>
-                <th @click="ordenarPor('numero')" class="sortable">
-                  # Cotización
-                  <span class="sort-icon">{{ getSortIcon('numero') }}</span>
-                </th>
-                <th @click="ordenarPor('cliente')" class="sortable">
-                  Cliente
-                  <span class="sort-icon">{{ getSortIcon('cliente') }}</span>
-                </th>
-                <th>Servicios</th>
-                <th @click="ordenarPor('fecha')" class="sortable">
-                  Fecha Creación
-                  <span class="sort-icon">{{ getSortIcon('fecha') }}</span>
-                </th>
-                <th @click="ordenarPor('vendedor')" class="sortable">
-                  Vendedor
-                  <span class="sort-icon">{{ getSortIcon('vendedor') }}</span>
-                </th>
-                <th @click="ordenarPor('total')" class="sortable">
-                  Total
-                  <span class="sort-icon">{{ getSortIcon('total') }}</span>
-                </th>
-                <th>Estado</th>
-                <th>PDF</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="cotizacion in cotizacionesPaginadas" :key="cotizacion.id">
-                <td>
-                  <span class="numero-cotizacion">CT{{ String(cotizacion.id).padStart(6, '0') }}</span>
-                </td>
-                <td>
-                  <div class="cliente-info">
-                    <span class="cliente-nombre">{{ cotizacion.cliente.nombre }}</span>
-                    <span class="cliente-email">{{ cotizacion.cliente.email }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="servicios-info">
-                    <span class="servicios-count">{{ cotizacion.servicios.length }} servicio(s)</span>
-                    <div class="servicios-preview">
-                      <span v-for="(servicio, index) in cotizacion.servicios.slice(0, 2)" 
-                            :key="index" 
-                            class="servicio-tag">
-                        {{ servicio }}
-                      </span>
-                      <span v-if="cotizacion.servicios.length > 2" class="servicios-mas">
-                        +{{ cotizacion.servicios.length - 2 }} más
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="fecha">{{ formatearFecha(cotizacion.fechaCreacion) }}</span>
-                </td>
-                <td>
-                  <div class="vendedor-info">
-                    <span class="vendedor-nombre">{{ cotizacion.vendedor.nombre }}</span>
-                    <span class="vendedor-rol">{{ cotizacion.vendedor.rol }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="monto">{{ formatearMoneda(cotizacion.total) }}</span>
-                </td>
-                <td>
-                  <span class="estado-badge" :class="cotizacion.estado">
-                    {{ getEstadoTexto(cotizacion.estado) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="pdf-status">
-                    <span v-if="cotizacion.pdfGenerado" class="pdf-disponible">
-                      <i class="fas fa-check-circle"></i> Disponible
-                    </span>
-                    <span v-else class="pdf-no-disponible">
-                      <i class="fas fa-times-circle"></i> No generado
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <div class="acciones">
-                    <button 
-                      class="btn-accion ver"
-                      @click="verCotizacion(cotizacion)"
-                      title="Ver detalles"
-                    >
-                      <i class="fas fa-eye"></i>
-                    </button>
-                    <button 
-                      v-if="cotizacion.pdfGenerado"
-                      class="btn-accion imprimir"
-                      @click="mostrarModalPDF(cotizacion)"
-                      title="Ver/Descargar PDF"
-                    >
-                      <i class="fas fa-file-pdf"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+     <!-- Información de paginación superior -->
+     <div v-if="pagination" class="paginacion-info">
+       <span class="items-info">
+         Mostrando {{ pagination.totalItems > 0 ? ((pagination.currentPage - 1) * pagination.itemsPerPage + 1) : 0 }} - 
+         {{ Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems) }} 
+         de {{ pagination.totalItems }} cotizaciones
+       </span>
+       <div class="pagination-jump" v-if="pagination.totalPages > 1">
+         <label for="jump-page">Ir a página:</label>
+         <input 
+           id="jump-page"
+           type="number" 
+           v-model.number="paginaSalto" 
+           @keyup.enter="irAPagina"
+           :min="1" 
+           :max="pagination.totalPages"
+           class="page-input"
+         >
+         <button class="btn btn-sm btn-outline" @click="irAPagina">
+           <i class="fas fa-arrow-right"></i>
+         </button>
+       </div>
+     </div>
 
-      <!-- Vista de tarjetas -->
-      <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
-        <div class="tarjetas-grid">
-          <div 
-            v-for="cotizacion in cotizacionesPaginadas" 
-            :key="cotizacion.id"
-            class="cotizacion-card"
-          >
-            <div class="card-header">
-              <div class="card-numero">CT{{ String(cotizacion.id).padStart(6, '0') }}</div>
-              <span class="estado-badge" :class="cotizacion.estado">
-                {{ getEstadoTexto(cotizacion.estado) }}
-              </span>
-            </div>
-            
-            <div class="card-content">
-              <h3 class="cliente-nombre">{{ cotizacion.cliente.nombre }}</h3>
-              <p class="cliente-email">{{ cotizacion.cliente.email }}</p>
-              
-              <div class="servicios-card">
-                <strong>Servicios ({{ cotizacion.servicios.length }}):</strong>
-                <div class="servicios-list">
-                  <span v-for="(servicio, index) in cotizacion.servicios.slice(0, 3)" 
-                        :key="index" 
-                        class="servicio-tag">
-                    {{ servicio }}
-                  </span>
-                  <span v-if="cotizacion.servicios.length > 3" class="servicios-mas">
-                    +{{ cotizacion.servicios.length - 3 }} más
-                  </span>
-                </div>
-              </div>
-              
-              <div class="card-details">
-                <div class="detail">
-                  <span class="detail-label">Fecha:</span>
-                  <span class="detail-value">{{ formatearFecha(cotizacion.fechaCreacion) }}</span>
-                </div>
-                <div class="detail">
-                  <span class="detail-label">Vendedor:</span>
-                  <span class="detail-value">{{ cotizacion.vendedor.nombre }}</span>
-                </div>
-                <div class="detail">
-                  <span class="detail-label">Total:</span>
-                  <span class="detail-value monto">{{ formatearMoneda(cotizacion.total) }}</span>
-                </div>
-                <div class="detail">
-                  <span class="detail-label">PDF:</span>
-                  <span class="detail-value" :class="cotizacion.pdfGenerado ? 'pdf-ok' : 'pdf-no'">
-                    <i :class="cotizacion.pdfGenerado ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
-                    {{ cotizacion.pdfGenerado ? ' Disponible' : ' No generado' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="card-actions">
-              <button class="btn btn-sm btn-outline" @click="verCotizacion(cotizacion)">
-                Ver Detalles
-              </button>
-              <button 
-                v-if="cotizacion.pdfGenerado"
-                class="btn btn-sm btn-secondary" 
-                @click="mostrarModalPDF(cotizacion)"
-              >
-                <i class="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+     <!-- Vista de tabla -->
+     <div v-if="vistaActual === 'tabla'" class="tabla-container">
+       <div class="tabla-wrapper">
+         <table class="cotizaciones-tabla">
+           <thead>
+             <tr>
+               <th @click="ordenarPor('numero')" class="sortable">
+                 # Cotización
+                 <span class="sort-icon">{{ getSortIcon('numero') }}</span>
+               </th>
+               <th @click="ordenarPor('cliente')" class="sortable">
+                 Cliente
+                 <span class="sort-icon">{{ getSortIcon('cliente') }}</span>
+               </th>
+               <th>Servicios</th>
+               <th @click="ordenarPor('fecha')" class="sortable">
+                 Fecha Creación
+                 <span class="sort-icon">{{ getSortIcon('fecha') }}</span>
+               </th>
+               <th @click="ordenarPor('vendedor')" class="sortable">
+                 Vendedor
+                 <span class="sort-icon">{{ getSortIcon('vendedor') }}</span>
+               </th>
+               <th @click="ordenarPor('total')" class="sortable">
+                 Total
+                 <span class="sort-icon">{{ getSortIcon('total') }}</span>
+               </th>
+               <th>Estado</th>
+               <th>PDF</th>
+               <th>Acciones</th>
+             </tr>
+           </thead>
+           <tbody>
+             <tr v-for="cotizacion in cotizaciones" :key="cotizacion.id">
+               <td>
+                 <span class="numero-cotizacion">{{ formatearNumeroCotizacion(cotizacion.id) }}</span>
+               </td>
+               <td>
+                 <div class="cliente-info">
+                   <span class="cliente-nombre">{{ cotizacion.cliente_info?.nombre_completo || 'Sin cliente' }}</span>
+                   <span class="cliente-email">{{ cotizacion.cliente_info?.email_principal || 'Sin email' }}</span>
+                 </div>
+               </td>
+               <td>
+                 <div class="servicios-info">
+                   <span class="servicios-count">{{ cotizacion.servicios?.length || 0 }} servicio(s)</span>
+                   <div class="servicios-preview">
+                     <span v-for="(servicio, index) in (cotizacion.servicios || []).slice(0, 2)" 
+                           :key="index" 
+                           class="servicio-tag">
+                       {{ servicio }}
+                     </span>
+                     <span v-if="(cotizacion.servicios || []).length > 2" class="servicios-mas">
+                       +{{ (cotizacion.servicios || []).length - 2 }} más
+                     </span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <span class="fecha">{{ formatearFecha(cotizacion.fechaCreacion) }}</span>
+               </td>
+               <td>
+                 <div class="vendedor-info">
+                   <span class="vendedor-nombre">{{ cotizacion.vendedor_info?.nombre_completo || 'Sin vendedor' }}</span>
+                   <span class="vendedor-rol">{{ cotizacion.vendedor_info?.rol_formateado || 'Sin rol' }}</span>
+                 </div>
+               </td>
+               <td>
+                 <span class="monto">{{ formatearMoneda(cotizacion.total) }}</span>
+               </td>
+               <td>
+                 <span class="estado-badge" :class="cotizacion.estado">
+                   {{ cotizacion.estado_label || getEstadoTexto(cotizacion.estado) }}
+                 </span>
+               </td>
+               <td>
+                 <div class="pdf-status">
+                   <span v-if="cotizacion.pdfGenerado" class="pdf-disponible">
+                     <i class="fas fa-check-circle"></i> Disponible
+                   </span>
+                   <span v-else class="pdf-no-disponible">
+                     <i class="fas fa-times-circle"></i> No generado
+                   </span>
+                 </div>
+               </td>
+               <td>
+                 <div class="acciones">
+                   <button 
+                     class="btn-accion ver"
+                     @click="verCotizacion(cotizacion)"
+                     title="Ver detalles"
+                   >
+                     <i class="fas fa-eye"></i>
+                   </button>
+                   <button 
+                     v-if="cotizacion.pdfGenerado"
+                     class="btn-accion imprimir"
+                     @click="mostrarModalPDF(cotizacion)"
+                     title="Ver/Descargar PDF"
+                   >
+                     <i class="fas fa-file-pdf"></i>
+                   </button>
+                 </div>
+               </td>
+             </tr>
+           </tbody>
+         </table>
+       </div>
+     </div>
 
-      <!-- Mensaje cuando no hay cotizaciones -->
-      <div v-if="cotizacionesFiltradas.length === 0" class="empty-state">
-        <div class="empty-icon"><i class="fas fa-file-alt"></i></div>
-        <h3 class="empty-title">No hay cotizaciones</h3>
-        <p class="empty-description">
-          {{ filtros.busqueda || filtros.estado || filtros.periodo 
-            ? 'No se encontraron cotizaciones con los filtros aplicados.' 
-            : 'Aún no se han creado cotizaciones en el sistema.' }}
-        </p>
-      </div>
+     <!-- Vista de tarjetas -->
+     <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
+       <div class="tarjetas-grid">
+         <div 
+           v-for="cotizacion in cotizaciones" 
+           :key="cotizacion.id"
+           class="cotizacion-card"
+         >
+           <div class="card-header">
+             <div class="card-numero">{{ formatearNumeroCotizacion(cotizacion.id) }}</div>
+             <span class="estado-badge" :class="cotizacion.estado">
+               {{ cotizacion.estado_label || getEstadoTexto(cotizacion.estado) }}
+             </span>
+           </div>
+           
+           <div class="card-content">
+             <h3 class="cliente-nombre">{{ cotizacion.cliente_info?.nombre_completo || 'Sin cliente' }}</h3>
+             <p class="cliente-email">{{ cotizacion.cliente_info?.email_principal || 'Sin email' }}</p>
+             
+             <div class="servicios-card">
+               <strong>Servicios ({{ (cotizacion.servicios || []).length }}):</strong>
+               <div class="servicios-list">
+                 <span v-for="(servicio, index) in (cotizacion.servicios || []).slice(0, 3)" 
+                       :key="index" 
+                       class="servicio-tag">
+                   {{ servicio }}
+                 </span>
+                 <span v-if="(cotizacion.servicios || []).length > 3" class="servicios-mas">
+                   +{{ (cotizacion.servicios || []).length - 3 }} más
+                 </span>
+               </div>
+             </div>
+             
+             <div class="card-details">
+               <div class="detail">
+                 <span class="detail-label">Fecha:</span>
+                 <span class="detail-value">{{ formatearFecha(cotizacion.fechaCreacion) }}</span>
+               </div>
+               <div class="detail">
+                 <span class="detail-label">Vendedor:</span>
+                 <span class="detail-value">{{ cotizacion.vendedor_info?.nombre_completo || 'Sin vendedor' }}</span>
+               </div>
+               <div class="detail">
+                 <span class="detail-label">Total:</span>
+                 <span class="detail-value monto">{{ formatearMoneda(cotizacion.total) }}</span>
+               </div>
+               <div class="detail">
+                 <span class="detail-label">PDF:</span>
+                 <span class="detail-value" :class="cotizacion.pdfGenerado ? 'pdf-ok' : 'pdf-no'">
+                   <i :class="cotizacion.pdfGenerado ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                   {{ cotizacion.pdfGenerado ? ' Disponible' : ' No generado' }}
+                 </span>
+               </div>
+             </div>
+           </div>
+           
+           <div class="card-actions">
+             <button class="btn btn-sm btn-outline" @click="verCotizacion(cotizacion)">
+               Ver Detalles
+             </button>
+             <button 
+               v-if="cotizacion.pdfGenerado"
+               class="btn btn-sm btn-secondary" 
+               @click="mostrarModalPDF(cotizacion)"
+             >
+               <i class="fas fa-file-pdf"></i> PDF
+             </button>
+           </div>
+         </div>
+       </div>
+     </div>
 
-      <!-- Paginación -->
-      <div v-if="totalPaginas > 1" class="paginacion-completa">
-        <div class="paginacion">
-          <button 
-            class="btn-pag"
-            @click="irAPrimera"
-            :disabled="paginaActual === 1"
-            title="Primera página"
-          >
-            <i class="fas fa-angle-double-left"></i>
-          </button>
+     <!-- Mensaje cuando no hay cotizaciones -->
+     <div v-if="cotizaciones.length === 0 && !loading" class="empty-state">
+       <div class="empty-icon"><i class="fas fa-file-alt"></i></div>
+       <h3 class="empty-title">No hay cotizaciones</h3>
+       <p class="empty-description">
+         {{ filtros.busqueda || filtros.estado || filtros.periodo 
+           ? 'No se encontraron cotizaciones con los filtros aplicados.' 
+           : 'Aún no se han creado cotizaciones en el sistema.' }}
+       </p>
+       <button class="btn btn-primary" @click="nuevaCotizacion">
+         <i class="fas fa-plus"></i>
+         Crear Primera Cotización
+       </button>
+     </div>
 
-          <button 
-            class="btn-pag"
-            @click="paginaActual = paginaActual - 1"
-            :disabled="paginaActual === 1"
-            title="Página anterior"
-          >
-            <i class="fas fa-chevron-left"></i>
-          </button>
-          
-          <div class="paginas">
-            <button
-              v-if="paginasVisibles[0] > 1"
-              class="btn-pag"
-              @click="paginaActual = 1"
-            >
-              1
-            </button>
-            
-            <span v-if="paginasVisibles[0] > 2" class="pagina-separador">...</span>
-            
-            <button
-              v-for="pagina in paginasVisibles"
-              :key="pagina"
-              class="btn-pag"
-              :class="{ active: pagina === paginaActual }"
-              @click="paginaActual = pagina"
-            >
-              {{ pagina }}
-            </button>
-            
-            <span v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas - 1" class="pagina-separador">...</span>
-            
-            <button
-              v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas"
-              class="btn-pag"
-              @click="paginaActual = totalPaginas"
-            >
-              {{ totalPaginas }}
-            </button>
-          </div>
-          
-          <button 
-            class="btn-pag"
-            @click="paginaActual = paginaActual + 1"
-            :disabled="paginaActual === totalPaginas"
-            title="Página siguiente"
-          >
-            <i class="fas fa-chevron-right"></i>
-          </button>
+     <!-- Paginación -->
+     <div v-if="pagination && pagination.totalPages > 1" class="paginacion-completa">
+       <div class="paginacion">
+         <button 
+           class="btn-pag"
+           @click="irAPrimera"
+           :disabled="pagination.currentPage === 1"
+           title="Primera página"
+         >
+           <i class="fas fa-angle-double-left"></i>
+         </button>
 
-          <button 
-            class="btn-pag"
-            @click="irAUltima"
-            :disabled="paginaActual === totalPaginas"
-            title="Última página"
-          >
-            <i class="fas fa-angle-double-right"></i>
-          </button>
-        </div>
+         <button 
+           class="btn-pag"
+           @click="paginaAnterior"
+           :disabled="!pagination.hasPrevPage"
+           title="Página anterior"
+         >
+           <i class="fas fa-chevron-left"></i>
+         </button>
+         
+         <div class="paginas">
+           <button
+             v-for="pagina in paginasVisibles"
+             :key="pagina"
+             class="btn-pag"
+             :class="{ active: pagina === pagination.currentPage }"
+             @click="irAPagina(pagina)"
+           >
+             {{ pagina }}
+           </button>
+         </div>
+         
+         <button 
+           class="btn-pag"
+           @click="paginaSiguiente"
+           :disabled="!pagination.hasNextPage"
+           title="Página siguiente"
+         >
+           <i class="fas fa-chevron-right"></i>
+         </button>
 
-        <div class="paginacion-info-bottom">
-          <span class="pagina-actual">
-            Página {{ paginaActual }} de {{ totalPaginas }}
-          </span>
-        </div>
-      </div>
-    </div>
+         <button 
+           class="btn-pag"
+           @click="irAUltima"
+           :disabled="pagination.currentPage === pagination.totalPages"
+           title="Última página"
+         >
+           <i class="fas fa-angle-double-right"></i>
+         </button>
+       </div>
 
-    <!-- Modal de vista previa de cotización -->
-    <div v-if="modalCotizacion" class="modal-overlay" @click="cerrarModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Cotización CT{{ String(modalCotizacion.id).padStart(6, '0') }}</h3>
-          <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-          <div class="cotizacion-detalle">
-            <div class="detalle-grid">
-              <div class="detalle-item">
-                <strong>Cliente:</strong> {{ modalCotizacion.cliente.nombre }}
-              </div>
-              <div class="detalle-item">
-                <strong>Email:</strong> {{ modalCotizacion.cliente.email }}
-              </div>
-              <div class="detalle-item">
-                <strong>Vendedor:</strong> {{ modalCotizacion.vendedor.nombre }}
-              </div>
-              <div class="detalle-item">
-                <strong>Fecha de Creación:</strong> {{ formatearFecha(modalCotizacion.fechaCreacion) }}
-              </div>
-              <div class="detalle-item">
-                <strong>Total:</strong> {{ formatearMoneda(modalCotizacion.total) }}
-              </div>
-              <div class="detalle-item">
-                <strong>Estado:</strong> 
-                <span class="estado-badge" :class="modalCotizacion.estado">
-                  {{ getEstadoTexto(modalCotizacion.estado) }}
-                </span>
-              </div>
-              <div class="detalle-item">
-                <strong>PDF:</strong> 
-                <span :class="modalCotizacion.pdfGenerado ? 'pdf-ok' : 'pdf-no'">
-                  <i :class="modalCotizacion.pdfGenerado ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
-                  {{ modalCotizacion.pdfGenerado ? ' Disponible' : ' No generado' }}
-                </span>
-              </div>
-            </div>
-            
-            <div class="servicios-detalle">
-              <h4>Servicios Incluidos ({{ modalCotizacion.servicios.length }})</h4>
-              <div class="servicios-modal-list">
-                <span v-for="(servicio, index) in modalCotizacion.servicios" 
-                      :key="index" 
-                      class="servicio-modal-tag">
-                  {{ servicio }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+       <div class="paginacion-info-bottom">
+         <span class="pagina-actual">
+           Página {{ pagination.currentPage }} de {{ pagination.totalPages }}
+         </span>
+       </div>
+     </div>
+   </div>
 
-    <!-- Modal de vista previa del PDF -->
-    <div v-if="modalPDF" class="modal-overlay" @click="cerrarModalPDF">
-      <div class="modal-content modal-pdf" @click.stop>
-        <div class="modal-header">
-          <h3>
-            <i class="fas fa-file-pdf"></i>
-            Vista Previa PDF - CT{{ String(cotizacionPDF.id).padStart(6, '0') }}
-          </h3>
-          <button class="btn-close" @click="cerrarModalPDF">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        
-        <div class="modal-body">
-          <!-- Controles del PDF -->
-          <div class="pdf-controls">
-            <div class="tipo-documento">
-              <button 
-                class="btn-tipo"
-                :class="{ active: tipoDocumento === 'copia' }"
-                @click="cambiarTipoDocumento('copia')"
-              >
-                <i class="fas fa-copy"></i>
-                Copia
-              </button>
-              <button 
-                class="btn-tipo"
-                :class="{ active: tipoDocumento === 'original' }"
-                @click="cambiarTipoDocumento('original')"
-              >
-                <i class="fas fa-certificate"></i>
-                Original
-              </button>
-            </div>
-            
-            <div class="info-documento">
-              <span class="documento-tipo" :class="tipoDocumento">
-                <i :class="tipoDocumento === 'copia' ? 'fas fa-copy' : 'fas fa-certificate'"></i>
-                {{ tipoDocumento === 'copia' ? 'COPIA' : 'ORIGINAL' }}
-              </span>
-            </div>
-          </div>
+   <!-- Modal de vista previa de cotización -->
+   <div v-if="modalCotizacion" class="modal-overlay" @click="cerrarModal">
+     <div class="modal-content" @click.stop>
+       <div class="modal-header">
+         <h3>Cotización {{ formatearNumeroCotizacion(modalCotizacion.id) }}</h3>
+         <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
+       </div>
+       <div class="modal-body">
+         <div class="cotizacion-detalle">
+           <div class="detalle-grid">
+             <div class="detalle-item">
+               <strong>Cliente:</strong> {{ modalCotizacion.cliente_info?.nombre_completo || 'Sin cliente' }}
+             </div>
+             <div class="detalle-item">
+               <strong>Email:</strong> {{ modalCotizacion.cliente_info?.email_principal || 'Sin email' }}
+             </div>
+             <div class="detalle-item">
+               <strong>Vendedor:</strong> {{ modalCotizacion.vendedor_info?.nombre_completo || 'Sin vendedor' }}
+             </div>
+             <div class="detalle-item">
+               <strong>Fecha de Creación:</strong> {{ formatearFecha(modalCotizacion.fechaCreacion) }}
+             </div>
+             <div class="detalle-item">
+               <strong>Total:</strong> {{ formatearMoneda(modalCotizacion.total) }}
+             </div>
+             <div class="detalle-item">
+               <strong>Estado:</strong> 
+               <span class="estado-badge" :class="modalCotizacion.estado">
+                 {{ modalCotizacion.estado_label || getEstadoTexto(modalCotizacion.estado) }}
+               </span>
+             </div>
+             <div class="detalle-item">
+               <strong>PDF:</strong> 
+               <span :class="modalCotizacion.pdfGenerado ? 'pdf-ok' : 'pdf-no'">
+                 <i :class="modalCotizacion.pdfGenerado ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                 {{ modalCotizacion.pdfGenerado ? ' Disponible' : ' No generado' }}
+               </span>
+             </div>
+           </div>
+           
+           <div class="servicios-detalle">
+             <h4>Servicios Incluidos ({{ (modalCotizacion.servicios || []).length }})</h4>
+             <div class="servicios-modal-list">
+               <span v-for="(servicio, index) in (modalCotizacion.servicios || [])" 
+                     :key="index" 
+                     class="servicio-modal-tag">
+                 {{ servicio }}
+               </span>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   </div>
 
-          <!-- Vista previa simulada del PDF -->
-          <div class="pdf-preview">
-            <div class="pdf-page">
-              <div class="pdf-header">
-                <div class="empresa-logo">
-                  <i class="fas fa-building"></i>
-                  <span>EMPRESA SERVICIOS</span>
-                </div>
-                <div class="documento-marca" :class="tipoDocumento">
-                  {{ tipoDocumento === 'copia' ? 'COPIA' : 'ORIGINAL' }}
-                </div>
-              </div>
-              
-              <div class="pdf-content">
-                <h2>COTIZACIÓN</h2>
-                <div class="cotizacion-numero">
-                  CT{{ String(cotizacionPDF.id).padStart(6, '0') }}
-                </div>
-                
-                <div class="pdf-info-grid">
-                  <div class="info-section">
-                    <h4>Cliente:</h4>
-                    <p>{{ cotizacionPDF.cliente.nombre }}</p>
-                    <p>{{ cotizacionPDF.cliente.email }}</p>
-                  </div>
-                  
-                  <div class="info-section">
-                    <h4>Vendedor:</h4>
-                    <p>{{ cotizacionPDF.vendedor.nombre }}</p>
-                    <p>{{ cotizacionPDF.vendedor.rol }}</p>
-                  </div>
-                  
-                  <div class="info-section">
-                    <h4>Fecha:</h4>
-                    <p>{{ formatearFecha(cotizacionPDF.fechaCreacion) }}</p>
-                  </div>
-                </div>
-                
-                <div class="servicios-pdf">
-                  <h4>Servicios:</h4>
-                  <ul>
-                    <li v-for="(servicio, index) in cotizacionPDF.servicios" :key="index">
-                      {{ servicio }}
-                    </li>
-                  </ul>
-                </div>
-                
-                <div class="total-pdf">
-                  <strong>Total: {{ formatearMoneda(cotizacionPDF.total) }}</strong>
-                </div>
-              </div>
-              
-              <div class="pdf-footer">
-                <div class="marca-agua" v-if="tipoDocumento === 'copia'">COPIA</div>
-                <p>Este documento es {{ tipoDocumento === 'copia' ? 'una copia' : 'el original' }} de la cotización</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="modal-footer">
-          <button class="btn btn-outline" @click="cerrarModalPDF">
-            <i class="fas fa-times"></i>
-            Cancelar
-          </button>
-          <button class="btn btn-primary" @click="descargarPDF">
-            <i class="fas fa-download"></i>
-            Descargar {{ tipoDocumento === 'copia' ? 'Copia' : 'Original' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+   <!-- Modal de vista previa del PDF -->
+   <div v-if="modalPDF" class="modal-overlay" @click="cerrarModalPDF">
+     <div class="modal-content modal-pdf" @click.stop>
+       <div class="modal-header">
+         <h3>
+           <i class="fas fa-file-pdf"></i>
+           Vista Previa PDF - {{ formatearNumeroCotizacion(cotizacionPDF.id) }}
+         </h3>
+         <button class="btn-close" @click="cerrarModalPDF">
+           <i class="fas fa-times"></i>
+         </button>
+       </div>
+       
+       <div class="modal-body">
+         <!-- Controles del PDF -->
+         <div class="pdf-controls">
+           <div class="tipo-documento">
+             <button 
+               class="btn-tipo"
+               :class="{ active: tipoDocumento === 'copia' }"
+               @click="cambiarTipoDocumento('copia')"
+             >
+               <i class="fas fa-copy"></i>
+               Copia
+             </button>
+             <button 
+               class="btn-tipo"
+               :class="{ active: tipoDocumento === 'original' }"
+               @click="cambiarTipoDocumento('original')"
+             >
+               <i class="fas fa-certificate"></i>
+               Original
+             </button>
+           </div>
+           
+           <div class="info-documento">
+             <span class="documento-tipo" :class="tipoDocumento">
+               <i :class="tipoDocumento === 'copia' ? 'fas fa-copy' : 'fas fa-certificate'"></i>
+               {{ tipoDocumento === 'copia' ? 'COPIA' : 'ORIGINAL' }}
+             </span>
+           </div>
+         </div>
+
+         <!-- Vista previa simulada del PDF -->
+         <div class="pdf-preview">
+           <div class="pdf-page">
+             <div class="pdf-header">
+               <div class="empresa-logo">
+                 <i class="fas fa-building"></i>
+                 <span>EMPRESA SERVICIOS</span>
+               </div>
+               <div class="documento-marca" :class="tipoDocumento">
+                 {{ tipoDocumento === 'copia' ? 'COPIA' : 'ORIGINAL' }}
+               </div>
+             </div>
+             
+             <div class="pdf-content">
+               <h2>COTIZACIÓN</h2>
+               <div class="cotizacion-numero">
+                 {{ formatearNumeroCotizacion(cotizacionPDF.id) }}
+               </div>
+               
+               <div class="pdf-info-grid">
+                 <div class="info-section">
+                   <h4>Cliente:</h4>
+                   <p>{{ cotizacionPDF.cliente_info?.nombre_completo || 'Sin cliente' }}</p>
+                   <p>{{ cotizacionPDF.cliente_info?.email_principal || 'Sin email' }}</p>
+                 </div>
+                 
+                 <div class="info-section">
+                   <h4>Vendedor:</h4>
+                   <p>{{ cotizacionPDF.vendedor_info?.nombre_completo || 'Sin vendedor' }}</p>
+                   <p>{{ cotizacionPDF.vendedor_info?.rol_formateado || 'Sin rol' }}</p>
+                 </div>
+                 
+                 <div class="info-section">
+                   <h4>Fecha:</h4>
+                   <p>{{ formatearFecha(cotizacionPDF.fechaCreacion) }}</p>
+                 </div>
+               </div>
+               
+               <div class="servicios-pdf">
+                 <h4>Servicios:</h4>
+                 <ul>
+                   <li v-for="(servicio, index) in (cotizacionPDF.servicios || [])" :key="index">
+                     {{ servicio }}
+                   </li>
+                 </ul>
+               </div>
+               
+               <div class="total-pdf">
+                 <strong>Total: {{ formatearMoneda(cotizacionPDF.total) }}</strong>
+               </div>
+             </div>
+             
+             <div class="pdf-footer">
+               <div class="marca-agua" v-if="tipoDocumento === 'copia'">COPIA</div>
+               <p>Este documento es {{ tipoDocumento === 'copia' ? 'una copia' : 'el original' }} de la cotización</p>
+             </div>
+           </div>
+         </div>
+       </div>
+       
+       <div class="modal-footer">
+         <button class="btn btn-outline" @click="cerrarModalPDF">
+           <i class="fas fa-times"></i>
+           Cancelar
+         </button>
+         <button class="btn btn-primary" @click="descargarPDF" :disabled="descargandoPDF">
+           <i :class="descargandoPDF ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
+           {{ descargandoPDF ? 'Descargando...' : `Descargar ${tipoDocumento === 'copia' ? 'Copia' : 'Original'}` }}
+         </button>
+       </div>
+     </div>
+   </div>
+
+   <!-- Toast de notificaciones -->
+   <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
+     <i class="fas" :class="notification.icon"></i>
+     <span>{{ notification.message }}</span>
+     <button class="notification-close" @click="closeNotification">
+       <i class="fas fa-times"></i>
+     </button>
+   </div>
+ </div>
 </template>
 
 <script>
+import cotizacionesService from '@/services/cotizacionesService';
+
 export default {
-  name: 'AdminCotizaciones',
-  data() {
-    return {
-      vistaActual: 'tabla',
-      modalCotizacion: null,
-      modalPDF: false,
-      cotizacionPDF: null,
-      tipoDocumento: 'copia', // 'copia' o 'original'
-      paginaActual: 1,
-      itemsPorPagina: 25,
-      paginaSalto: 1,
-      ordenActual: { campo: 'fecha', direccion: 'desc' },
-      
-      filtros: {
-        busqueda: '',
-        estado: '',
-        vendedor: '',
-        periodo: ''
-      },
-      
-      // Datos simulados para demostración
-      cotizaciones: [
-        {
-          id: 1,
-          cliente: {
-            nombre: 'Empresa ABC S.A.',
-            email: 'contacto@empresaabc.com'
-          },
-          servicios: ['Desarrollo Web', 'SEO', 'Marketing Digital'],
-          fechaCreacion: '2024-01-15',
-          vendedor: {
-            nombre: 'Carlos Mendoza',
-            rol: 'Vendedor Senior'
-          },
-          estado: 'efectiva',
-          total: 25000.00,
-          pdfGenerado: true
-        },
-        {
-          id: 2,
-          cliente: {
-            nombre: 'Constructora XYZ',
-            email: 'info@xyz.com'
-          },
-          servicios: ['Consultoría', 'Auditoría'],
-          fechaCreacion: '2024-01-20',
-          vendedor: {
-            nombre: 'Ana García',
-            rol: 'Vendedor'
-          },
-          estado: 'pendiente',
-          total: 35000.00,
-          pdfGenerado: true
-        },
-        {
-          id: 3,
-          cliente: {
-            nombre: 'Comercial DEF',
-            email: 'ventas@def.com'
-          },
-          servicios: ['Diseño Gráfico'],
-          fechaCreacion: '2024-01-25',
-          vendedor: {
-            nombre: 'Luis Rodríguez',
-            rol: 'Vendedor'
-          },
-          estado: 'esperando',
-          total: 1500.00,
-          pdfGenerado: false
-        },
-        {
-          id: 4,
-          cliente: {
-            nombre: 'Industrias GHI',
-            email: 'compras@ghi.com'
-          },
-          servicios: ['ERP', 'Capacitación', 'Soporte', 'Mantenimiento'],
-          fechaCreacion: '2024-02-01',
-          vendedor: {
-            nombre: 'María López',
-            rol: 'Vendedor Senior'
-          },
-          estado: 'cancelada',
-          total: 45000.00,
-          pdfGenerado: true
-        },
-        {
-          id: 5,
-          cliente: {
-            nombre: 'Servicios JKL',
-            email: 'info@jkl.com'
-          },
-          servicios: ['E-commerce'],
-          fechaCreacion: '2024-02-05',
-          vendedor: {
-            nombre: 'Pedro Sánchez',
-            rol: 'Vendedor'
-          },
-          estado: 'esperando',
-          total: 800.00,
-          pdfGenerado: false
-        },
-        // Agregar más datos para demostración
-        ...Array.from({ length: 45 }, (_, i) => ({
-          id: i + 6,
-          cliente: {
-            nombre: `Cliente ${i + 6}`,
-            email: `cliente${i + 6}@email.com`
-          },
-          servicios: [
-            'Desarrollo Web', 'Marketing Digital', 'Consultoría', 'Diseño Gráfico', 'E-commerce'
-          ].slice(0, Math.floor(Math.random() * 3) + 1),
-          fechaCreacion: `2024-0${Math.floor(Math.random() * 9) + 1}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-          vendedor: {
-            nombre: ['Carlos Mendoza', 'Ana García', 'Luis Rodríguez', 'María López', 'Pedro Sánchez'][Math.floor(Math.random() * 5)],
-            rol: ['Vendedor', 'Vendedor Senior'][Math.floor(Math.random() * 2)]
-          },
-          estado: ['esperando', 'pendiente', 'efectiva', 'cancelada'][Math.floor(Math.random() * 4)],
-          total: Math.floor(Math.random() * 50000) + 1000,
-          pdfGenerado: Math.random() > 0.3
-        }))
-      ]
-    }
-  },
-  
-  computed: {
-    vendedoresUnicos() {
-      const vendedores = [...new Set(this.cotizaciones.map(c => c.vendedor.nombre))];
-      return vendedores.sort();
-    },
+ name: 'AdminCotizaciones',
+ data() {
+   return {
+     loading: false,
+     loadingMessage: 'Cargando cotizaciones...',
+     vistaActual: 'tabla',
+     modalCotizacion: null,
+     modalPDF: false,
+     cotizacionPDF: null,
+     tipoDocumento: 'copia',
+     descargandoPDF: false,
+     paginaSalto: 1,
+     itemsPorPagina: 25,
+     ordenActual: { campo: 'fechaCreacion', direccion: 'desc' },
 
-    cotizacionesFiltradas() {
-      let resultado = [...this.cotizaciones];
-      
-      // Filtro por búsqueda
-      if (this.filtros.busqueda) {
-        const busqueda = this.filtros.busqueda.toLowerCase();
-        resultado = resultado.filter(cotizacion => 
-          `CT${String(cotizacion.id).padStart(6, '0')}`.toLowerCase().includes(busqueda) ||
-          cotizacion.cliente.nombre.toLowerCase().includes(busqueda) ||
-          cotizacion.cliente.email.toLowerCase().includes(busqueda) ||
-          cotizacion.vendedor.nombre.toLowerCase().includes(busqueda)
-        );
-      }
-      
-      // Filtro por estado
-      if (this.filtros.estado) {
-        resultado = resultado.filter(cotizacion => 
-          cotizacion.estado === this.filtros.estado
-        );
-      }
+     // Datos del backend
+     cotizaciones: [],
+     vendedoresUnicos: [],
+     pagination: null,
+     estadisticas: {
+       total: 0,
+       esperando: 0,
+       pendientes: 0,
+       efectivas: 0,
+       rechazadas: 0
+     },
+     
+     filtros: {
+       busqueda: '',
+       estado: '',
+       vendedor: '',
+       periodo: ''
+     },
 
-      // Filtro por vendedor
-     if (this.filtros.vendedor) {
-       resultado = resultado.filter(cotizacion => 
-         cotizacion.vendedor.nombre === this.filtros.vendedor
-       );
+     busquedaTimeout: null,
+
+     // Sistema de notificaciones
+     notification: {
+       show: false,
+       type: 'success',
+       message: '',
+       icon: 'fa-check'
      }
-     
-     // Filtro por período
-     if (this.filtros.periodo) {
-       const hoy = new Date();
-       resultado = resultado.filter(cotizacion => {
-         const fecha = new Date(cotizacion.fechaCreacion);
-         
-         if (this.filtros.periodo === 'hoy') {
-           return fecha.toDateString() === hoy.toDateString();
-         }
-         
-         if (this.filtros.periodo === 'semana') {
-           const semanaAtras = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
-           return fecha >= semanaAtras;
-         }
-         
-         if (this.filtros.periodo === 'mes') {
-           return fecha.getMonth() === hoy.getMonth() && 
-                  fecha.getFullYear() === hoy.getFullYear();
-         }
-         
-         if (this.filtros.periodo === 'trimestre') {
-           const trimestre = Math.floor(hoy.getMonth() / 3);
-           const fechaTrimestre = Math.floor(fecha.getMonth() / 3);
-           return fechaTrimestre === trimestre && 
-                  fecha.getFullYear() === hoy.getFullYear();
-         }
-         
-         return true;
-       });
-     }
-     
-     // Ordenamiento
-     resultado.sort((a, b) => {
-       let valorA = a[this.ordenActual.campo];
-       let valorB = b[this.ordenActual.campo];
-       
-       if (this.ordenActual.campo === 'cliente') {
-         valorA = a.cliente.nombre;
-         valorB = b.cliente.nombre;
-       }
-
-       if (this.ordenActual.campo === 'vendedor') {
-         valorA = a.vendedor.nombre;
-         valorB = b.vendedor.nombre;
-       }
-       
-       if (this.ordenActual.campo === 'fecha') {
-         valorA = new Date(a.fechaCreacion);
-         valorB = new Date(b.fechaCreacion);
-       }
-       
-       if (valorA < valorB) {
-         return this.ordenActual.direccion === 'asc' ? -1 : 1;
-       }
-       if (valorA > valorB) {
-         return this.ordenActual.direccion === 'asc' ? 1 : -1;
-       }
-       return 0;
-     });
-     
-     return resultado;
-   },
-   
-   cotizacionesPaginadas() {
-     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-     const fin = inicio + this.itemsPorPagina;
-     return this.cotizacionesFiltradas.slice(inicio, fin);
-   },
-   
-   totalPaginas() {
-     return Math.ceil(this.cotizacionesFiltradas.length / this.itemsPorPagina);
-   },
-   
+   }
+ },
+ 
+ computed: {
    paginasVisibles() {
-     const total = this.totalPaginas;
-     const actual = this.paginaActual;
+     if (!this.pagination) return [];
+     
+     const total = this.pagination.totalPages;
+     const actual = this.pagination.currentPage;
      const rango = 2;
      
      let inicio = Math.max(1, actual - rango);
@@ -850,115 +677,119 @@ export default {
        paginas.push(i);
      }
      return paginas;
-   },
-   
-   rangoInicio() {
-     return (this.paginaActual - 1) * this.itemsPorPagina + 1;
-   },
-   
-   rangoFin() {
-     return Math.min(this.paginaActual * this.itemsPorPagina, this.cotizacionesFiltradas.length);
-   },
-   
-   estadisticas() {
-     const vendedoresActivos = new Set(this.cotizaciones.map(c => c.vendedor.nombre)).size;
-     const ingresosTotales = this.cotizaciones
-       .filter(c => c.estado === 'efectiva')
-       .reduce((total, c) => total + c.total, 0);
+   }
+ },
 
-     return {
-       total: this.cotizaciones.length,
-       esperandoAprobacion: this.cotizaciones.filter(c => c.estado === 'esperando').length,
-       pendientes: this.cotizaciones.filter(c => c.estado === 'pendiente').length,
-       efectivas: this.cotizaciones.filter(c => c.estado === 'efectiva').length,
-       canceladas: this.cotizaciones.filter(c => c.estado === 'cancelada').length,
-       vendedoresActivos,
-       ingresosTotales
-     };
-   }
- },
- 
  watch: {
-   // Resetear a la primera página cuando cambien los filtros
-   'filtros.busqueda'() {
-     this.paginaActual = 1;
-   },
-   'filtros.estado'() {
-     this.paginaActual = 1;
-   },
-   'filtros.vendedor'() {
-     this.paginaActual = 1;
-   },
-   'filtros.periodo'() {
-     this.paginaActual = 1;
-   },
-   
    // Actualizar paginaSalto cuando cambie la página actual
-   paginaActual(newVal) {
-     this.paginaSalto = newVal;
+   'pagination.currentPage'(newVal) {
+     if (newVal) {
+       this.paginaSalto = newVal;
+     }
    }
  },
- 
+
+ async mounted() {
+   await this.cargarDatosIniciales();
+ },
+
  methods: {
-   nuevaCotizacion() {
-     this.$router.push('/shared/cotizacion');
-   },
-   
-   verCotizacion(cotizacion) {
-     this.modalCotizacion = cotizacion;
-   },
-   
-   // Nuevo método para mostrar el modal del PDF
-   mostrarModalPDF(cotizacion) {
-     this.cotizacionPDF = cotizacion;
-     this.tipoDocumento = 'copia'; // Siempre inicia como copia
-     this.modalPDF = true;
-   },
-   
-   // Método para cambiar el tipo de documento
-   cambiarTipoDocumento(tipo) {
-     this.tipoDocumento = tipo;
-   },
-   
-   // Método para descargar el PDF
-   descargarPDF() {
-     const numeroDocumento = `CT${String(this.cotizacionPDF.id).padStart(6, '0')}`;
-     const tipoTexto = this.tipoDocumento === 'copia' ? 'Copia' : 'Original';
+   // ==================== CARGA DE DATOS ====================
+   async cargarDatosIniciales() {
+     this.loading = true;
+     this.loadingMessage = 'Cargando datos del sistema...';
      
-     console.log(`Descargando ${tipoTexto} del PDF:`, numeroDocumento);
-     alert(`Descargando ${tipoTexto} del PDF ${numeroDocumento}`);
-     
-     // Aquí iría la lógica real de descarga
-     // Por ejemplo: window.open(`/api/pdf/${this.cotizacionPDF.id}?tipo=${this.tipoDocumento}`)
-     
-     this.cerrarModalPDF();
-   },
-   
-   // Método para cerrar el modal del PDF
-   cerrarModalPDF() {
-     this.modalPDF = false;
-     this.cotizacionPDF = null;
-     this.tipoDocumento = 'copia';
-   },
-   
-   exportarDatos() {
-     console.log('Exportando datos de cotizaciones...');
-     alert('Funcionalidad de exportación en desarrollo');
-   },
-   
-   ordenarPor(campo) {
-     if (this.ordenActual.campo === campo) {
-       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-     } else {
-       this.ordenActual = { campo, direccion: 'asc' };
+     try {
+       // Cargar cotizaciones, vendedores y estadísticas
+       this.loadingMessage = 'Cargando cotizaciones...';
+       await this.cargarCotizaciones();
+       
+       this.loadingMessage = 'Cargando vendedores...';
+       await this.cargarVendedores();
+       
+       this.loadingMessage = 'Cargando estadísticas...';
+       await this.cargarEstadisticas();
+       
+     } catch (error) {
+       this.showNotification('Error cargando datos del sistema', 'error');
+     } finally {
+       this.loading = false;
      }
    },
-   
-   getSortIcon(campo) {
-     if (this.ordenActual.campo !== campo) return '↕';
-     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+
+   async cargarCotizaciones() {
+     try {
+       const params = {
+         page: this.pagination?.currentPage || 1,
+         limit: this.itemsPorPagina,
+         search: this.filtros.busqueda || undefined,
+         estado: this.filtros.estado || undefined,
+         vendedor: this.filtros.vendedor || undefined,
+         periodo: this.filtros.periodo || undefined
+       };
+       
+       const result = await cotizacionesService.getCotizaciones(params);
+       
+       if (result.success) {
+         // Formatear cada cotización usando el helper del servicio
+         this.cotizaciones = result.cotizaciones.map(cotizacion => 
+           cotizacionesService.formatCotizacionDisplay(cotizacion)
+         );
+         this.pagination = result.pagination;
+       } else {
+         this.showNotification(result.message || 'Error cargando cotizaciones', 'error');
+       }
+       
+     } catch (error) {
+       this.showNotification('Error de conexión al cargar cotizaciones', 'error');
+     }
    },
-   
+
+   async cargarVendedores() {
+     try {
+       const result = await cotizacionesService.getVendedores();
+       if (result.success) {
+         this.vendedoresUnicos = result.vendedores || [];
+       } else {
+         this.vendedoresUnicos = [];
+       }
+       
+     } catch (error) {
+       this.vendedoresUnicos = [];
+     }
+   },
+
+   async cargarEstadisticas() {
+     try {
+       const result = await cotizacionesService.getEstadisticas();
+       
+       if (result.success) {
+         this.estadisticas = result.estadisticas;
+       }
+       
+     } catch (error) {
+       // Error silencioso para estadísticas
+     }
+   },
+
+   // ==================== BÚSQUEDA Y FILTROS ====================
+   buscarCotizaciones() {
+     // Debounce para evitar muchas llamadas
+     clearTimeout(this.busquedaTimeout);
+     this.busquedaTimeout = setTimeout(() => {
+       this.aplicarFiltros();
+     }, 500);
+   },
+
+   async aplicarFiltros() {
+     // Resetear a la primera página
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     
+     await this.cargarCotizaciones();
+   },
+
    limpiarFiltros() {
      this.filtros = {
        busqueda: '',
@@ -966,69 +797,183 @@ export default {
        vendedor: '',
        periodo: ''
      };
-     this.paginaActual = 1;
-     this.paginaSalto = 1;
+     
+     this.aplicarFiltros();
    },
-   
+
+   // ==================== PAGINACIÓN ====================
+   async cambiarItemsPorPagina() {
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     this.paginaSalto = 1;
+     await this.cargarCotizaciones();
+   },
+
+   async irAPrimera() {
+     if (this.pagination && this.pagination.currentPage !== 1) {
+       this.pagination.currentPage = 1;
+       await this.cargarCotizaciones();
+     }
+   },
+
+   async irAUltima() {
+     if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
+       this.pagination.currentPage = this.pagination.totalPages;
+       await this.cargarCotizaciones();
+     }
+   },
+
+   async paginaAnterior() {
+     if (this.pagination && this.pagination.hasPrevPage) {
+       this.pagination.currentPage--;
+       await this.cargarCotizaciones();
+     }
+   },
+
+   async paginaSiguiente() {
+     if (this.pagination && this.pagination.hasNextPage) {
+       this.pagination.currentPage++;
+       await this.cargarCotizaciones();
+     }
+   },
+
+   async irAPagina(pagina = null) {
+     const targetPage = pagina || this.paginaSalto;
+     
+     if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
+       this.pagination.currentPage = targetPage;
+       await this.cargarCotizaciones();
+     } else {
+       this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
+       this.paginaSalto = this.pagination?.currentPage || 1;
+     }
+   },
+
+   // ==================== GESTIÓN DE COTIZACIONES ====================
+   nuevaCotizacion() {
+     this.$router.push('/shared/cotizacion');
+   },
+  
+   verCotizacion(cotizacion) {
+     this.modalCotizacion = cotizacion;
+   },
+  
+   // ==================== PDF ====================
+   mostrarModalPDF(cotizacion) {
+     this.cotizacionPDF = cotizacion;
+     this.tipoDocumento = 'copia';
+     this.modalPDF = true;
+   },
+  
+   cambiarTipoDocumento(tipo) {
+     this.tipoDocumento = tipo;
+   },
+  
+   async descargarPDF() {
+     if (this.descargandoPDF || !this.cotizacionPDF) return;
+     
+     this.descargandoPDF = true;
+     
+     try {
+       const result = await cotizacionesService.generarPDF(this.cotizacionPDF.id, this.tipoDocumento);
+       
+       if (result.success) {
+         this.showNotification(result.message || 'PDF descargado exitosamente', 'success');
+         this.cerrarModalPDF();
+       } else {
+         this.showNotification(result.message || 'Error al generar PDF', 'error');
+       }
+       
+     } catch (error) {
+       this.showNotification('Error de conexión al generar PDF', 'error');
+     } finally {
+       this.descargandoPDF = false;
+     }
+   },
+  
+   cerrarModalPDF() {
+     this.modalPDF = false;
+     this.cotizacionPDF = null;
+     this.tipoDocumento = 'copia';
+   },
+
+   // ==================== ORDENAMIENTO ====================
+   ordenarPor(campo) {
+     if (this.ordenActual.campo === campo) {
+       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+     } else {
+       this.ordenActual = { campo, direccion: 'asc' };
+     }
+     
+     // Aplicar ordenamiento localmente ya que el servicio tiene helper para esto
+     this.cotizaciones = cotizacionesService.sortCotizaciones(
+       this.cotizaciones, 
+       this.ordenActual.campo, 
+       this.ordenActual.direccion
+     );
+   },
+  
+   getSortIcon(campo) {
+     if (this.ordenActual.campo !== campo) return '↕';
+     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+   },
+
+   // ==================== MODALES ====================
    cerrarModal() {
      this.modalCotizacion = null;
    },
-   
-   // Métodos de paginación
-   cambiarItemsPorPagina() {
-     this.paginaActual = 1;
-     this.paginaSalto = 1;
-   },
-   
-   irAPrimera() {
-     this.paginaActual = 1;
-   },
-   
-   irAUltima() {
-     this.paginaActual = this.totalPaginas;
-   },
-   
-   irAPagina() {
-     if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
-       this.paginaActual = this.paginaSalto;
-     } else {
-       alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
-       this.paginaSalto = this.paginaActual;
-     }
-   },
-   
-   formatearFecha(fecha) {
-     return new Date(fecha).toLocaleDateString('es-HN', {
-       year: 'numeric',
-       month: 'short',
-       day: 'numeric'
-     });
-   },
-   
-   formatearMoneda(monto) {
-     return new Intl.NumberFormat('es-HN', {
-       style: 'currency',
-       currency: 'HNL'
-     }).format(monto);
+
+   // ==================== HELPERS ====================
+   formatearNumeroCotizacion(id) {
+     return cotizacionesService.formatNumeroCotizacion(id);
    },
 
-   formatearMonedaCorta(monto) {
-     if (monto >= 1000000) {
-       return `L${(monto / 1000000).toFixed(1)}M`;
-     } else if (monto >= 1000) {
-       return `L${(monto / 1000).toFixed(0)}K`;
-     }
-     return this.formatearMoneda(monto);
+   formatearFecha(fecha) {
+     return cotizacionesService.formatDate(fecha);
    },
-   
+  
+   formatearMoneda(monto) {
+     return cotizacionesService.formatPrice(monto);
+   },
+
    getEstadoTexto(estado) {
-     const estados = {
-       esperando: 'Esperando Aprobación',
-       pendiente: 'Pendiente',
-       efectiva: 'Efectiva',
-       cancelada: 'Cancelada'
+     const estados = cotizacionesService.getEstados();
+     const estadoObj = estados.find(e => e.value === estado);
+     return estadoObj?.label || estado;
+   },
+
+   // ==================== NOTIFICACIONES ====================
+   showNotification(message, type = 'success') {
+     const icons = {
+       success: 'fa-check-circle',
+       error: 'fa-exclamation-circle',
+       warning: 'fa-exclamation-triangle',
+       info: 'fa-info-circle'
      };
-     return estados[estado] || estado;
+     
+     this.notification = {
+       show: true,
+       type,
+       message,
+       icon: icons[type] || icons.info
+     };
+     
+     // Auto-close después de 5 segundos
+     setTimeout(() => {
+       this.closeNotification();
+     }, 5000);
+   },
+
+   closeNotification() {
+     this.notification.show = false;
+   }
+ },
+
+ // Limpiar timeouts al destruir el componente
+ beforeUnmount() {
+   if (this.busquedaTimeout) {
+     clearTimeout(this.busquedaTimeout);
    }
  }
 }
@@ -1040,6 +985,40 @@ export default {
  padding: 2rem;
  max-width: 1400px;
  margin: 0 auto;
+}
+
+.loading-overlay {
+ position: fixed;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background: rgba(255, 255, 255, 0.9);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ z-index: 9999;
+}
+
+.loading-spinner {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 1rem;
+ padding: 2rem;
+ background: white;
+ border-radius: 12px;
+ box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.loading-spinner i {
+ font-size: 2rem;
+ color: #3498db;
+}
+
+.loading-spinner span {
+ color: #2c3e50;
+ font-weight: 500;
 }
 
 .page-header {
@@ -1091,6 +1070,13 @@ export default {
 .btn-primary:hover {
  transform: translateY(-2px);
  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-primary:disabled {
+ background: #bdc3c7;
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: none;
 }
 
 .btn-secondary {
@@ -1678,16 +1664,16 @@ export default {
  letter-spacing: 0.5px;
 }
 
-.estado-badge.esperando {
- background: #fff3cd;
- color: #856404;
- border: 1px solid #ffeaa7;
-}
-
 .estado-badge.pendiente {
  background: #d1ecf1;
  color: #0c5460;
  border: 1px solid #bee5eb;
+}
+
+.estado-badge.pendiente_aprobacion {
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
 }
 
 .estado-badge.efectiva {
@@ -1696,7 +1682,7 @@ export default {
  border: 1px solid #c3e6cb;
 }
 
-.estado-badge.cancelada {
+.estado-badge.rechazada {
  background: #f8d7da;
  color: #721c24;
  border: 1px solid #f5c6cb;
@@ -2101,6 +2087,86 @@ export default {
  font-weight: 600;
 }
 
+/* ESTILOS PARA TOAST DE NOTIFICACIONES */
+.notification {
+ position: fixed;
+ top: 20px;
+ right: 20px;
+ min-width: 320px;
+ max-width: 500px;
+ padding: 1rem 1.25rem;
+ border-radius: 12px;
+ color: white;
+ font-weight: 500;
+ box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ z-index: 10000;
+ animation: slideInRight 0.3s ease-out;
+ transform: translateX(0);
+ transition: all 0.3s ease;
+}
+
+.notification.notification-success {
+ background: linear-gradient(135deg, #27ae60, #2ecc71);
+ border-left: 4px solid #1e8449;
+}
+
+.notification.notification-error {
+ background: linear-gradient(135deg, #e74c3c, #c0392b);
+ border-left: 4px solid #a93226;
+}
+
+.notification.notification-warning {
+ background: linear-gradient(135deg, #f39c12, #e67e22);
+ border-left: 4px solid #d68910;
+}
+
+.notification.notification-info {
+ background: linear-gradient(135deg, #3498db, #2980b9);
+ border-left: 4px solid #2471a3;
+}
+
+.notification i {
+ font-size: 1.25rem;
+ flex-shrink: 0;
+}
+
+.notification span {
+ flex: 1;
+ line-height: 1.4;
+}
+
+.notification-close {
+ background: none;
+ border: none;
+ color: white;
+ font-size: 1.1rem;
+ cursor: pointer;
+ padding: 0.25rem;
+ border-radius: 50%;
+ transition: background 0.2s ease;
+ flex-shrink: 0;
+ opacity: 0.8;
+}
+
+.notification-close:hover {
+ background: rgba(255, 255, 255, 0.2);
+ opacity: 1;
+}
+
+@keyframes slideInRight {
+ from {
+   transform: translateX(100%);
+   opacity: 0;
+ }
+ to {
+   transform: translateX(0);
+   opacity: 1;
+ }
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
  .estadisticas-grid {
@@ -2326,6 +2392,13 @@ export default {
  
  .cotizacion-numero {
    font-size: 1rem;
+ }
+
+ .notification {
+   left: 10px;
+   right: 10px;
+   min-width: auto;
+   max-width: none;
  }
 }
 </style>

@@ -1,668 +1,656 @@
 <template>
- <div class="admin-categorias-container">
-   <!-- Header de la página -->
-   <div class="page-header">
-     <div class="header-content">
-       <h1 class="page-title">Gestión de Categorías</h1>
-       <p class="page-subtitle">Administración y control de todas las categorías del sistema</p>
+<div class="admin-categorias-container">
+ <!-- Loading overlay -->
+ <div v-if="loading" class="loading-overlay">
+   <div class="loading-spinner">
+     <i class="fas fa-spinner fa-spin"></i>
+     <span>{{ loadingMessage }}</span>
+   </div>
+ </div>
+
+ <!-- Header de la página -->
+ <div class="page-header">
+   <div class="header-content">
+     <h1 class="page-title">Gestión de Categorías</h1>
+     <p class="page-subtitle">Administración y control de todas las categorías del sistema</p>
+   </div>
+   <div class="header-actions">
+     <button class="btn btn-primary" @click="nuevaCategoria">
+       <i class="fas fa-plus btn-icon"></i>
+       Nueva Categoría
+     </button>
+     <button class="btn btn-secondary" @click="cargarCategorias">
+       <i class="fas fa-sync-alt btn-icon"></i>
+       Actualizar
+     </button>
+   </div>
+ </div>
+
+ <!-- Filtros y búsqueda -->
+ <div class="filtros-section">
+   <div class="filtros-container">
+     <div class="search-box">
+       <i class="fas fa-search search-icon"></i>
+       <input
+         v-model="filtros.busqueda"
+         type="text"
+         placeholder="Buscar por nombre o descripción..."
+         class="search-input"
+         @input="buscarCategorias"
+       />
      </div>
-     <div class="header-actions">
-       <button class="btn btn-primary" @click="nuevaCategoria">
-         <i class="fas fa-plus btn-icon"></i>
-         Nueva Categoría
+     
+     <div class="filtros-grid">
+       <select v-model="filtros.estado" class="filter-select" @change="aplicarFiltros">
+         <option value="">Todos los estados</option>
+         <option value="activo">Activas</option>
+         <option value="inactivo">Inactivas</option>
+       </select>
+       
+       <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
+         <option value="10">10 por página</option>
+         <option value="25">25 por página</option>
+         <option value="50">50 por página</option>
+         <option value="100">100 por página</option>
+       </select>
+       
+       <button class="btn btn-secondary" @click="limpiarFiltros">
+         Limpiar Filtros
+       </button>
+     </div>
+   </div>
+ </div>
+
+ <!-- Estadísticas rápidas -->
+ <div class="estadisticas-grid">
+   <div class="stat-card total">
+     <div class="stat-content">
+       <div class="stat-number">{{ estadisticas.total }}</div>
+       <div class="stat-label">Total Categorías</div>
+     </div>
+   </div>
+   
+   <div class="stat-card activos">
+     <div class="stat-content">
+       <div class="stat-number">{{ estadisticas.activas }}</div>
+       <div class="stat-label">Categorías Activas</div>
+     </div>
+   </div>
+   
+   <div class="stat-card inactivos">
+     <div class="stat-content">
+       <div class="stat-number">{{ estadisticas.inactivas }}</div>
+       <div class="stat-label">Categorías Inactivas</div>
+     </div>
+   </div>
+   
+   <div class="stat-card servicios">
+     <div class="stat-content">
+       <div class="stat-number">{{ estadisticas.con_servicios_activos }}</div>
+       <div class="stat-label">Con Servicios</div>
+     </div>
+   </div>
+ </div>
+
+ <!-- Categorías section -->
+ <div class="categorias-section">
+   <div class="section-header">
+     <h2 class="section-title">
+       {{ pagination ? pagination.totalItems : categorias.length }} Categorías encontradas
+     </h2>
+     <div class="view-controls">
+       <button 
+         class="view-btn"
+         :class="{ active: vistaActual === 'tabla' }"
+         @click="vistaActual = 'tabla'"
+       >
+         <i class="fas fa-table"></i> Tabla
+       </button>
+       <button 
+         class="view-btn"
+         :class="{ active: vistaActual === 'tarjetas' }"
+         @click="vistaActual = 'tarjetas'"
+       >
+         <i class="fas fa-th-large"></i> Tarjetas
        </button>
      </div>
    </div>
 
-   <!-- Filtros y búsqueda -->
-   <div class="filtros-section">
-     <div class="filtros-container">
-       <div class="search-box">
-         <i class="fas fa-search search-icon"></i>
-         <input
-           v-model="filtros.busqueda"
-           type="text"
-           placeholder="Buscar por nombre o descripción..."
-           class="search-input"
-         />
+   <!-- Información de paginación superior -->
+   <div v-if="pagination" class="paginacion-info">
+     <span class="items-info">
+       Mostrando {{ pagination.totalItems > 0 ? ((pagination.currentPage - 1) * pagination.itemsPerPage + 1) : 0 }} - 
+       {{ Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems) }} 
+       de {{ pagination.totalItems }} categorías
+     </span>
+     <div class="pagination-jump" v-if="pagination.totalPages > 1">
+       <label for="jump-page">Ir a página:</label>
+       <input 
+         id="jump-page"
+         type="number" 
+         v-model.number="paginaSalto" 
+         @keyup.enter="irAPagina"
+         :min="1" 
+         :max="pagination.totalPages"
+         class="page-input"
+       >
+       <button class="btn btn-sm btn-outline" @click="irAPagina">
+         <i class="fas fa-arrow-right"></i>
+       </button>
+     </div>
+   </div>
+
+   <!-- Vista de tabla -->
+   <div v-if="vistaActual === 'tabla'" class="tabla-container">
+     <div class="tabla-wrapper">
+       <table class="categorias-tabla">
+         <thead>
+           <tr>
+             <th>ID</th>
+             <th>Nombre</th>
+             <th>Descripción</th>
+             <th>Servicios</th>
+             <th>Estado</th>
+             <th>Fecha Creación</th>
+             <th>Acciones</th>
+           </tr>
+         </thead>
+         <tbody>
+           <tr v-for="categoria in categorias" :key="categoria.categorias_id">
+             <td>
+               <span class="categoria-id">#{{ String(categoria.categorias_id).padStart(4, '0') }}</span>
+             </td>
+             <td>
+               <div class="categoria-info">
+                 <span class="categoria-nombre">{{ categoria.nombre }}</span>
+               </div>
+             </td>
+             <td>
+               <div class="descripcion-info">
+                 <span class="descripcion-texto">{{ truncarTexto(categoria.descripcion, 80) }}</span>
+               </div>
+             </td>
+             <td>
+               <div class="servicios-info">
+                 <span class="servicios-total">{{ categoria.servicios?.length || 0 }} servicios</span>
+                 <span class="servicios-activos" v-if="categoria.servicios">
+                   ({{ categoria.servicios.filter(s => s.estado === 'activo').length }} activos)
+                 </span>
+               </div>
+             </td>
+             <td>
+               <span class="estado-badge" :class="categoria.estado">
+                 {{ getEstadoTexto(categoria.estado) }}
+               </span>
+             </td>
+             <td>
+               <span class="fecha">{{ formatearFecha(categoria.created_at) }}</span>
+             </td>
+             <td>
+               <div class="acciones">
+                 <button 
+                   class="btn-accion ver"
+                   @click="verCategoria(categoria)"
+                   title="Ver detalles"
+                 >
+                   <i class="fas fa-eye"></i>
+                 </button>
+                 <button 
+                   class="btn-accion editar"
+                   @click="editarCategoria(categoria)"
+                   title="Editar categoría"
+                 >
+                   <i class="fas fa-edit"></i>
+                 </button>
+                 <button 
+                   class="btn-accion" 
+                   :class="categoria.estado === 'activo' ? 'deshabilitar' : 'habilitar'"
+                   @click="mostrarModalCambiarEstado(categoria)"
+                   :title="categoria.estado === 'activo' ? 'Desactivar categoría' : 'Activar categoría'"
+                 >
+                   <i :class="categoria.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+                 </button>
+               </div>
+             </td>
+           </tr>
+         </tbody>
+       </table>
+     </div>
+   </div>
+
+   <!-- Vista de tarjetas -->
+   <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
+     <div class="tarjetas-grid">
+       <div 
+         v-for="categoria in categorias" 
+         :key="categoria.categorias_id"
+         class="categoria-card"
+       >
+         <div class="card-header">
+           <div class="card-numero">#{{ String(categoria.categorias_id).padStart(4, '0') }}</div>
+           <span class="estado-badge" :class="categoria.estado">
+             {{ getEstadoTexto(categoria.estado) }}
+           </span>
+         </div>
+         
+         <div class="card-content">
+           <h3 class="categoria-nombre-card">
+             <i class="fas fa-tags"></i>
+             {{ categoria.nombre }}
+           </h3>
+           
+           <div class="descripcion-card">
+             <p>{{ categoria.descripcion }}</p>
+           </div>
+           
+           <div class="categoria-details">
+             <div class="detail">
+               <span class="detail-label">
+                 <i class="fas fa-cogs"></i>
+                 Servicios:
+               </span>
+               <span class="detail-value servicios-card">
+                 {{ categoria.servicios?.length || 0 }} servicios
+                 <span v-if="categoria.servicios" class="servicios-activos-small">
+                   ({{ categoria.servicios.filter(s => s.estado === 'activo').length }} activos)
+                 </span>
+               </span>
+             </div>
+             
+             <div class="detail">
+               <span class="detail-label">
+                 <i class="fas fa-calendar-alt"></i>
+                 Creación:
+               </span>
+               <span class="detail-value">{{ formatearFecha(categoria.created_at) }}</span>
+             </div>
+           </div>
+         </div>
+         
+         <div class="card-actions">
+           <button class="btn btn-sm btn-outline" @click="verCategoria(categoria)">
+             <i class="fas fa-eye"></i>
+             Ver Detalles
+           </button>
+           <button class="btn btn-sm btn-primary" @click="editarCategoria(categoria)">
+             <i class="fas fa-edit"></i> Editar
+           </button>
+           <button 
+             class="btn btn-sm"
+             :class="categoria.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+             @click="mostrarModalCambiarEstado(categoria)"
+           >
+             <i :class="categoria.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+             {{ categoria.estado === 'activo' ? 'Desactivar' : 'Activar' }}
+           </button>
+         </div>
+       </div>
+     </div>
+   </div>
+
+   <!-- Mensaje cuando no hay categorías -->
+   <div v-if="categorias.length === 0 && !loading" class="empty-state">
+     <div class="empty-icon"><i class="fas fa-tags"></i></div>
+     <h3 class="empty-title">No hay categorías</h3>
+     <p class="empty-description">
+       {{ filtros.busqueda || filtros.estado 
+         ? 'No se encontraron categorías con los filtros aplicados.' 
+         : 'Aún no se han registrado categorías en el sistema.' }}
+     </p>
+     <button class="btn btn-primary" @click="nuevaCategoria">
+       <i class="fas fa-plus"></i>
+       Crear Primera Categoría
+     </button>
+   </div>
+
+   <!-- Paginación -->
+   <div v-if="pagination && pagination.totalPages > 1" class="paginacion-completa">
+     <div class="paginacion">
+       <button 
+         class="btn-pag"
+         @click="irAPrimera"
+         :disabled="pagination.currentPage === 1"
+         title="Primera página"
+       >
+         <i class="fas fa-angle-double-left"></i>
+       </button>
+
+       <button 
+         class="btn-pag"
+         @click="paginaAnterior"
+         :disabled="!pagination.hasPrevPage"
+         title="Página anterior"
+       >
+         <i class="fas fa-chevron-left"></i>
+       </button>
+       
+       <div class="paginas">
+         <button
+           v-for="pagina in paginasVisibles"
+           :key="pagina"
+           class="btn-pag"
+           :class="{ active: pagina === pagination.currentPage }"
+           @click="irAPagina(pagina)"
+         >
+           {{ pagina }}
+         </button>
        </div>
        
-       <div class="filtros-grid">
-         <select v-model="filtros.estado" class="filter-select">
-           <option value="">Todos los estados</option>
-           <option value="activa">Activas</option>
-           <option value="inactiva">Inactivas</option>
-         </select>
-         
-         <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
-           <option value="10">10 por página</option>
-           <option value="25">25 por página</option>
-           <option value="50">50 por página</option>
-           <option value="100">100 por página</option>
-         </select>
-         
-         <button class="btn btn-secondary" @click="limpiarFiltros">
-           Limpiar Filtros
-         </button>
-       </div>
-     </div>
-   </div>
+       <button 
+         class="btn-pag"
+         @click="paginaSiguiente"
+         :disabled="!pagination.hasNextPage"
+         title="Página siguiente"
+       >
+         <i class="fas fa-chevron-right"></i>
+       </button>
 
-   <!-- Estadísticas rápidas -->
-   <div class="estadisticas-grid">
-     <div class="stat-card total">
-       <div class="stat-content">
-         <div class="stat-number">{{ estadisticas.total }}</div>
-         <div class="stat-label">Total Categorías</div>
-       </div>
-     </div>
-     
-     <div class="stat-card activos">
-       <div class="stat-content">
-         <div class="stat-number">{{ estadisticas.activas }}</div>
-         <div class="stat-label">Categorías Activas</div>
-       </div>
+       <button 
+         class="btn-pag"
+         @click="irAUltima"
+         :disabled="pagination.currentPage === pagination.totalPages"
+         title="Última página"
+       >
+         <i class="fas fa-angle-double-right"></i>
+       </button>
      </div>
 
-     <div class="stat-card inactivos">
-       <div class="stat-content">
-         <div class="stat-number">{{ estadisticas.inactivas }}</div>
-         <div class="stat-label">Categorías Inactivas</div>
-       </div>
-     </div>
-   </div>
-
-   <!-- Categorías section -->
-   <div class="categorias-section">
-     <div class="section-header">
-       <h2 class="section-title">
-         {{ categoriasFiltradas.length }} Categorías encontradas
-       </h2>
-       <div class="view-controls">
-         <button 
-           class="view-btn"
-           :class="{ active: vistaActual === 'tabla' }"
-           @click="vistaActual = 'tabla'"
-         >
-           <i class="fas fa-table"></i> Tabla
-         </button>
-         <button 
-           class="view-btn"
-           :class="{ active: vistaActual === 'tarjetas' }"
-           @click="vistaActual = 'tarjetas'"
-         >
-           <i class="fas fa-th-large"></i> Tarjetas
-         </button>
-       </div>
-     </div>
-
-     <!-- Información de paginación superior -->
-     <div class="paginacion-info">
-       <span class="items-info">
-         Mostrando {{ rangoInicio }} - {{ rangoFin }} de {{ categoriasFiltradas.length }} categorías
+     <div class="paginacion-info-bottom">
+       <span class="pagina-actual">
+         Página {{ pagination.currentPage }} de {{ pagination.totalPages }}
        </span>
-       <div class="pagination-jump">
-         <label for="jump-page">Ir a página:</label>
-         <input 
-           id="jump-page"
-           type="number" 
-           v-model.number="paginaSalto" 
-           @keyup.enter="irAPagina"
-           :min="1" 
-           :max="totalPaginas"
-           class="page-input"
-         >
-         <button class="btn btn-sm btn-outline" @click="irAPagina">
-           <i class="fas fa-arrow-right"></i>
-         </button>
-       </div>
-     </div>
-
-     <!-- Vista de tabla -->
-     <div v-if="vistaActual === 'tabla'" class="tabla-container">
-       <div class="tabla-wrapper">
-         <table class="categorias-tabla">
-           <thead>
-             <tr>
-               <th @click="ordenarPor('id')" class="sortable">
-                 ID
-                 <span class="sort-icon">{{ getSortIcon('id') }}</span>
-               </th>
-               <th @click="ordenarPor('nombre')" class="sortable">
-                 Nombre
-                 <span class="sort-icon">{{ getSortIcon('nombre') }}</span>
-               </th>
-               <th>Descripción</th>
-               <th @click="ordenarPor('fechaCreacion')" class="sortable">
-                 Fecha Creación
-                 <span class="sort-icon">{{ getSortIcon('fechaCreacion') }}</span>
-               </th>
-               <th>Estado</th>
-               <th>Acciones</th>
-             </tr>
-           </thead>
-           <tbody>
-             <tr v-for="categoria in categoriasPaginadas" :key="categoria.id">
-               <td>
-                 <span class="categoria-id">#{{ String(categoria.id).padStart(4, '0') }}</span>
-               </td>
-               <td>
-                 <div class="categoria-info">
-                   <span class="categoria-nombre">{{ categoria.nombre }}</span>
-                 </div>
-               </td>
-               <td>
-                 <div class="descripcion-info">
-                   <span class="descripcion-texto">{{ truncarTexto(categoria.descripcion, 80) }}</span>
-                 </div>
-               </td>
-               <td>
-                 <span class="fecha">{{ formatearFecha(categoria.fechaCreacion) }}</span>
-               </td>
-               <td>
-                 <span class="estado-badge" :class="categoria.estado">
-                   {{ getEstadoTexto(categoria.estado) }}
-                 </span>
-               </td>
-               <td>
-                 <div class="acciones">
-                   <button 
-                     class="btn-accion ver"
-                     @click="verCategoria(categoria)"
-                     title="Ver detalles"
-                   >
-                     <i class="fas fa-eye"></i>
-                   </button>
-                   <button 
-                     class="btn-accion editar"
-                     @click="editarCategoria(categoria)"
-                     title="Editar categoría"
-                   >
-                     <i class="fas fa-edit"></i>
-                   </button>
-                   <button 
-                     class="btn-accion" 
-                     :class="categoria.estado === 'activa' ? 'deshabilitar' : 'habilitar'"
-                     @click="mostrarModalCambiarEstado(categoria)"
-                     :title="categoria.estado === 'activa' ? 'Desactivar categoría' : 'Activar categoría'"
-                   >
-                     <i :class="categoria.estado === 'activa' ? 'fas fa-ban' : 'fas fa-check'"></i>
-                   </button>
-                 </div>
-               </td>
-             </tr>
-           </tbody>
-         </table>
-       </div>
-     </div>
-
-     <!-- Vista de tarjetas -->
-     <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
-       <div class="tarjetas-grid">
-         <div 
-           v-for="categoria in categoriasPaginadas" 
-           :key="categoria.id"
-           class="categoria-card"
-         >
-           <div class="card-header">
-             <div class="card-numero">#{{ String(categoria.id).padStart(4, '0') }}</div>
-             <span class="estado-badge" :class="categoria.estado">
-               {{ getEstadoTexto(categoria.estado) }}
-             </span>
-           </div>
-           
-           <div class="card-content">
-             <h3 class="categoria-nombre-card">
-               <i class="fas fa-tags"></i>
-               {{ categoria.nombre }}
-             </h3>
-             
-             <div class="descripcion-card">
-               <p>{{ categoria.descripcion }}</p>
-             </div>
-             
-             <div class="info-card">
-               <div class="info-item">
-                 <span class="info-label">
-                   <i class="fas fa-calendar-alt"></i>
-                   Fecha Creación:
-                 </span>
-                 <span class="info-valor">{{ formatearFecha(categoria.fechaCreacion) }}</span>
-               </div>
-             </div>
-           </div>
-           
-           <div class="card-actions">
-             <button class="btn btn-sm btn-outline" @click="verCategoria(categoria)">
-               <i class="fas fa-eye"></i>
-               Ver Detalles
-             </button>
-             <button class="btn btn-sm btn-primary" @click="editarCategoria(categoria)">
-               <i class="fas fa-edit"></i> Editar
-             </button>
-             <button 
-               class="btn btn-sm"
-               :class="categoria.estado === 'activa' ? 'btn-danger' : 'btn-success'"
-               @click="mostrarModalCambiarEstado(categoria)"
-             >
-               <i :class="categoria.estado === 'activa' ? 'fas fa-ban' : 'fas fa-check'"></i>
-               {{ categoria.estado === 'activa' ? 'Desactivar' : 'Activar' }}
-             </button>
-           </div>
-         </div>
-       </div>
-     </div>
-
-     <!-- Mensaje cuando no hay categorías -->
-     <div v-if="categoriasFiltradas.length === 0" class="empty-state">
-       <div class="empty-icon"><i class="fas fa-tags"></i></div>
-       <h3 class="empty-title">No hay categorías</h3>
-       <p class="empty-description">
-         {{ filtros.busqueda || filtros.estado 
-           ? 'No se encontraron categorías con los filtros aplicados.' 
-           : 'Aún no se han registrado categorías en el sistema.' }}
-       </p>
-     </div>
-
-     <!-- Paginación -->
-     <div v-if="totalPaginas > 1" class="paginacion-completa">
-       <div class="paginacion">
-         <button 
-           class="btn-pag"
-           @click="irAPrimera"
-           :disabled="paginaActual === 1"
-           title="Primera página"
-         >
-           <i class="fas fa-angle-double-left"></i>
-         </button>
-
-         <button 
-           class="btn-pag"
-           @click="paginaActual = paginaActual - 1"
-           :disabled="paginaActual === 1"
-           title="Página anterior"
-         >
-           <i class="fas fa-chevron-left"></i>
-         </button>
-         
-         <div class="paginas">
-           <button
-             v-if="paginasVisibles[0] > 1"
-             class="btn-pag"
-             @click="paginaActual = 1"
-           >
-             1
-           </button>
-           
-           <span v-if="paginasVisibles[0] > 2" class="pagina-separador">...</span>
-           
-           <button
-             v-for="pagina in paginasVisibles"
-             :key="pagina"
-             class="btn-pag"
-             :class="{ active: pagina === paginaActual }"
-             @click="paginaActual = pagina"
-           >
-             {{ pagina }}
-           </button>
-           
-           <span v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas - 1" class="pagina-separador">...</span>
-           
-           <button
-             v-if="paginasVisibles[paginasVisibles.length - 1] < totalPaginas"
-             class="btn-pag"
-             @click="paginaActual = totalPaginas"
-           >
-             {{ totalPaginas }}
-           </button>
-         </div>
-         
-         <button 
-           class="btn-pag"
-           @click="paginaActual = paginaActual + 1"
-           :disabled="paginaActual === totalPaginas"
-           title="Página siguiente"
-         >
-           <i class="fas fa-chevron-right"></i>
-         </button>
-
-         <button 
-           class="btn-pag"
-           @click="irAUltima"
-           :disabled="paginaActual === totalPaginas"
-           title="Última página"
-         >
-           <i class="fas fa-angle-double-right"></i>
-         </button>
-       </div>
-
-       <div class="paginacion-info-bottom">
-         <span class="pagina-actual">
-           Página {{ paginaActual }} de {{ totalPaginas }}
-         </span>
-       </div>
-     </div>
-   </div>
-
-   <!-- Modal de vista previa -->
-   <div v-if="modalCategoria" class="modal-overlay" @click="cerrarModal">
-     <div class="modal-content" @click.stop>
-       <div class="modal-header">
-         <h3>Categoría #{{ String(modalCategoria.id).padStart(4, '0') }} - {{ modalCategoria.nombre }}</h3>
-         <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
-       </div>
-       <div class="modal-body">
-         <div class="categoria-detalle">
-           <div class="detalle-grid">
-             <div class="detalle-item">
-               <strong><i class="fas fa-tags"></i> Nombre:</strong> {{ modalCategoria.nombre }}
-             </div>
-             <div class="detalle-item descripcion-completa">
-               <strong><i class="fas fa-align-left"></i> Descripción:</strong> 
-               <span class="descripcion-texto">{{ modalCategoria.descripcion }}</span>
-             </div>
-             <div class="detalle-item">
-               <strong><i class="fas fa-calendar-alt"></i> Fecha de Creación:</strong> {{ formatearFecha(modalCategoria.fechaCreacion) }}
-             </div>
-             <div class="detalle-item">
-               <strong><i class="fas fa-info-circle"></i> Estado:</strong> 
-               <span class="estado-badge" :class="modalCategoria.estado">
-                 {{ getEstadoTexto(modalCategoria.estado) }}
-               </span>
-             </div>
-           </div>
-         </div>
-       </div>
-       <div class="modal-footer">
-         <button class="btn btn-outline" @click="cerrarModal">Cerrar</button>
-         <button class="btn btn-primary" @click="editarCategoria(modalCategoria)">
-           <i class="fas fa-edit"></i> Editar Categoría
-         </button>
-       </div>
-     </div>
-   </div>
-
-   <!-- Modal de formulario -->
-   <div v-if="modalFormulario" class="modal-overlay" @click="cerrarModalFormulario">
-     <div class="modal-content modal-formulario" @click.stop>
-       <div class="modal-header">
-         <h3>{{ categoriaEditando ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
-         <button class="btn-close" @click="cerrarModalFormulario"><i class="fas fa-times"></i></button>
-       </div>
-       <div class="modal-body">
-         <form @submit.prevent="guardarCategoria" class="formulario-categoria">
-           <div class="form-grid">
-             <div class="form-group">
-               <label for="nombre">Nombre de la Categoría *</label>
-               <input 
-                 id="nombre"
-                 v-model="formulario.nombre" 
-                 type="text" 
-                 required 
-                 class="form-input"
-                 placeholder="Desarrollo, Consultoría, Marketing, etc."
-               >
-             </div>
-             
-             <div class="form-group full-width">
-               <label for="descripcion">Descripción *</label>
-               <textarea 
-                 id="descripcion"
-                 v-model="formulario.descripcion" 
-                 required 
-                 class="form-textarea"
-                 placeholder="Describe detalladamente el tipo de servicios que incluye esta categoría..."
-                 rows="4"
-               ></textarea>
-             </div>
-             
-             <div class="form-group" v-if="categoriaEditando">
-               <label for="estado">Estado</label>
-               <select id="estado" v-model="formulario.estado" class="form-select">
-                 <option value="activa">Activa</option>
-                 <option value="inactiva">Inactiva</option>
-               </select>
-             </div>
-           </div>
-         </form>
-       </div>
-       <div class="modal-footer">
-         <button type="button" class="btn btn-outline" @click="cerrarModalFormulario">Cancelar</button>
-         <button type="button" class="btn btn-primary" @click="guardarCategoria" :disabled="!formularioValido">
-           <i class="fas fa-save"></i> {{ categoriaEditando ? 'Actualizar' : 'Crear' }} Categoría
-         </button>
-       </div>
-     </div>
-   </div>
-
-   <!-- Modal de confirmación para cambiar estado -->
-   <div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
-     <div class="modal-content modal-confirmacion" @click.stop>
-       <div class="modal-header">
-         <h3>
-           <i :class="categoriaParaCambiarEstado.estado === 'activa' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
-           {{ categoriaParaCambiarEstado.estado === 'activa' ? 'Desactivar Categoría' : 'Activar Categoría' }}
-         </h3>
-         <button class="btn-close" @click="cerrarModalCambiarEstado">
-           <i class="fas fa-times"></i>
-         </button>
-       </div>
-       
-       <div class="modal-body">
-         <div class="confirmacion-content">
-           <div class="categoria-info-resumen">
-             <div class="categoria-avatar">
-               <i class="fas fa-tags"></i>
-             </div>
-             <div class="categoria-datos">
-               <h4>{{ categoriaParaCambiarEstado.nombre }}</h4>
-               <p class="categoria-descripcion">{{ truncarTexto(categoriaParaCambiarEstado.descripcion, 100) }}</p>
-               <div class="categoria-badges">
-                 <span class="categoria-id">#{{ String(categoriaParaCambiarEstado.id).padStart(4, '0') }}</span>
-               </div>
-             </div>
-           </div>
-           
-           <div class="mensaje-confirmacion">
-             <div class="icono-estado" :class="categoriaParaCambiarEstado.estado === 'activa' ? 'desactivar' : 'activar'">
-               <i :class="categoriaParaCambiarEstado.estado === 'activa' ? 'fas fa-ban' : 'fas fa-check'"></i>
-             </div>
-             
-             <div class="texto-confirmacion">
-               <p class="pregunta-principal">
-                 ¿Está seguro que desea 
-                 <strong :class="categoriaParaCambiarEstado.estado === 'activa' ? 'text-danger' : 'text-success'">
-                   {{ categoriaParaCambiarEstado.estado === 'activa' ? 'desactivar' : 'activar' }}
-                 </strong> 
-                 esta categoría?
-               </p>
-               
-               <div class="advertencia-estado" v-if="categoriaParaCambiarEstado.estado === 'activa'">
-                 <i class="fas fa-exclamation-triangle"></i>
-                 <span>Al desactivar esta categoría, no estará disponible para ser asignada a nuevos servicios hasta que sea activada nuevamente.</span>
-               </div>
-               
-               <div class="info-estado" v-else>
-                 <i class="fas fa-info-circle"></i>
-                 <span>Al activar esta categoría, estará disponible para ser asignada a servicios.</span>
-               </div>
-             </div>
-           </div>
-           
-           <div class="cambio-estado-visual">
-             <div class="estado-actual">
-               <span class="label">Estado actual:</span>
-               <span class="estado-badge" :class="categoriaParaCambiarEstado.estado">
-                 {{ getEstadoTexto(categoriaParaCambiarEstado.estado) }}
-               </span>
-             </div>
-             
-             <div class="flecha-cambio">
-               <i class="fas fa-arrow-right"></i>
-             </div>
-             
-             <div class="estado-nuevo">
-               <span class="label">Nuevo estado:</span>
-               <span class="estado-badge" :class="categoriaParaCambiarEstado.estado === 'activa' ? 'inactiva' : 'activa'">
-                 {{ categoriaParaCambiarEstado.estado === 'activa' ? 'Inactiva' : 'Activa' }}
-               </span>
-             </div>
-           </div>
-         </div>
-       </div>
-       
-       <div class="modal-footer">
-         <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
-           <i class="fas fa-times"></i>
-           Cancelar
-         </button>
-         <button 
-           class="btn"
-           :class="categoriaParaCambiarEstado.estado === 'activa' ? 'btn-danger' : 'btn-success'"
-           @click="confirmarCambiarEstado"
-         >
-           <i :class="categoriaParaCambiarEstado.estado === 'activa' ? 'fas fa-ban' : 'fas fa-check'"></i>
-           {{ categoriaParaCambiarEstado.estado === 'activa' ? 'Desactivar' : 'Activar' }} Categoría
-         </button>
-       </div>
      </div>
    </div>
  </div>
+
+ <!-- Modal de vista previa -->
+ <div v-if="modalCategoria" class="modal-overlay" @click="cerrarModal">
+   <div class="modal-content" @click.stop>
+     <div class="modal-header">
+       <h3>Categoría #{{ String(modalCategoria.categorias_id).padStart(4, '0') }} - {{ modalCategoria.nombre }}</h3>
+       <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
+     </div>
+     <div class="modal-body">
+       <div class="categoria-detalle">
+         <div class="detalle-grid">
+           <div class="detalle-item">
+             <strong><i class="fas fa-tags"></i> Nombre:</strong> {{ modalCategoria.nombre }}
+           </div>
+           <div class="detalle-item descripcion-completa">
+             <strong><i class="fas fa-align-left"></i> Descripción:</strong> 
+             <span class="descripcion-texto">{{ modalCategoria.descripcion }}</span>
+           </div>
+           <div class="detalle-item">
+             <strong><i class="fas fa-cogs"></i> Servicios:</strong> 
+             {{ modalCategoria.servicios?.length || 0 }} servicios 
+             <span v-if="modalCategoria.servicios">
+               ({{ modalCategoria.servicios.filter(s => s.estado === 'activo').length }} activos)
+             </span>
+           </div>
+           <div class="detalle-item">
+             <strong><i class="fas fa-calendar-alt"></i> Fecha de Creación:</strong> {{ formatearFecha(modalCategoria.created_at) }}
+           </div>
+           <div class="detalle-item">
+             <strong><i class="fas fa-info-circle"></i> Estado:</strong> 
+             <span class="estado-badge" :class="modalCategoria.estado">
+               {{ getEstadoTexto(modalCategoria.estado) }}
+             </span>
+           </div>
+         </div>
+       </div>
+     </div>
+     <div class="modal-footer">
+       <button class="btn btn-outline" @click="cerrarModal">Cerrar</button>
+       <button class="btn btn-primary" @click="editarCategoria(modalCategoria)">
+         Editar Categoría
+       </button>
+     </div>
+   </div>
+ </div>
+
+ <!-- Modal de formulario -->
+ <div v-if="modalFormulario" class="modal-overlay" @click="cerrarModalFormulario">
+   <div class="modal-content modal-formulario" @click.stop>
+     <div class="modal-header">
+       <h3>{{ categoriaEditando ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
+       <button class="btn-close" @click="cerrarModalFormulario"><i class="fas fa-times"></i></button>
+     </div>
+     <div class="modal-body">
+       <form @submit.prevent="guardarCategoria" class="formulario-categoria">
+         <div class="form-sections">
+           <!-- Información Principal -->
+           <div class="form-section">
+             <h4 class="section-title">
+               <i class="fas fa-tags"></i>
+               Información de la Categoría
+             </h4>
+             <div class="form-grid">
+               <div class="form-group">
+                 <label for="nombre">Nombre de la Categoría *</label>
+                 <input 
+                   id="nombre"
+                   v-model="formulario.nombre" 
+                   type="text" 
+                   required 
+                   class="form-input"
+                   placeholder="Desarrollo, Consultoría, Marketing, etc."
+                 >
+               </div>
+               
+               <div class="form-group full-width">
+                 <label for="descripcion">Descripción *</label>
+                 <textarea 
+                   id="descripcion"
+                   v-model="formulario.descripcion" 
+                   required 
+                   class="form-textarea"
+                   placeholder="Describe detalladamente el tipo de servicios que incluye esta categoría..."
+                   rows="4"
+                 ></textarea>
+               </div>
+               
+               <div class="form-group" v-if="categoriaEditando">
+                 <label for="estado">Estado</label>
+                 <select id="estado" v-model="formulario.estado" class="form-select">
+                   <option value="activo">Activa</option>
+                   <option value="inactivo">Inactiva</option>
+                 </select>
+               </div>
+             </div>
+           </div>
+         </div>
+         
+         <!-- Errores de validación -->
+         <div v-if="erroresFormulario.length > 0" class="form-errors">
+           <div class="error-item" v-for="error in erroresFormulario" :key="error.field">
+             <i class="fas fa-exclamation-triangle"></i>
+             <span>{{ error.message }}</span>
+           </div>
+         </div>
+       </form>
+     </div>
+     <div class="modal-footer">
+       <button type="button" class="btn btn-outline" @click="cerrarModalFormulario">Cancelar</button>
+       <button 
+         type="button" 
+         class="btn btn-primary" 
+         @click="guardarCategoria"
+         :disabled="guardandoCategoria"
+       >
+         
+         {{ guardandoCategoria ? 'Guardando...' : (categoriaEditando ? 'Actualizar' : 'Crear') }} Categoría
+       </button>
+     </div>
+   </div>
+ </div>
+
+ <!-- Modal de confirmación para cambiar estado -->
+ <div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
+   <div class="modal-content modal-confirmacion" @click.stop>
+     <div class="modal-header">
+       <h3>
+         <i :class="categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
+         {{ categoriaParaCambiarEstado.estado === 'activo' ? 'Desactivar Categoría' : 'Activar Categoría' }}
+       </h3>
+       <button class="btn-close" @click="cerrarModalCambiarEstado">
+         <i class="fas fa-times"></i>
+       </button>
+     </div>
+     
+     <div class="modal-body">
+       <div class="confirmacion-content">
+         <div class="categoria-info-resumen">
+           <div class="categoria-avatar">
+             <i class="fas fa-tags"></i>
+           </div>
+           <div class="categoria-datos">
+             <h4>{{ categoriaParaCambiarEstado.nombre }}</h4>
+             <p class="categoria-descripcion">{{ truncarTexto(categoriaParaCambiarEstado.descripcion, 100) }}</p>
+             <div class="categoria-badges">
+               <span class="categoria-id">#{{ String(categoriaParaCambiarEstado.categorias_id).padStart(4, '0') }}</span>
+               <span class="servicios-count">{{ categoriaParaCambiarEstado.servicios?.length || 0 }} servicios</span>
+             </div>
+           </div>
+         </div>
+         
+         <div class="mensaje-confirmacion">
+           <div class="icono-estado" :class="categoriaParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
+             <i :class="categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+           </div>
+           
+           <div class="texto-confirmacion">
+             <p class="pregunta-principal">
+               ¿Está seguro que desea 
+               <strong :class="categoriaParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
+                 {{ categoriaParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar' }}
+               </strong> 
+               esta categoría?
+             </p>
+             
+             <div class="advertencia-estado" v-if="categoriaParaCambiarEstado.estado === 'activo'">
+               <i class="fas fa-exclamation-triangle"></i>
+               <span>Al desactivar esta categoría, no estará disponible para ser asignada a nuevos servicios hasta que sea activada nuevamente.</span>
+             </div>
+             
+             <div class="info-estado" v-else>
+               <i class="fas fa-info-circle"></i>
+               <span>Al activar esta categoría, estará disponible para ser asignada a servicios.</span>
+             </div>
+           </div>
+         </div>
+         
+         <div class="cambio-estado-visual">
+           <div class="estado-actual">
+             <span class="label">Estado actual:</span>
+             <span class="estado-badge" :class="categoriaParaCambiarEstado.estado">
+               {{ getEstadoTexto(categoriaParaCambiarEstado.estado) }}
+             </span>
+           </div>
+           
+           <div class="flecha-cambio">
+             <i class="fas fa-arrow-right"></i>
+           </div>
+           
+           <div class="estado-nuevo">
+             <span class="label">Nuevo estado:</span>
+             <span class="estado-badge" :class="categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
+               {{ categoriaParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
+             </span>
+           </div>
+         </div>
+       </div>
+     </div>
+     
+     <div class="modal-footer">
+       <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
+         <i class="fas fa-times"></i>
+         Cancelar
+       </button>
+       <button 
+         class="btn"
+         :class="categoriaParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+         @click="confirmarCambiarEstado"
+         :disabled="cambiandoEstado"
+       >
+         <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check')"></i>
+         {{ cambiandoEstado ? 'Procesando...' : (categoriaParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar') }} Categoría
+       </button>
+     </div>
+   </div>
+ </div>
+
+ <!-- Toast de notificaciones -->
+ <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
+   <i class="fas" :class="notification.icon"></i>
+   <span>{{ notification.message }}</span>
+   <button class="notification-close" @click="closeNotification">
+     <i class="fas fa-times"></i>
+   </button>
+ </div>
+</div>
 </template>
 
 <script>
+import categoriasService from '@/services/categoriasService';
+
 export default {
- name: 'AdminCategorias',
+ name: 'MisCategorias',
  data() {
    return {
+     loading: false,
+     loadingMessage: 'Cargando categorías...',
      vistaActual: 'tabla',
      modalCategoria: null,
      modalFormulario: false,
      modalCambiarEstado: false,
      categoriaEditando: null,
      categoriaParaCambiarEstado: null,
-     paginaActual: 1,
-     itemsPorPagina: 25,
+     guardandoCategoria: false,
+     cambiandoEstado: false,
      paginaSalto: 1,
-     ordenActual: { campo: 'id', direccion: 'desc' },
-     
+     itemsPorPagina: 25,
+
+     // Datos reales del backend
+     categorias: [],
+     pagination: null,
+     estadisticas: {
+       total: 0,
+       activas: 0,
+       inactivas: 0,
+       con_servicios_activos: 0,
+       sin_servicios_activos: 0
+     },
+
      filtros: {
        busqueda: '',
        estado: ''
      },
-     
+
      formulario: {
        nombre: '',
        descripcion: '',
-       estado: 'activa'
+       estado: 'activo'
      },
-     
-     categorias: [
-       {
-         id: 1,
-         nombre: 'Desarrollo Web',
-         descripcion: 'Categoría que incluye todos los servicios relacionados con el desarrollo de sitios web, aplicaciones web, e-commerce y plataformas digitales.',
-         estado: 'activa',
-         fechaCreacion: '2024-01-15'
-       },
-       {
-         id: 2,
-         nombre: 'Consultoría Tecnológica',
-         descripcion: 'Servicios de asesoría y consultoría en tecnologías de la información, transformación digital y optimización de procesos.',
-         estado: 'activa',
-         fechaCreacion: '2024-01-20'
-       },
-       {
-         id: 3,
-         nombre: 'Marketing Digital',
-         descripcion: 'Estrategias y servicios de marketing en línea, incluyendo SEO, SEM, redes sociales, email marketing y análisis de datos.',
-         estado: 'activa',
-         fechaCreacion: '2024-01-25'
-       },
-       {
-         id: 4,
-         nombre: 'Diseño y Creatividad',
-         descripcion: 'Servicios de diseño gráfico, diseño web, branding, identidad corporativa y material publicitario.',
-         estado: 'activa',
-         fechaCreacion: '2024-02-01'
-       },
-       {
-         id: 5,
-         nombre: 'Aplicaciones Móviles',
-         descripcion: 'Desarrollo de aplicaciones nativas y multiplataforma para dispositivos móviles iOS y Android.',
-         estado: 'inactiva',
-         fechaCreacion: '2024-02-05'
-       },
-       {
-         id: 6,
-         nombre: 'Seguridad Informática',
-         descripcion: 'Servicios de auditoría, consultoría en seguridad, implementación de medidas de protección y análisis de vulnerabilidades.',
-         estado: 'activa',
-         fechaCreacion: '2024-02-10'
-       },
-       {
-         id: 7,
-         nombre: 'Capacitación y Formación',
-         descripcion: 'Programas de entrenamiento, cursos especializados y capacitación empresarial en tecnologías y herramientas digitales.',
-         estado: 'activa',
-         fechaCreacion: '2024-02-15'
-       }
-     ]
+
+     erroresFormulario: [],
+     busquedaTimeout: null,
+
+     // Sistema de notificaciones
+     notification: {
+       show: false,
+       type: 'success',
+       message: '',
+       icon: 'fa-check'
+     }
    }
  },
- 
- computed: {
-   categoriasFiltradas() {
-     let resultado = [...this.categorias];
-     
-     if (this.filtros.busqueda) {
-       const busqueda = this.filtros.busqueda.toLowerCase();
-       resultado = resultado.filter(categoria => 
-         categoria.nombre.toLowerCase().includes(busqueda) ||
-         categoria.descripcion.toLowerCase().includes(busqueda)
-       );
-     }
 
-     if (this.filtros.estado) {
-       resultado = resultado.filter(categoria => 
-         categoria.estado === this.filtros.estado
-       );
-     }
-     
-     resultado.sort((a, b) => {
-       let valorA = a[this.ordenActual.campo];
-       let valorB = b[this.ordenActual.campo];
-       
-       if (this.ordenActual.campo === 'fechaCreacion') {
-         valorA = new Date(valorA);
-         valorB = new Date(valorB);
-       }
-       
-       if (valorA < valorB) {
-         return this.ordenActual.direccion === 'asc' ? -1 : 1;
-       }
-       if (valorA > valorB) {
-         return this.ordenActual.direccion === 'asc' ? 1 : -1;
-       }
-       return 0;
-     });
-     
-     return resultado;
-   },
-   
-   categoriasPaginadas() {
-     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-     const fin = inicio + this.itemsPorPagina;
-     return this.categoriasFiltradas.slice(inicio, fin);
-   },
-   
-   totalPaginas() {
-     return Math.ceil(this.categoriasFiltradas.length / this.itemsPorPagina);
-   },
-   
+ computed: {
    paginasVisibles() {
-     const total = this.totalPaginas;
-     const actual = this.paginaActual;
+     if (!this.pagination) return [];
+     
+     const total = this.pagination.totalPages;
+     const actual = this.pagination.currentPage;
      const rango = 2;
      
      let inicio = Math.max(1, actual - rango);
@@ -681,48 +669,172 @@ export default {
        paginas.push(i);
      }
      return paginas;
-   },
-   
-   rangoInicio() {
-     return (this.paginaActual - 1) * this.itemsPorPagina + 1;
-   },
-   
-   rangoFin() {
-     return Math.min(this.paginaActual * this.itemsPorPagina, this.categoriasFiltradas.length);
-   },
-   
-   estadisticas() {
-     return {
-       total: this.categorias.length,
-       activas: this.categorias.filter(c => c.estado === 'activa').length,
-       inactivas: this.categorias.filter(c => c.estado === 'inactiva').length
-     };
-   },
-   
-   formularioValido() {
-     return this.formulario.nombre.trim() && this.formulario.descripcion.trim();
    }
  },
- 
+
  watch: {
-   'filtros.busqueda'() {
-     this.paginaActual = 1;
-   },
-   'filtros.estado'() {
-     this.paginaActual = 1;
-   },
-   paginaActual(newVal) {
-     this.paginaSalto = newVal;
+   // Actualizar paginaSalto cuando cambie la página actual
+   'pagination.currentPage'(newVal) {
+     if (newVal) {
+       this.paginaSalto = newVal;
+     }
    }
  },
- 
+
+ async mounted() {
+   console.log('🚀 Componente MisCategorias montado');
+   await this.cargarDatosIniciales();
+ },
+
  methods: {
+   // ==================== CARGA DE DATOS ====================
+   async cargarDatosIniciales() {
+     this.loading = true;
+     this.loadingMessage = 'Cargando categorías...';
+     
+     try {
+       await Promise.all([
+         this.cargarCategorias(),
+         this.cargarEstadisticas()
+       ]);
+     } catch (error) {
+       console.error('❌ Error cargando datos iniciales:', error);
+       this.showNotification('Error cargando datos del sistema', 'error');
+     } finally {
+       this.loading = false;
+     }
+   },
+
+   async cargarCategorias() {
+     try {
+       console.log('📋 Cargando categorías con filtros:', this.filtros);
+       
+       const params = {
+         page: this.pagination?.currentPage || 1,
+         limit: this.itemsPorPagina,
+         search: this.filtros.busqueda || undefined,
+         estado: this.filtros.estado || undefined
+       };
+       
+       const result = await categoriasService.getCategorias(params);
+       
+       if (result.success) {
+         this.categorias = result.categorias;
+         this.pagination = result.pagination;
+         console.log('✅ Categorías cargadas:', this.categorias.length);
+       } else {
+         this.showNotification(result.message || 'Error cargando categorías', 'error');
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cargando categorías:', error);
+       this.showNotification('Error de conexión al cargar categorías', 'error');
+     }
+   },
+
+   async cargarEstadisticas() {
+     try {
+       console.log('📊 Cargando estadísticas...');
+       
+       const result = await categoriasService.getEstadisticas();
+       
+       if (result.success) {
+         this.estadisticas = result.estadisticas;
+         console.log('✅ Estadísticas cargadas:', this.estadisticas);
+       } else {
+         console.error('❌ Error cargando estadísticas:', result.message);
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cargando estadísticas:', error);
+     }
+   },
+
+   // ==================== BÚSQUEDA Y FILTROS ====================
+   buscarCategorias() {
+     // Debounce para evitar muchas llamadas
+     clearTimeout(this.busquedaTimeout);
+     this.busquedaTimeout = setTimeout(() => {
+       this.aplicarFiltros();
+     }, 500);
+   },
+
+   async aplicarFiltros() {
+     console.log('🔍 Aplicando filtros:', this.filtros);
+     
+     // Resetear a la primera página
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     
+     await this.cargarCategorias();
+   },
+
+   limpiarFiltros() {
+     this.filtros = {
+       busqueda: '',
+       estado: ''
+     };
+     
+     this.aplicarFiltros();
+   },
+
+   // ==================== PAGINACIÓN ====================
+   async cambiarItemsPorPagina() {
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     this.paginaSalto = 1;
+     await this.cargarCategorias();
+   },
+
+   async irAPrimera() {
+     if (this.pagination && this.pagination.currentPage !== 1) {
+       this.pagination.currentPage = 1;
+       await this.cargarCategorias();
+     }
+   },
+
+   async irAUltima() {
+     if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
+       this.pagination.currentPage = this.pagination.totalPages;
+       await this.cargarCategorias();
+     }
+   },
+
+   async paginaAnterior() {
+     if (this.pagination && this.pagination.hasPrevPage) {
+       this.pagination.currentPage--;
+       await this.cargarCategorias();
+     }
+   },
+
+   async paginaSiguiente() {
+     if (this.pagination && this.pagination.hasNextPage) {
+       this.pagination.currentPage++;
+       await this.cargarCategorias();
+     }
+   },
+
+   async irAPagina(pagina = null) {
+     const targetPage = pagina || this.paginaSalto;
+     
+     if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
+       this.pagination.currentPage = targetPage;
+       await this.cargarCategorias();
+     } else {
+       this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
+       this.paginaSalto = this.pagination?.currentPage || 1;
+     }
+   },
+
+   // ==================== GESTIÓN DE CATEGORÍAS ====================
    nuevaCategoria() {
      this.categoriaEditando = null;
      this.limpiarFormulario();
      this.modalFormulario = true;
    },
-   
+
    verCategoria(categoria) {
      this.modalCategoria = categoria;
    },
@@ -734,21 +846,154 @@ export default {
      this.modalCategoria = null;
    },
 
+   async guardarCategoria() {
+     if (this.guardandoCategoria) return;
+     
+     this.erroresFormulario = [];
+     
+     // Validaciones básicas
+     if (!this.validarFormulario()) {
+       return;
+     }
+     
+     this.guardandoCategoria = true;
+     this.loadingMessage = this.categoriaEditando ? 'Actualizando categoría...' : 'Creando categoría...';
+     
+     try {
+       let result;
+       
+       if (this.categoriaEditando) {
+         // Actualizar categoría existente
+         result = await categoriasService.updateCategoria(this.categoriaEditando.categorias_id, this.formulario);
+       } else {
+         // Crear nueva categoría
+         result = await categoriasService.createCategoria(this.formulario);
+       }
+       
+       if (result.success) {
+         this.showNotification(
+           result.message || (this.categoriaEditando ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente'), 
+           'success'
+         );
+         
+         this.cerrarModalFormulario();
+         
+         // Recargar datos
+         await Promise.all([
+           this.cargarCategorias(),
+           this.cargarEstadisticas()
+         ]);
+         
+       } else {
+         // Manejar errores de validación
+         if (result.errors) {
+           this.erroresFormulario = result.errors;
+         } else {
+           this.showNotification(result.message || 'Error al guardar categoría', 'error');
+         }
+       }
+       
+     } catch (error) {
+       console.error('❌ Error guardando categoría:', error);
+       this.showNotification('Error de conexión al guardar categoría', 'error');
+     } finally {
+       this.guardandoCategoria = false;
+     }
+   },
+
+   validarFormulario() {
+     const errores = [];
+     
+     if (!this.formulario.nombre?.trim()) {
+       errores.push({ field: 'nombre', message: 'El nombre de la categoría es requerido' });
+     }
+     
+     if (this.formulario.nombre && this.formulario.nombre.trim().length < 2) {
+       errores.push({ field: 'nombre', message: 'El nombre debe tener al menos 2 caracteres' });
+     }
+     
+     if (this.formulario.nombre && this.formulario.nombre.trim().length > 100) {
+       errores.push({ field: 'nombre', message: 'El nombre no puede exceder 100 caracteres' });
+     }
+     
+     if (!this.formulario.descripcion?.trim()) {
+       errores.push({ field: 'descripcion', message: 'La descripción es requerida' });
+     }
+     
+     if (this.formulario.descripcion && this.formulario.descripcion.trim().length > 500) {
+       errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 500 caracteres' });
+     }
+     
+     this.erroresFormulario = errores;
+     
+     if (errores.length > 0) {
+       this.showNotification('Por favor corrige los errores en el formulario', 'warning');
+       return false;
+     }
+     
+     return true;
+   },
+
+   llenarFormulario(categoria) {
+     this.formulario = {
+       nombre: categoria.nombre,
+       descripcion: categoria.descripcion || '',
+       estado: categoria.estado
+     };
+   },
+
+   limpiarFormulario() {
+     this.formulario = {
+       nombre: '',
+       descripcion: '',
+       estado: 'activo'
+     };
+     this.erroresFormulario = [];
+   },
+
+   // ==================== CAMBIO DE ESTADO ====================
    mostrarModalCambiarEstado(categoria) {
      this.categoriaParaCambiarEstado = categoria;
      this.modalCambiarEstado = true;
    },
 
-   confirmarCambiarEstado() {
-     if (this.categoriaParaCambiarEstado) {
-       const estadoAnterior = this.categoriaParaCambiarEstado.estado;
-       const nuevoEstado = estadoAnterior === 'activa' ? 'inactiva' : 'activa';
+   async confirmarCambiarEstado() {
+     if (this.cambiandoEstado || !this.categoriaParaCambiarEstado) return;
+     
+     this.cambiandoEstado = true;
+     
+     try {
+       const nuevoEstado = this.categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
        
-       this.categoriaParaCambiarEstado.estado = nuevoEstado;
+       let result;
+       if (nuevoEstado === 'activo') {
+         result = await categoriasService.restoreCategoria(this.categoriaParaCambiarEstado.categorias_id);
+       } else {
+         result = await categoriasService.deleteCategoria(this.categoriaParaCambiarEstado.categorias_id);
+       }
        
-       const accion = nuevoEstado === 'activa' ? 'activada' : 'desactivada';
-       alert(`Categoría ${accion} exitosamente`);
+       if (result.success) {
+         const accion = nuevoEstado === 'activo' ? 'activada' : 'desactivada';
+         this.showNotification(`Categoría ${accion} exitosamente`, 'success');
+         
+         // Actualizar el estado local
+         this.categoriaParaCambiarEstado.estado = nuevoEstado;
+         
+         // Recargar datos
+         await Promise.all([
+           this.cargarCategorias(),
+           this.cargarEstadisticas()
+         ]);
+         
+       } else {
+         this.showNotification(result.message || 'Error al cambiar estado de la categoría', 'error');
+       }
        
+     } catch (error) {
+       console.error('❌ Error cambiando estado:', error);
+       this.showNotification('Error de conexión al cambiar estado', 'error');
+     } finally {
+       this.cambiandoEstado = false;
        this.cerrarModalCambiarEstado();
      }
    },
@@ -758,87 +1003,7 @@ export default {
      this.categoriaParaCambiarEstado = null;
    },
 
-  guardarCategoria() {
-     if (!this.formularioValido) {
-       alert('Por favor complete todos los campos correctamente');
-       return;
-     }
-     
-     const nombreExiste = this.categorias.some(c => 
-       c.nombre.toLowerCase() === this.formulario.nombre.toLowerCase() && 
-       (!this.categoriaEditando || c.id !== this.categoriaEditando.id)
-     );
-     
-     if (nombreExiste) {
-       alert('Ya existe una categoría con ese nombre');
-       return;
-     }
-     
-     if (this.categoriaEditando) {
-       Object.assign(this.categoriaEditando, {
-         nombre: this.formulario.nombre,
-         descripcion: this.formulario.descripcion,
-         estado: this.formulario.estado
-       });
-       alert('Categoría actualizada exitosamente');
-     } else {
-       const nuevaCategoria = {
-         id: Math.max(...this.categorias.map(c => c.id)) + 1,
-         nombre: this.formulario.nombre,
-         descripcion: this.formulario.descripcion,
-         estado: 'activa',
-         fechaCreacion: new Date().toISOString().split('T')[0]
-       };
-       this.categorias.push(nuevaCategoria);
-       alert('Categoría creada exitosamente');
-     }
-     
-     this.cerrarModalFormulario();
-   },
-
-   llenarFormulario(categoria) {
-     this.formulario = {
-       nombre: categoria.nombre,
-       descripcion: categoria.descripcion,
-       estado: categoria.estado
-     };
-   },
-
-   limpiarFormulario() {
-     this.formulario = {
-       nombre: '',
-       descripcion: '',
-       estado: 'activa'
-     };
-   },
-
-   truncarTexto(texto, limite) {
-     if (texto.length <= limite) return texto;
-     return texto.substring(0, limite) + '...';
-   },
-
-   ordenarPor(campo) {
-     if (this.ordenActual.campo === campo) {
-       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-     } else {
-       this.ordenActual = { campo, direccion: 'asc' };
-     }
-   },
-
-   getSortIcon(campo) {
-     if (this.ordenActual.campo !== campo) return '↕';
-     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
-   },
-
-   limpiarFiltros() {
-     this.filtros = {
-       busqueda: '',
-       estado: ''
-     };
-     this.paginaActual = 1;
-     this.paginaSalto = 1;
-   },
-
+   // ==================== MODALES ====================
    cerrarModal() {
      this.modalCategoria = null;
    },
@@ -849,54 +1014,111 @@ export default {
      this.limpiarFormulario();
    },
 
-   cambiarItemsPorPagina() {
-     this.paginaActual = 1;
-     this.paginaSalto = 1;
-   },
-
-   irAPrimera() {
-     this.paginaActual = 1;
-   },
-
-   irAUltima() {
-     this.paginaActual = this.totalPaginas;
-   },
-
-   irAPagina() {
-     if (this.paginaSalto >= 1 && this.paginaSalto <= this.totalPaginas) {
-       this.paginaActual = this.paginaSalto;
-     } else {
-       alert(`Por favor ingresa un número entre 1 y ${this.totalPaginas}`);
-       this.paginaSalto = this.paginaActual;
-     }
-   },
-
+   // ==================== HELPERS ====================
    formatearFecha(fecha) {
-     return new Date(fecha).toLocaleDateString('es-HN', {
-       year: 'numeric',
-       month: 'short',
-       day: 'numeric'
-     });
+     if (!fecha) return 'No disponible';
+     
+     try {
+       return new Date(fecha).toLocaleDateString('es-HN', {
+         year: 'numeric',
+         month: 'short',
+         day: 'numeric',
+         hour: '2-digit',
+         minute: '2-digit'
+       });
+     } catch (error) {
+       return fecha;
+     }
    },
 
    getEstadoTexto(estado) {
      const estados = {
-       activa: 'Activa',
-       inactiva: 'Inactiva'
+       activo: 'Activo',
+       inactivo: 'Inactivo'
      };
      return estados[estado] || estado;
+   },
+
+   truncarTexto(texto, limite = 80) {
+     if (!texto) return '';
+     if (texto.length <= limite) return texto;
+     return texto.substring(0, limite) + '...';
+   },
+
+   // ==================== NOTIFICACIONES ====================
+   showNotification(message, type = 'success') {
+     const icons = {
+       success: 'fa-check-circle',
+       error: 'fa-exclamation-circle',
+       warning: 'fa-exclamation-triangle',
+       info: 'fa-info-circle'
+     };
+     
+     this.notification = {
+       show: true,
+       type,
+       message,
+       icon: icons[type] || icons.info
+     };
+     
+     // Auto-close después de 5 segundos
+     setTimeout(() => {
+       this.closeNotification();
+     }, 5000);
+   },
+
+   closeNotification() {
+     this.notification.show = false;
+   }
+ },
+
+ // Limpiar timeouts al destruir el componente
+ beforeUnmount() {
+   if (this.busquedaTimeout) {
+     clearTimeout(this.busquedaTimeout);
    }
  }
 }
 </script>
 
 <style scoped>
+/* Estilos base */
 .admin-categorias-container {
  padding: 2rem;
  max-width: 1400px;
  margin: 0 auto;
 }
 
+/* Loading overlay */
+.loading-overlay {
+ position: fixed;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background: rgba(0, 0, 0, 0.7);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ z-index: 2000;
+ backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 1rem;
+ color: white;
+ font-size: 1.1rem;
+}
+
+.loading-spinner i {
+ font-size: 3rem;
+ color: #3498db;
+}
+
+/* Header */
 .page-header {
  display: flex;
  justify-content: space-between;
@@ -924,6 +1146,7 @@ export default {
  gap: 1rem;
 }
 
+/* Botones */
 .btn {
  padding: 0.875rem 1.5rem;
  border: none;
@@ -938,21 +1161,20 @@ export default {
  font-size: 0.9rem;
 }
 
+.btn:disabled {
+ opacity: 0.6;
+ cursor: not-allowed;
+ transform: none !important;
+}
+
 .btn-primary {
  background: linear-gradient(135deg, #3498db, #2980b9);
  color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
  transform: translateY(-2px);
  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
-}
-
-.btn-primary:disabled {
- background: #bdc3c7;
- cursor: not-allowed;
- transform: none;
- box-shadow: none;
 }
 
 .btn-secondary {
@@ -960,7 +1182,7 @@ export default {
  color: white;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
  background: #7f8c8d;
 }
 
@@ -970,7 +1192,7 @@ export default {
  border: 2px solid #3498db;
 }
 
-.btn-outline:hover {
+.btn-outline:hover:not(:disabled) {
  background: #3498db;
  color: white;
 }
@@ -980,7 +1202,7 @@ export default {
  color: white;
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
  background: #c0392b;
 }
 
@@ -989,7 +1211,7 @@ export default {
  color: white;
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
  background: #219a52;
 }
 
@@ -998,6 +1220,7 @@ export default {
  font-size: 0.85rem;
 }
 
+/* Filtros */
 .filtros-section {
  background: white;
  border-radius: 12px;
@@ -1055,6 +1278,7 @@ export default {
  cursor: pointer;
 }
 
+/* Estadísticas */
 .estadisticas-grid {
  display: grid;
  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1093,7 +1317,9 @@ export default {
 .stat-card.total { border-left: 4px solid #3498db; }
 .stat-card.activos { border-left: 4px solid #27ae60; }
 .stat-card.inactivos { border-left: 4px solid #95a5a6; }
+.stat-card.servicios { border-left: 4px solid #f39c12; }
 
+/* Sección de categorías */
 .categorias-section {
  background: white;
  border-radius: 12px;
@@ -1141,6 +1367,53 @@ export default {
  border-color: #3498db;
 }
 
+/* Paginación info */
+.paginacion-info {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1rem;
+ padding: 1rem;
+ background: #f8f9fa;
+ border-radius: 8px;
+ flex-wrap: wrap;
+ gap: 1rem;
+}
+
+.items-info {
+ color: #6c757d;
+ font-size: 0.9rem;
+ font-weight: 500;
+}
+
+.pagination-jump {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.pagination-jump label {
+ color: #6c757d;
+ font-size: 0.85rem;
+ font-weight: 500;
+}
+
+.page-input {
+ width: 60px;
+ padding: 0.375rem 0.5rem;
+ border: 1px solid #ced4da;
+ border-radius: 4px;
+ text-align: center;
+ font-size: 0.85rem;
+}
+
+.page-input:focus {
+ outline: none;
+ border-color: #3498db;
+ box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Tabla */
 .tabla-wrapper {
  overflow-x: auto;
 }
@@ -1197,11 +1470,12 @@ export default {
 .categoria-nombre {
  font-weight: 500;
  color: #2c3e50;
- font-size: 1rem;
 }
 
 .descripcion-info {
- max-width: 300px;
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem;
 }
 
 .descripcion-texto {
@@ -1211,14 +1485,116 @@ export default {
 }
 
 .fecha {
+ color: #7f8c8d;
+ font-size: 0.85rem;
+}
+
+/* Estilos específicos para servicios */
+.servicios-info {
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem;
+}
+
+.servicios-total {
  font-weight: 500;
- color: #6c757d;
+ color: #2c3e50;
  font-size: 0.9rem;
 }
 
+.servicios-activos {
+ color: #27ae60;
+ font-size: 0.8rem;
+ font-weight: 500;
+}
+
+/* Estados */
+.estado-badge {
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.8rem;
+ font-weight: 600;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+}
+
+.estado-badge.activo {
+ background: #d4edda;
+ color: #155724;
+ border: 1px solid #c3e6cb;
+}
+
+.estado-badge.inactivo {
+ background: #f8d7da;
+ color: #721c24;
+ border: 1px solid #f5c6cb;
+}
+
+/* Acciones */
+.acciones {
+ display: flex;
+ flex-direction: row;
+ gap: 0.5rem;
+ align-items: center;
+ justify-content: flex-start;
+ flex-wrap: nowrap;
+ min-width: 120px;
+}
+
+.btn-accion {
+ width: 32px;
+ height: 32px;
+ border: none;
+ border-radius: 6px;
+ cursor: pointer;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-size: 0.9rem;
+ transition: all 0.3s ease;
+ flex-shrink: 0;
+}
+
+.btn-accion.ver {
+ background: #e3f2fd;
+ color: #1976d2;
+}
+
+.btn-accion.ver:hover {
+ background: #bbdefb;
+}
+
+.btn-accion.editar {
+ background: #fff3e0;
+ color: #f57c00;
+}
+
+.btn-accion.editar:hover {
+ background: #ffe0b2;
+}
+
+.btn-accion.deshabilitar {
+ background: #ffebee;
+ color: #d32f2f;
+}
+
+.btn-accion.deshabilitar:hover {
+ background: #ffcdd2;
+}
+
+.btn-accion.habilitar {
+ background: #e8f5e8;
+ color: #388e3c;
+}
+
+.btn-accion.habilitar:hover {
+ background: #c8e6c9;
+}
+
+/* Vista de tarjetas */
 .tarjetas-grid {
  display: grid;
- grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+ grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
  gap: 1.5rem;
 }
 
@@ -1273,13 +1649,13 @@ export default {
  line-height: 1.5;
 }
 
-.info-card {
+.categoria-details {
  display: grid;
  gap: 0.75rem;
  margin-bottom: 1.5rem;
 }
 
-.info-item {
+.detail {
  display: flex;
  justify-content: space-between;
  align-items: center;
@@ -1288,7 +1664,7 @@ export default {
  border-radius: 6px;
 }
 
-.info-label {
+.detail-label {
  color: #7f8c8d;
  font-size: 0.85rem;
  font-weight: 500;
@@ -1297,9 +1673,26 @@ export default {
  gap: 0.5rem;
 }
 
-.info-valor {
- font-weight: 600;
+.detail-value {
  color: #2c3e50;
+ font-weight: 500;
+ font-size: 0.9rem;
+}
+
+.servicios-card {
+ background: #e8f5e8;
+ color: #2e7d32;
+ padding: 0.25rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.85rem;
+ font-weight: 500;
+}
+
+.servicios-activos-small {
+ display: block;
+ color: #27ae60;
+ font-size: 0.75rem;
+ margin-top: 0.125rem;
 }
 
 .card-actions {
@@ -1311,85 +1704,10 @@ export default {
 .card-actions .btn {
  flex: 1;
  justify-content: center;
- min-width: 80px;
+ min-width: auto;
 }
 
-.estado-badge {
- padding: 0.375rem 0.75rem;
- border-radius: 20px;
- font-size: 0.8rem;
- font-weight: 600;
- text-transform: uppercase;
- letter-spacing: 0.5px;
-}
-
-.estado-badge.activa {
- background: #d4edda;
- color: #155724;
- border: 1px solid #c3e6cb;
-}
-
-.estado-badge.inactiva {
- background: #f8d7da;
- color: #721c24;
- border: 1px solid #f5c6cb;
-}
-
-.acciones {
- display: flex;
- gap: 0.5rem;
- flex-wrap: wrap;
-}
-
-.btn-accion {
- width: 32px;
- height: 32px;
- border: none;
- border-radius: 6px;
- cursor: pointer;
- display: flex;
- align-items: center;
- justify-content: center;
- font-size: 0.9rem;
- transition: all 0.3s ease;
-}
-
-.btn-accion.ver {
- background: #e3f2fd;
- color: #1976d2;
-}
-
-.btn-accion.ver:hover {
- background: #bbdefb;
-}
-
-.btn-accion.editar {
- background: #fff3e0;
- color: #f57c00;
-}
-
-.btn-accion.editar:hover {
- background: #ffe0b2;
-}
-
-.btn-accion.deshabilitar {
- background: #ffebee;
- color: #d32f2f;
-}
-
-.btn-accion.deshabilitar:hover {
- background: #ffcdd2;
-}
-
-.btn-accion.habilitar {
- background: #e8f5e8;
- color: #388e3c;
-}
-
-.btn-accion.habilitar:hover {
- background: #c8e6c9;
-}
-
+/* Estado vacío */
 .empty-state {
  text-align: center;
  padding: 4rem 2rem;
@@ -1414,51 +1732,7 @@ export default {
  line-height: 1.5;
 }
 
-.paginacion-info {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 1rem;
- padding: 1rem;
- background: #f8f9fa;
- border-radius: 8px;
- flex-wrap: wrap;
- gap: 1rem;
-}
-
-.items-info {
- color: #6c757d;
- font-size: 0.9rem;
- font-weight: 500;
-}
-
-.pagination-jump {
- display: flex;
- align-items: center;
- gap: 0.5rem;
-}
-
-.pagination-jump label {
- color: #6c757d;
- font-size: 0.85rem;
- font-weight: 500;
-}
-
-.page-input {
- width: 60px;
- padding: 0.375rem 0.5rem;
- border: 1px solid #ced4da;
- border-radius: 4px;
- text-align: center;
- font-size: 0.85rem;
-}
-
-.page-input:focus {
- outline: none;
- border-color: #3498db;
- box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
+/* Paginación completa */
 .paginacion-completa {
  margin-top: 2rem;
  padding-top: 1.5rem;
@@ -1532,6 +1806,7 @@ export default {
  border-radius: 20px;
 }
 
+/* Modales */
 .modal-overlay {
  position: fixed;
  top: 0;
@@ -1544,6 +1819,7 @@ export default {
  justify-content: center;
  z-index: 1000;
  padding: 1rem;
+ backdrop-filter: blur(4px);
 }
 
 .modal-content {
@@ -1554,10 +1830,11 @@ export default {
  max-height: 90vh;
  overflow-y: auto;
  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+ animation: modalSlideIn 0.3s ease-out;
 }
 
 .modal-formulario {
- max-width: 700px;
+ max-width: 900px;
 }
 
 .modal-confirmacion {
@@ -1609,6 +1886,7 @@ export default {
  background: #f8f9fa;
 }
 
+/* Detalle de categoría */
 .categoria-detalle {
  padding: 1rem 0;
 }
@@ -1622,7 +1900,7 @@ export default {
 .detalle-item {
  display: flex;
  justify-content: space-between;
- align-items: flex-start;
+ align-items: center;
  padding: 0.75rem;
  background: #f8f9fa;
  border-radius: 6px;
@@ -1642,8 +1920,34 @@ export default {
  gap: 0.5rem;
 }
 
+/* Formulario */
 .formulario-categoria {
  padding: 1rem 0;
+}
+
+.form-sections {
+ display: flex;
+ flex-direction: column;
+ gap: 2rem;
+}
+
+.form-section {
+ border: 1px solid #e9ecef;
+ border-radius: 8px;
+ padding: 1.5rem;
+ background: #fafafa;
+}
+
+.section-title {
+ color: #2c3e50;
+ font-size: 1.1rem;
+ font-weight: 600;
+ margin-bottom: 1rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ border-bottom: 1px solid #e9ecef;
+ padding-bottom: 0.5rem;
 }
 
 .form-grid {
@@ -1692,7 +1996,33 @@ export default {
  min-height: 100px;
 }
 
-/* Estilos específicos para el modal de confirmación */
+/* Errores de formulario */
+.form-errors {
+ background: #fff5f5;
+ border: 1px solid #fed7d7;
+ border-radius: 8px;
+ padding: 1rem;
+ margin-top: 1rem;
+}
+
+.error-item {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ color: #e53e3e;
+ font-size: 0.9rem;
+ margin-bottom: 0.5rem;
+}
+
+.error-item:last-child {
+ margin-bottom: 0;
+}
+
+.error-item i {
+ color: #e53e3e;
+}
+
+/* Modal de confirmación */
 .confirmacion-content {
  display: flex;
  flex-direction: column;
@@ -1732,7 +2062,6 @@ export default {
  margin: 0 0 0.25rem 0;
  color: #7f8c8d;
  font-size: 0.9rem;
- line-height: 1.4;
 }
 
 .categoria-badges {
@@ -1745,6 +2074,15 @@ export default {
  font-family: monospace;
  background: #e3f2fd;
  color: #1976d2;
+ padding: 0.2rem 0.5rem;
+ border-radius: 4px;
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+.servicios-count {
+ background: #fff3e0;
+ color: #f57c00;
  padding: 0.2rem 0.5rem;
  border-radius: 4px;
  font-size: 0.8rem;
@@ -1862,21 +2200,256 @@ export default {
  font-size: 1.5rem;
 }
 
+/* Notificaciones */
+.notification {
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ padding: 1rem 1.5rem;
+ border-radius: 8px;
+ color: white;
+ font-weight: 500;
+ z-index: 3000;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ min-width: 300px;
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+ animation: slideInRight 0.3s ease-out;
+}
+
+.notification-success {
+ background: #27ae60;
+}
+
+.notification-error {
+ background: #e74c3c;
+}
+
+.notification-warning {
+ background: #f39c12;
+}
+
+.notification-info {
+ background: #3498db;
+}
+
+.notification-close {
+ background: none;
+ border: none;
+ color: white;
+ cursor: pointer;
+ padding: 0.25rem;
+ border-radius: 50%;
+ transition: all 0.3s ease;
+ margin-left: auto;
+}
+
+.notification-close:hover {
+ background: rgba(255, 255, 255, 0.2);
+}
+
+/* Animaciones */
+@keyframes slideInRight {
+ from {
+   opacity: 0;
+   transform: translateX(100%);
+ }
+ to {
+   opacity: 1;
+   transform: translateX(0);
+ }
+}
+
+@keyframes slideOutRight {
+ from {
+   opacity: 1;
+   transform: translateX(0);
+ }
+ to {
+   opacity: 0;
+   transform: translateX(100%);
+ }
+}
+
+@keyframes fadeIn {
+ from {
+   opacity: 0;
+   transform: translateY(20px);
+ }
+ to {
+   opacity: 1;
+   transform: translateY(0);
+ }
+}
+
+@keyframes modalSlideIn {
+ from {
+   opacity: 0;
+   transform: scale(0.9) translateY(-20px);
+ }
+ to {
+   opacity: 1;
+   transform: scale(1) translateY(0);
+ }
+}
+
+@keyframes spin {
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
+}
+
+.admin-categorias-container {
+ animation: fadeIn 0.5s ease-out;
+}
+
+.categoria-card,
+.stat-card {
+ animation: fadeIn 0.3s ease-out;
+}
+
+/* Estados de hover mejorados */
+.btn:hover:not(:disabled) {
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.categorias-tabla tbody tr:hover {
+ background-color: #f8f9fa;
+ transform: scale(1.01);
+ transition: all 0.2s ease;
+}
+
+.btn-accion:hover {
+ transform: translateY(-2px);
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Mejoras de accesibilidad */
+.btn:focus,
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.btn-accion:focus,
+.view-btn:focus {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+/* Estados de carga específicos */
+.btn.loading {
+ pointer-events: none;
+ opacity: 0.7;
+}
+
+.btn.loading i {
+ animation: spin 1s linear infinite;
+}
+
+/* Transiciones suaves */
+* {
+ transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Mejoras visuales para la paginación */
+.btn-pag:focus {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+.page-input:invalid {
+ border-color: #e74c3c;
+ box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+/* Mejoras para el formulario */
+.form-input:invalid,
+.form-select:invalid,
+.form-textarea:invalid {
+ border-color: #e74c3c;
+}
+
+.form-input:valid,
+.form-select:valid,
+.form-textarea:valid {
+ border-color: #27ae60;
+}
+
+/* Mejoras para la búsqueda */
+.search-input:focus + .search-icon {
+ color: #3498db;
+}
+
+/* Estados específicos para notificaciones */
+.notification.hide {
+ animation: slideOutRight 0.3s ease-in forwards;
+}
+
+/* Sombras mejoradas */
+.categoria-card,
+.modal-content,
+.categorias-section,
+.filtros-section {
+ box-shadow: 
+   0 1px 3px rgba(0, 0, 0, 0.12),
+   0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.categoria-card:hover {
+ box-shadow: 
+   0 14px 28px rgba(0, 0, 0, 0.25),
+   0 10px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* Scroll personalizado para la tabla */
+.tabla-wrapper::-webkit-scrollbar {
+ height: 8px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-track {
+ background: #f1f1f1;
+ border-radius: 4px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-thumb {
+ background: #c1c1c1;
+ border-radius: 4px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-thumb:hover {
+ background: #a8a8a8;
+}
+
+/* Estados de éxito y error para formularios */
+.form-group.success .form-input,
+.form-group.success .form-select,
+.form-group.success .form-textarea {
+ border-color: #27ae60;
+ box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+.form-group.error .form-input,
+.form-group.error .form-select,
+.form-group.error .form-textarea {
+ border-color: #e74c3c;
+ box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
  .estadisticas-grid {
    grid-template-columns: repeat(3, 1fr);
  }
- 
+
  .confirmacion-content {
    gap: 1.5rem;
  }
- 
+
  .cambio-estado-visual {
    flex-direction: column;
    gap: 1rem;
  }
- 
+
  .flecha-cambio {
    transform: rotate(90deg);
  }
@@ -1930,7 +2503,7 @@ export default {
  }
 
  .categorias-tabla {
-   min-width: 800px;
+   min-width: 900px;
  }
 
  .tarjetas-grid {
@@ -1938,16 +2511,12 @@ export default {
  }
 
  .card-actions {
-   display: flex;
-   flex-direction: row;
-   gap: 0.5rem;
-   flex-wrap: wrap;
+   justify-content: stretch;
  }
 
  .card-actions .btn {
    flex: 1;
    justify-content: center;
-   min-width: 80px;
  }
 
  .detalle-item {
@@ -1963,26 +2532,43 @@ export default {
  .modal-footer {
    flex-direction: column;
  }
- 
+
  .modal-confirmacion {
    max-width: 95%;
    margin: 1rem;
  }
- 
+
  .categoria-info-resumen {
    flex-direction: column;
    text-align: center;
    gap: 0.75rem;
  }
- 
+
  .icono-estado {
    width: 60px;
    height: 60px;
    font-size: 1.5rem;
  }
- 
+
  .cambio-estado-visual {
    padding: 1rem;
+ }
+
+ .notification {
+   right: 1rem;
+   left: 1rem;
+   min-width: auto;
+ }
+
+ /* Botones de acción en móvil - mantener horizontal */
+ .acciones {
+   gap: 0.25rem;
+ }
+
+ .btn-accion {
+   width: 28px;
+   height: 28px;
+   font-size: 0.8rem;
  }
 }
 
@@ -2014,38 +2600,332 @@ export default {
  }
 
  .card-actions {
-   display: flex;
-   flex-direction: row;
-   gap: 0.5rem;
-   flex-wrap: wrap;
+   flex-direction: column;
  }
 
  .card-actions .btn {
-   flex: 1;
-   min-width: 70px;
-   font-size: 0.8rem;
-   padding: 0.4rem 0.8rem;
+   width: 100%;
  }
- 
+
  .modal-confirmacion {
    max-width: 100%;
    margin: 0.5rem;
  }
- 
+
  .categoria-avatar {
    width: 50px;
    height: 50px;
    font-size: 1.2rem;
  }
- 
+
  .pregunta-principal {
    font-size: 1rem;
  }
- 
+
  .advertencia-estado,
  .info-estado {
    padding: 0.75rem;
    font-size: 0.85rem;
  }
+
+ .notification {
+   top: 1rem;
+   right: 0.5rem;
+   left: 0.5rem;
+   padding: 0.75rem 1rem;
+   font-size: 0.9rem;
+ }
+
+ .loading-spinner {
+   font-size: 1rem;
+ }
+
+ .loading-spinner i {
+   font-size: 2rem;
+ }
+
+ /* Mantener botones horizontales incluso en pantallas muy pequeñas */
+ .acciones {
+   min-width: 90px;
+   overflow-x: auto;
+ }
+
+ .btn-accion {
+   width: 26px;
+   height: 26px;
+   font-size: 0.75rem;
+   flex-shrink: 0;
+ }
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+ .btn-accion {
+   width: 40px;
+   height: 40px;
+ }
+
+ .btn {
+   padding: 1rem 1.5rem;
+ }
+
+ .categorias-tabla td {
+   padding: 1.5rem 1rem;
+ }
+
+ /* Asegurar que los botones de acción permanezcan en fila */
+ .acciones {
+   gap: 0.75rem;
+ }
+}
+
+/* Estados específicos de badges y indicadores */
+.estado-badge {
+ position: relative;
+ overflow: hidden;
+}
+
+.estado-badge::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: -100%;
+ width: 100%;
+ height: 100%;
+ background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+ transition: left 0.5s;
+}
+
+.estado-badge:hover::before {
+ left: 100%;
+}
+
+/* Indicadores de loading específicos */
+.btn[disabled] i.fa-spinner {
+ animation: spin 1s linear infinite;
+}
+
+/* Mejoras de contraste y legibilidad */
+.stat-card:focus-within {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+.categoria-card:focus-within {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+/* Estados de error y éxito más visuales */
+.form-input.error,
+.form-textarea.error {
+ border-color: #e74c3c;
+ background-color: rgba(231, 76, 60, 0.05);
+}
+
+.form-input.success,
+.form-textarea.success {
+ border-color: #27ae60;
+ background-color: rgba(39, 174, 96, 0.05);
+}
+
+/* Mejoras en la presentación de datos */
+.stat-number {
+ background: linear-gradient(135deg, #2c3e50, #34495e);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
+}
+
+/* Efectos especiales para estados importantes */
+.btn-danger:hover {
+ box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+
+.btn-success:hover {
+ box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+}
+
+/* Mejoras finales de UX */
+.modal-overlay {
+ animation: fadeIn 0.3s ease-out;
+}
+
+.empty-state {
+ animation: fadeIn 0.5s ease-out;
+}
+
+.categoria-card {
+ transform-origin: center;
+}
+
+.stat-card {
+ transform-origin: center;
+}
+
+/* Personalización de scrollbars para todo el modal */
+.modal-content::-webkit-scrollbar {
+ width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+ background: #f1f1f1;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+ background: #c1c1c1;
+ border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+ background: #a8a8a8;
+}
+
+/* CORRECCIÓN ESPECÍFICA PARA BOTONES DE ACCIONES */
+/* Asegurar que los botones siempre estén en fila horizontal */
+.acciones {
+ display: flex !important;
+ flex-direction: row !important;
+ align-items: center !important;
+ justify-content: flex-start !important;
+ gap: 0.5rem !important;
+ flex-wrap: nowrap !important;
+ white-space: nowrap !important;
+}
+
+/* Prevenir que los botones se apilen verticalmente */
+.btn-accion {
+ flex: 0 0 auto !important;
+ display: inline-flex !important;
+ margin: 0 !important;
+}
+
+/* Ajustes específicos para la tabla */
+.categorias-tabla .acciones {
+ min-width: 120px;
+ max-width: 150px;
+}
+
+/* Asegurar que la columna de acciones tenga suficiente espacio */
+.categorias-tabla th:last-child,
+.categorias-tabla td:last-child {
+ width: 140px;
+ min-width: 140px;
+ text-align: center;
+}
+
+/* Mejoras específicas para categorías */
+.categoria-nombre {
+ font-weight: 600;
+ color: #2c3e50;
+ font-size: 1.05rem;
+}
+
+.descripcion-info {
+ max-width: 300px;
+}
+
+.descripcion-texto {
+ color: #6c757d;
+ font-size: 0.9rem;
+ line-height: 1.4;
+}
+
+/* Estilos específicos para el modal de categorías */
+.detalle-item.descripcion-completa .descripcion-texto {
+ color: #2c3e50;
+ line-height: 1.6;
+ margin-top: 0.5rem;
+ padding: 0.75rem;
+ background: #f8f9fa;
+ border-radius: 6px;
+ border-left: 3px solid #3498db;
+}
+
+/* Mejoras para la vista de tarjetas de categorías */
+.descripcion-card {
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+ border-left: 4px solid #3498db;
+ position: relative;
+ overflow: hidden;
+}
+
+.descripcion-card::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: 0;
+ right: 0;
+ height: 2px;
+ background: linear-gradient(90deg, #3498db, #2980b9);
+}
+
+/* Efectos adicionales para badges de servicios */
+.servicios-card {
+ position: relative;
+ overflow: hidden;
+}
+
+.servicios-card::after {
+ content: '';
+ position: absolute;
+ top: 0;
+ right: 0;
+ width: 20px;
+ height: 20px;
+ background: radial-gradient(circle, rgba(39, 174, 96, 0.2), transparent);
+ border-radius: 50%;
+}
+
+/* Transición suave para el cambio de vista */
+.tabla-container,
+.tarjetas-container {
+ animation: fadeIn 0.4s ease-out;
+}
+
+/* Mejoras para el estado de carga */
+.loading-overlay {
+ backdrop-filter: blur(8px);
+ -webkit-backdrop-filter: blur(8px);
+}
+
+.loading-spinner {
+ background: rgba(0, 0, 0, 0.8);
+ padding: 2rem;
+ border-radius: 12px;
+ box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Pulso animado para elementos importantes */
+@keyframes pulse {
+ 0% {
+   box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+ }
+ 70% {
+   box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+ }
+ 100% {
+   box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+ }
+}
+
+.btn-primary:focus {
+ animation: pulse 2s infinite;
+}
+
+/* Mejoras finales de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+ *,
+ *::before,
+ *::after {
+   animation-duration: 0.01ms !important;
+   animation-iteration-count: 1 !important;
+   transition-duration: 0.01ms !important;
+ }
+}
+
+/* Modo oscuro preparado (opcional) */
+@media (prefers-color-scheme: dark) {
+ /* Aquí puedes agregar estilos para modo oscuro si lo necesitas */
 }
 </style>
