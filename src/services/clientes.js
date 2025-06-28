@@ -1,6 +1,191 @@
+// clientes.js
 import api from './api';
+import categoriasService from './categoriasService';
 
 class ClientesService {
+  constructor() {
+    // Cache para categorías
+    this._categoriasCache = null;
+    this._categoriasCacheTime = null;
+    this._categoriasMap = new Map();
+  }
+
+  // ✅ NUEVA FUNCIÓN: Obtener y cachear categorías activas
+  async getCategoriasActivas() {
+    try {
+      // Cache por 5 minutos
+      const cacheExpiry = 5 * 60 * 1000;
+      const now = Date.now();
+      
+      if (this._categoriasCache && this._categoriasCacheTime && 
+          (now - this._categoriasCacheTime) < cacheExpiry) {
+        console.log('✅ Usando categorías desde cache');
+        return this._categoriasCache;
+      }
+      
+      console.log('🔄 Obteniendo categorías desde API...');
+      const result = await categoriasService.getCategoriasActivas();
+      
+      if (result.success) {
+        this._categoriasCache = result.categorias;
+        this._categoriasCacheTime = now;
+        
+        // Crear mapa para búsqueda rápida por nombre
+        this._categoriasMap.clear();
+        result.categorias.forEach(cat => {
+          this._categoriasMap.set(cat.nombre.toLowerCase(), cat.categorias_id);
+        });
+        
+        console.log('✅ Categorías cacheadas:', result.categorias.length);
+        return result.categorias;
+      }
+      
+      console.warn('⚠️ Error obteniendo categorías, usando fallback');
+      return this._getFallbackCategorias();
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo categorías:', error);
+      return this._getFallbackCategorias();
+    }
+  }
+
+  // ✅ NUEVA FUNCIÓN: Categorías fallback si falla la API
+  _getFallbackCategorias() {
+    return [
+      { categorias_id: 1, nombre: 'hosting' },
+      { categorias_id: 2, nombre: 'backup' },
+      { categorias_id: 3, nombre: 'security' },
+      { categorias_id: 4, nombre: 'database' },
+      { categorias_id: 5, nombre: 'cdn' }
+    ];
+  }
+
+  // ✅ NUEVA FUNCIÓN: Mapear nombre de categoria a ID dinámicamente
+  async getCategoriaIdByNombre(nombreCategoria) {
+    try {
+      // Asegurar que tenemos las categorías cargadas
+      await this.getCategoriasActivas();
+      
+      const nombre = nombreCategoria.toLowerCase().trim();
+      
+      // Buscar en el mapa
+      let categoriaId = this._categoriasMap.get(nombre);
+      
+      // Si no se encuentra exacta, buscar por coincidencia parcial
+      if (!categoriaId) {
+        for (const [catNombre, catId] of this._categoriasMap.entries()) {
+          if (catNombre.includes(nombre) || nombre.includes(catNombre)) {
+            categoriaId = catId;
+            break;
+          }
+        }
+      }
+      
+      // Fallback a primera categoría si no se encuentra
+      if (!categoriaId && this._categoriasCache && this._categoriasCache.length > 0) {
+        categoriaId = this._categoriasCache[0].categorias_id;
+      }
+      
+      console.log(`🔧 Categoria mapeada: "${nombreCategoria}" → ID ${categoriaId}`);
+      return categoriaId || 1;
+      
+    } catch (error) {
+      console.error('❌ Error mapeando categoria:', error);
+      return 1; // hosting por defecto
+    }
+  }
+
+  // ✅ FUNCIÓN CORREGIDA: Formatear servicios para envío al backend
+  async formatServiciosParaPDF(servicios) {
+    console.log('🔧 INICIO formatServiciosParaPDF - Recibido:', servicios);
+    
+    // Convertir Proxy a array normal
+    const serviciosArray = Array.from(servicios || []);
+    
+    if (serviciosArray.length === 0) {
+      console.warn('⚠️ servicios está vacío');
+      return [];
+    }
+
+    // Procesar servicios uno por uno (async)
+    const serviciosFormateados = [];
+    
+    for (let i = 0; i < serviciosArray.length; i++) {
+      const item = serviciosArray[i];
+      console.log(`🔧 Formateando servicio ${i}:`, item);
+      
+      const servicio = item.servicio || item;
+      let categoriaFormateada = null;
+      
+      // ✅ FORMATEAR CATEGORIA DINÁMICAMENTE
+      if (servicio.categoria) {
+        if (typeof servicio.categoria === 'object' && servicio.categoria !== null && servicio.categoria.categorias_id) {
+          // Ya es objeto válido
+          categoriaFormateada = {
+            categorias_id: servicio.categoria.categorias_id,
+            nombre: servicio.categoria.nombre
+          };
+          console.log(`✅ Categoria ya es objeto: ${categoriaFormateada.nombre}`);
+        } else if (typeof servicio.categoria === 'string') {
+          // Es string - mapear dinámicamente
+          const categoriaId = await this.getCategoriaIdByNombre(servicio.categoria);
+          categoriaFormateada = {
+            categorias_id: categoriaId,
+            nombre: servicio.categoria
+          };
+          console.log(`🔧 Categoria string convertida: "${servicio.categoria}" → ID ${categoriaId}`);
+        }
+      }
+      
+      // ✅ FALLBACK si no hay categoria válida
+      if (!categoriaFormateada) {
+        const categorias = await this.getCategoriasActivas();
+        const primerCategoria = categorias[0] || { categorias_id: 1, nombre: 'hosting' };
+        
+        categoriaFormateada = {
+          categorias_id: primerCategoria.categorias_id,
+          nombre: primerCategoria.nombre
+        };
+        console.log(`⚠️ Usando categoria fallback: ${categoriaFormateada.nombre}`);
+      }
+
+      const servicioFormateado = {
+        ...item,
+        servicio: {
+          servicios_id: servicio.servicios_id || servicio.id,
+          nombre: servicio.nombre,
+          precio_venta: servicio.precio_venta || servicio.precioVenta,
+          precio_minimo: servicio.precio_minimo || servicio.precioMinimo,
+          categoria: categoriaFormateada, // ✅ SIEMPRE objeto válido
+          descripcion: servicio.descripcion,
+          estado: servicio.estado || 'activo'
+        },
+        cantidadServidores: item.cantidadServidores || 0,
+        cantidadEquipos: item.cantidadEquipos || 0,
+        precioVentaFinal: item.precioVentaFinal || 0
+      };
+
+      console.log(`✅ Servicio ${i} categoria final:`, servicioFormateado.servicio.categoria);
+      serviciosFormateados.push(servicioFormateado);
+    }
+    
+    return serviciosFormateados;
+  }
+
+  // ✅ FUNCIÓN PRINCIPAL: Formatear datos completos para PDF
+  async formatDataParaPDF(datosOriginales) {
+    console.log('🔧 Formateando datos para PDF:', datosOriginales);
+    
+    const datosFormateados = {
+      ...datosOriginales,
+      servicios: await this.formatServiciosParaPDF(datosOriginales.servicios || [])
+    };
+
+    console.log('✅ Datos formateados para PDF:', datosFormateados);
+    console.log('✅ Ejemplo categoria formateada:', datosFormateados.servicios[0]?.servicio?.categoria);
+    
+    return datosFormateados;
+  }
   
   // Obtener todos los clientes con paginación y filtros
   async getClientes(params = {}) {
@@ -226,10 +411,10 @@ class ClientesService {
     }
   }
   
-  // Buscar clientes (método helper para autocompletado)
+  // Buscar clientes (método helper para autocompletado ADMIN)
   async searchClientes(searchTerm) {
     try {
-      console.log('🔍 Buscando clientes:', searchTerm);
+      console.log('🔍 Buscando clientes (admin):', searchTerm);
       
       const response = await api.get('/clientes/search', {
         params: {
@@ -253,6 +438,79 @@ class ClientesService {
       
     } catch (error) {
       console.error('❌ Error buscando clientes:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  // ✅ NUEVO: Buscar clientes para modales (CON filtros de usuario)
+  async searchClientesModal(searchTerm) {
+    try {
+      console.log('🔍 Buscando clientes para modal:', searchTerm);
+      
+      const response = await api.get('/clientes/modal/search', {
+        params: {
+          q: searchTerm,
+          limit: 10
+        }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Clientes encontrados para modal:', response.data.data.clientes);
+        return {
+          success: true,
+          clientes: response.data.data.clientes
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error en la búsqueda'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error buscando clientes para modal:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  // ✅ CORREGIDO: Obtener clientes recientes usando el endpoint correcto
+  async getClientesRecientes(limit = 5) {
+    try {
+      console.log('📋 Obteniendo clientes recientes para modal...');
+      
+      // ✅ USAR EL ENDPOINT CORRECTO que aplica filtros de usuario
+      const response = await api.get('/clientes/modal/search', {
+        params: {
+          q: '',  // Término vacío = obtener todos los del usuario actual
+          limit: limit
+        }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Clientes recientes obtenidos:', response.data.data.clientes);
+        console.log('🔍 DEBUG - usuarios_id de cada cliente:', response.data.data.clientes.map(c => ({
+          empresa: c.nombre_empresa,
+          usuarios_id: c.usuarios_id
+        })));
+        return {
+          success: true,
+          clientes: response.data.data.clientes
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo clientes'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo clientes recientes:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Error de conexión'
@@ -314,21 +572,62 @@ class ClientesService {
     ];
   }
   
-  // Helper para formatear datos de cliente para mostrar
+  // ✅ CORREGIDO: Helper para formatear datos de cliente para mostrar
   formatClienteDisplay(cliente) {
     if (!cliente) return null;
     
-    const estados = this.getEstados();
+    // ✅ CORREGIDO: Crear funciones locales en lugar de usar this
+    const generateInitials = (nombreCompleto) => {
+      if (!nombreCompleto) return 'C';
+      const nombres = nombreCompleto.trim().split(' ');
+      if (nombres.length >= 2) {
+        return (nombres[0][0] + nombres[1][0]).toUpperCase();
+      } else {
+        return nombres[0].substring(0, 2).toUpperCase();
+      }
+    };
+    
+    const generateInitialsEmpresa = (nombreEmpresa) => {
+      if (!nombreEmpresa) return 'E';
+      const palabras = nombreEmpresa.trim().split(' ');
+      if (palabras.length >= 2) {
+        return (palabras[0][0] + palabras[1][0]).toUpperCase();
+      } else {
+        return palabras[0].substring(0, 2).toUpperCase();
+      }
+    };
+    
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (error) {
+        return dateString;
+      }
+    };
+
+    const estados = [
+      { value: 'activo', label: 'Activo', color: 'success' },
+      { value: 'inactivo', label: 'Inactivo', color: 'danger' }
+    ];
+    
     const estado = estados.find(e => e.value === cliente.estado);
     
     return {
       ...cliente,
       estado_label: estado?.label || cliente.estado,
       estado_color: estado?.color || 'secondary',
-      iniciales_encargado: this.generateInitials(cliente.nombre_encargado),
-      iniciales_empresa: this.generateInitialsEmpresa(cliente.nombre_empresa),
-      fecha_creacion: this.formatDate(cliente.created_at),
-      fecha_actualizacion: this.formatDate(cliente.updated_at),
+      iniciales_encargado: generateInitials(cliente.nombre_encargado),
+      iniciales_empresa: generateInitialsEmpresa(cliente.nombre_empresa),
+      fecha_creacion: formatDate(cliente.created_at),
+      fecha_actualizacion: formatDate(cliente.updated_at),
       manager_nombre: cliente.manager?.nombre_completo || 'Sin asignar',
       telefono_principal: cliente.telefono_empresa || cliente.telefono_personal || 'No registrado',
       correo_principal: cliente.correo_empresa || cliente.correo_personal || 'No registrado'
@@ -431,6 +730,27 @@ class ClientesService {
     }
     
     return rtn;
+  }
+
+  // ✅ NUEVO: Helper para formatear precios/moneda
+  formatPrice(precio) {
+    if (!precio && precio !== 0) return 'L. 0.00';
+    
+    // Convertir a número si es string
+    const numero = typeof precio === 'string' ? parseFloat(precio) : precio;
+    
+    if (isNaN(numero)) return 'L. 0.00';
+    
+    // Formatear con separadores de miles y 2 decimales
+    return `L. ${numero.toLocaleString('es-HN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  }
+
+  // ✅ NUEVO: Alias para formatPrice
+  formatCurrency(precio) {
+    return this.formatPrice(precio);
   }
 }
 

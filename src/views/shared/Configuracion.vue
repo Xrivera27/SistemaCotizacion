@@ -116,14 +116,6 @@
             </div>
           </div>
 
-          <!-- Mensaje de éxito/error -->
-          <div v-if="mensajePersonal.texto" class="alert" :class="mensajePersonal.tipo">
-            <i class="fas alert-icon" 
-               :class="mensajePersonal.tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'">
-            </i>
-            {{ mensajePersonal.texto }}
-          </div>
-
           <!-- Botones -->
           <div class="form-actions">
             <button
@@ -294,14 +286,6 @@
             </ul>
           </div>
 
-          <!-- Mensaje de éxito/error -->
-          <div v-if="mensajePassword.texto" class="alert" :class="mensajePassword.tipo">
-            <i class="fas alert-icon" 
-               :class="mensajePassword.tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'">
-            </i>
-            {{ mensajePassword.texto }}
-          </div>
-
           <!-- Botones -->
           <div class="form-actions">
             <button
@@ -326,10 +310,21 @@
         </form>
       </div>
     </div>
+
+    <!-- Toast de notificaciones -->
+    <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
+      <i class="fas" :class="notification.icon"></i>
+      <span>{{ notification.message }}</span>
+      <button class="notification-close" @click="closeNotification">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
   </div>
 </template>
 
 <script>
+import ConfiguracionService from '@/services/configuracion';
+
 export default {
   name: 'ConfiguracionUsuario',
   data() {
@@ -365,12 +360,16 @@ export default {
       isLoadingPersonal: false,
       isLoadingPassword: false,
       
-      // Mensajes
-      mensajePersonal: { texto: '', tipo: '' },
-      mensajePassword: { texto: '', tipo: '' },
-      
       // Errores
-      errors: {}
+      errors: {},
+      
+      // Sistema de notificaciones toast
+      notification: {
+        show: false,
+        type: 'success',
+        message: '',
+        icon: 'fa-check'
+      }
     }
   },
   
@@ -398,8 +397,46 @@ export default {
   },
   
   methods: {
-    cargarDatosUsuario() {
-      // Cargar datos del usuario desde localStorage/sessionStorage
+    async cargarDatosUsuario() {
+      try {
+        console.log('🔄 Cargando datos del usuario...');
+        
+        // Primero intentar cargar desde el backend
+        const result = await ConfiguracionService.getInformacionPersonal();
+        
+        if (result.success) {
+          console.log('✅ Datos cargados desde el backend:', result.data);
+          
+          this.formData = {
+            nombre: result.data.nombre || '',
+            email: result.data.email || '',
+            usuario: result.data.usuario || '',
+            telefono: result.data.telefono || '',
+            departamento: '', // Campo que no usas
+            rolTexto: result.data.rolTexto || ''
+          };
+          
+          // Guardar datos originales
+          this.originalData = { ...this.formData };
+          
+          // Sincronizar con localStorage/sessionStorage
+          ConfiguracionService.syncUserData(result.data);
+          
+        } else {
+          console.log('⚠️ Error del backend, cargando desde localStorage');
+          this.cargarDatosLocalStorage();
+          this.showNotification('No se pudieron cargar los datos del servidor', 'warning');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error cargando datos:', error);
+        // Cargar desde localStorage como respaldo
+        this.cargarDatosLocalStorage();
+        this.showNotification('Error de conexión. Datos cargados desde caché local', 'error');
+      }
+    },
+    
+    cargarDatosLocalStorage() {
       const user = localStorage.getItem('cloudtech_user') || sessionStorage.getItem('cloudtech_user');
       if (user) {
         const userData = JSON.parse(user);
@@ -412,8 +449,8 @@ export default {
           rolTexto: userData.rolTexto || ''
         };
         
-        // Guardar datos originales
         this.originalData = { ...this.formData };
+        console.log('📱 Datos cargados desde localStorage');
       }
     },
     
@@ -467,53 +504,61 @@ export default {
       if (!this.validarInformacionPersonal()) return;
       
       this.isLoadingPersonal = true;
-      this.mensajePersonal = { texto: '', tipo: '' };
+      this.errors = {}; // Limpiar errores previos
       
       try {
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('💾 Guardando información personal...');
         
-        // Aquí iría la llamada al backend
-        console.log('Guardando información personal:', this.formData);
+        // Formatear datos para envío (solo campos que cambiaron)
+        const datosParaEnviar = ConfiguracionService.formatDataForUpdate(this.formData);
         
-        // Actualizar datos en localStorage/sessionStorage
-        const user = localStorage.getItem('cloudtech_user') || sessionStorage.getItem('cloudtech_user');
-        if (user) {
-          const userData = JSON.parse(user);
-          const updatedUser = {
-            ...userData,
-            nombre: this.formData.nombre,
-            email: this.formData.email,
-            usuario: this.formData.usuario,
-            telefono: this.formData.telefono
+        console.log('📤 Datos a enviar:', datosParaEnviar);
+        
+        const result = await ConfiguracionService.actualizarInformacionPersonal(datosParaEnviar);
+        
+        if (result.success) {
+          console.log('✅ Información actualizada exitosamente');
+          
+          // Actualizar datos locales con la respuesta del servidor
+          this.formData = {
+            nombre: result.data.nombre || '',
+            email: result.data.email || '',
+            usuario: result.data.usuario || '',
+            telefono: result.data.telefono || '',
+            departamento: '',
+            rolTexto: result.data.rolTexto || ''
           };
           
-          // Actualizar en ambos storages si existen
-          if (localStorage.getItem('cloudtech_user')) {
-            localStorage.setItem('cloudtech_user', JSON.stringify(updatedUser));
-          }
-          if (sessionStorage.getItem('cloudtech_user')) {
-            sessionStorage.setItem('cloudtech_user', JSON.stringify(updatedUser));
+          this.originalData = { ...this.formData };
+          
+          // Sincronizar con localStorage/sessionStorage
+          ConfiguracionService.syncUserData(result.data);
+          
+          this.showNotification(
+            result.message || 'Información personal actualizada correctamente',
+            'success'
+          );
+          
+        } else {
+          console.log('❌ Error del servidor:', result.message);
+          
+          this.showNotification(
+            result.message || 'Error al guardar la información',
+            'error'
+          );
+          
+          // Manejar errores de validación específicos
+          if (result.errors) {
+            this.errors = {};
+            result.errors.forEach(error => {
+              this.errors[error.field] = error.message;
+            });
           }
         }
         
-        this.originalData = { ...this.formData };
-        this.mensajePersonal = {
-          texto: 'Información personal actualizada correctamente',
-          tipo: 'success'
-        };
-        
-        // Limpiar mensaje después de 5 segundos
-        setTimeout(() => {
-          this.mensajePersonal = { texto: '', tipo: '' };
-        }, 5000);
-        
       } catch (error) {
-        this.mensajePersonal = {
-          texto: 'Error al guardar la información. Intenta nuevamente.',
-          tipo: 'error'
-        };
-        console.error('Error al guardar:', error);
+        console.error('❌ Error de conexión:', error);
+        this.showNotification('Error de conexión. Intenta nuevamente.', 'error');
       } finally {
         this.isLoadingPersonal = false;
       }
@@ -523,35 +568,50 @@ export default {
       if (!this.validarContrasena()) return;
       
       this.isLoadingPassword = true;
-      this.mensajePassword = { texto: '', tipo: '' };
+      this.errors = {}; // Limpiar errores previos
       
       try {
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('🔐 Cambiando contraseña...');
         
-        // Aquí iría la validación de contraseña actual con el backend
-        // Por ahora simulamos que es correcta
-        console.log('Cambiando contraseña...');
-        
-        this.mensajePassword = {
-          texto: 'Contraseña cambiada exitosamente',
-          tipo: 'success'
+        const passwordData = {
+          actual: this.passwordData.actual,
+          nueva: this.passwordData.nueva,
+          confirmar: this.passwordData.confirmar
         };
         
-        // Limpiar formulario de contraseñas
-        this.cancelarCambiosPassword();
+        const result = await ConfiguracionService.cambiarContrasena(passwordData);
         
-        // Limpiar mensaje después de 5 segundos
-        setTimeout(() => {
-          this.mensajePassword = { texto: '', tipo: '' };
-        }, 5000);
+        if (result.success) {
+          console.log('✅ Contraseña cambiada exitosamente');
+          
+          this.showNotification(
+            result.message || 'Contraseña cambiada exitosamente',
+            'success'
+          );
+          
+          // Limpiar formulario de contraseñas
+          this.cancelarCambiosPassword();
+          
+        } else {
+          console.log('❌ Error cambiando contraseña:', result.message);
+          
+          this.showNotification(
+            result.message || 'Error al cambiar la contraseña',
+            'error'
+          );
+          
+          // Manejar errores de validación específicos
+          if (result.errors) {
+            this.errors = {};
+            result.errors.forEach(error => {
+              this.errors[error.field] = error.message;
+            });
+          }
+        }
         
       } catch (error) {
-        this.mensajePassword = {
-          texto: 'Error al cambiar la contraseña. Intenta nuevamente.',
-          tipo: 'error'
-        };
-        console.error('Error al cambiar contraseña:', error);
+        console.error('❌ Error de conexión:', error);
+        this.showNotification('Error de conexión. Intenta nuevamente.', 'error');
       } finally {
         this.isLoadingPassword = false;
       }
@@ -560,7 +620,7 @@ export default {
     cancelarCambiosPersonales() {
       this.formData = { ...this.originalData };
       this.errors = {};
-      this.mensajePersonal = { texto: '', tipo: '' };
+      this.showNotification('Cambios cancelados', 'info');
     },
     
     cancelarCambiosPassword() {
@@ -586,6 +646,32 @@ export default {
       // Formato hondureño: +504 0000-0000 o variaciones
       const phoneRegex = /^(\+504\s?)?[0-9]{4}-?[0-9]{4}$/;
       return phoneRegex.test(phone.replace(/\s/g, ''));
+    },
+    
+    // ==================== NOTIFICACIONES TOAST ====================
+    showNotification(message, type = 'success') {
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
+      
+      this.notification = {
+        show: true,
+        type,
+        message,
+        icon: icons[type] || icons.info
+      };
+      
+      // Auto-close después de 5 segundos
+      setTimeout(() => {
+        this.closeNotification();
+      }, 5000);
+    },
+    
+    closeNotification() {
+      this.notification.show = false;
     }
   }
 }
@@ -733,12 +819,6 @@ export default {
   box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
 }
 
-.form-input.readonly {
-  background: #f8f9fa;
-  color: #6c757d;
-  cursor: not-allowed;
-}
-
 .toggle-password {
   position: absolute;
   right: 1rem;
@@ -755,13 +835,6 @@ export default {
 .toggle-password:hover {
   background: rgba(0, 0, 0, 0.05);
   color: #3498db;
-}
-
-.form-help {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #6c757d;
-  font-style: italic;
 }
 
 .error-message {
@@ -830,33 +903,6 @@ export default {
   color: #27ae60;
 }
 
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 500;
-}
-
-.alert.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.alert.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.alert-icon {
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -908,60 +954,238 @@ export default {
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+ width: 20px;
+ height: 20px;
+ border: 2px solid rgba(255, 255, 255, 0.3);
+ border-top: 2px solid white;
+ border-radius: 50%;
+ animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
+}
+
+/* Notificaciones Toast */
+.notification {
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ padding: 1rem 1.5rem;
+ border-radius: 8px;
+ color: white;
+ font-weight: 500;
+ z-index: 3000;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ min-width: 300px;
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+ animation: slideInRight 0.3s ease-out;
+}
+
+.notification-success {
+ background: #27ae60;
+}
+
+.notification-error {
+ background: #e74c3c;
+}
+
+.notification-warning {
+ background: #f39c12;
+}
+
+.notification-info {
+ background: #3498db;
+}
+
+.notification-close {
+ background: none;
+ border: none;
+ color: white;
+ cursor: pointer;
+ padding: 0.25rem;
+ border-radius: 50%;
+ transition: all 0.3s ease;
+ margin-left: auto;
+}
+
+.notification-close:hover {
+ background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideInRight {
+ from {
+   opacity: 0;
+   transform: translateX(100%);
+ }
+ to {
+   opacity: 1;
+   transform: translateX(0);
+ }
+}
+
+/* Estados de carga */
+.btn.loading {
+ pointer-events: none;
+ opacity: 0.7;
+}
+
+.btn.loading i {
+ animation: spin 1s linear infinite;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .configuracion-container {
-    padding: 1rem;
-  }
-  
-  .page-title {
-    font-size: 2rem;
-  }
-  
-  .config-section {
-    padding: 1.5rem;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .form-actions {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-  }
+ .configuracion-container {
+   padding: 1rem;
+ }
+ 
+ .page-title {
+   font-size: 2rem;
+ }
+ 
+ .config-section {
+   padding: 1.5rem;
+ }
+ 
+ .form-grid {
+   grid-template-columns: 1fr;
+   gap: 1rem;
+ }
+ 
+ .form-actions {
+   flex-direction: column;
+ }
+ 
+ .btn {
+   width: 100%;
+ }
+ 
+ .notification {
+   right: 1rem;
+   left: 1rem;
+   min-width: auto;
+ }
 }
 
 @media (max-width: 480px) {
-  .section-title {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
-  }
-  
-  .password-requirements {
-    padding: 1rem;
-  }
-  
-  .form-actions {
-    gap: 0.75rem;
-  }
+ .section-title {
+   flex-direction: column;
+   gap: 0.5rem;
+   text-align: center;
+ }
+ 
+ .password-requirements {
+   padding: 1rem;
+ }
+ 
+ .form-actions {
+   gap: 0.75rem;
+ }
+ 
+ .notification {
+   top: 1rem;
+   right: 0.5rem;
+   left: 0.5rem;
+   padding: 0.75rem 1rem;
+   font-size: 0.9rem;
+ }
+}
+
+/* Animaciones adicionales */
+@keyframes fadeIn {
+ from {
+   opacity: 0;
+   transform: translateY(20px);
+ }
+ to {
+   opacity: 1;
+   transform: translateY(0);
+ }
+}
+
+.configuracion-container {
+ animation: fadeIn 0.5s ease-out;
+}
+
+.config-section {
+ animation: fadeIn 0.3s ease-out;
+}
+
+/* Mejoras de accesibilidad */
+.btn:focus,
+.form-input:focus,
+.toggle-password:focus {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+/* Transiciones suaves */
+* {
+ transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Estados de éxito y error para formularios */
+.form-group.success .form-input {
+ border-color: #27ae60;
+ box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+.form-group.error .form-input {
+ border-color: #e74c3c;
+ box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+/* Mejoras visuales */
+.btn:hover:not(:disabled) {
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Animación de salida para notificaciones */
+.notification.hide {
+ animation: slideOutRight 0.3s ease-in forwards;
+}
+
+@keyframes slideOutRight {
+ from {
+   opacity: 1;
+   transform: translateX(0);
+ }
+ to {
+   opacity: 0;
+   transform: translateX(100%);
+ }
+}
+
+/* Sombras mejoradas */
+.config-section {
+ box-shadow: 
+   0 1px 3px rgba(0, 0, 0, 0.12),
+   0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.config-section:hover {
+ box-shadow: 
+   0 14px 28px rgba(0, 0, 0, 0.25),
+   0 10px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+ .btn {
+   padding: 1rem 1.5rem;
+ }
+ 
+ .toggle-password {
+   padding: 0.75rem;
+ }
+ 
+ .form-input {
+   padding: 1rem;
+ }
 }
 </style>

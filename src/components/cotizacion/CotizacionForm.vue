@@ -1,5 +1,13 @@
 <template>
   <div class="cotizacion-form-container">
+    <!-- Loading overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>{{ loadingMessage }}</p>
+      </div>
+    </div>
+
     <!-- Selector de años global -->
     <div class="años-selector">
       <div class="años-container">
@@ -52,7 +60,7 @@
               type="text" 
               placeholder="Buscar por nombre o descripción..."
               class="input-busqueda"
-              @input="resetearPaginacion"
+              @input="buscarServicios"
             >
             <button 
               v-if="filtros.busqueda" 
@@ -71,7 +79,7 @@
             <i class="fas fa-tags"></i>
             Categoría:
           </label>
-          <select v-model="filtros.categoria" @change="resetearPaginacion" class="select-categoria">
+          <select v-model="filtros.categoria" @change="filtrarPorCategoria" class="select-categoria">
             <option value="">Todas las categorías</option>
             <option v-for="categoria in categoriasDisponibles" :key="categoria.value" :value="categoria.value">
               {{ categoria.label }}
@@ -79,7 +87,19 @@
           </select>
         </div>
 
-       
+        <!-- Filtro por precio -->
+        <div class="precio-filter">
+          <label>
+            <i class="fas fa-dollar-sign"></i>
+            Rango de precio:
+          </label>
+          <select v-model="filtros.rangoPrecio" @change="filtrarPorPrecio" class="select-precio">
+            <option value="">Todos los precios</option>
+            <option value="economico">Económico (menor a $. 1,000)</option>
+            <option value="medio">Medio ($. 1,000 - $. 5,000)</option>
+            <option value="premium">Premium (mayor a $. 5,000)</option>
+          </select>
+        </div>
 
         <!-- Botón limpiar filtros -->
         <div class="filtros-actions">
@@ -119,17 +139,17 @@
       </div>
 
       <!-- Grid de servicios -->
-      <div class="servicios-grid" v-if="serviciosPaginados.length > 0">
+      <div class="servicios-grid" v-if="serviciosPaginados.length > 0" :class="{ loading: loadingServicios }">
         <ServicioItem
           v-for="servicio in serviciosPaginados"
-          :key="servicio.id"
+          :key="servicio.servicios_id"
           :servicio="servicio"
-          v-model="cantidades[servicio.id]"
-          :cantidadEquipos="cantidadesEquipos[servicio.id]"
-          :precioVenta="preciosVenta[servicio.id]"
+          v-model="cantidades[servicio.servicios_id]"
+          :cantidadEquipos="cantidadesEquipos[servicio.servicios_id]"
+          :precioVenta="preciosVenta[servicio.servicios_id]"
           :añosContrato="añosContrato"
-          @update:cantidadEquipos="actualizarCantidadEquipos(servicio.id, $event)"
-          @update:precioVenta="actualizarPrecioVenta(servicio.id, $event)"
+          @update:cantidadEquipos="actualizarCantidadEquipos(servicio.servicios_id, $event)"
+          @update:precioVenta="actualizarPrecioVenta(servicio.servicios_id, $event)"
         />
       </div>
 
@@ -219,12 +239,22 @@
       </div>
     </div>
 
+    <!-- Error message -->
+    <div v-if="error" class="error-message">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ error }}
+      <button @click="recargarServicios" class="btn-reintentar">
+        <i class="fas fa-redo"></i>
+        Reintentar
+      </button>
+    </div>
+
     <div class="form-actions">
-      <button @click="calcularCotizacion" class="btn-calcular" :disabled="!hayServicios">
+      <button @click="calcularCotizacion" class="btn-calcular" :disabled="!hayServicios || loading">
         <i class="fas fa-calculator"></i>
         Calcular Cotización
       </button>
-      <button @click="limpiarFormulario" class="btn-limpiar">
+      <button @click="limpiarFormulario" class="btn-limpiar" :disabled="loading">
         <i class="fas fa-trash-alt"></i>
         Limpiar Todo
       </button>
@@ -240,10 +270,10 @@
 </template>
 
 <script>
-import { reactive } from 'vue'
-import ServicioItem from './ServicioItem.vue';
-import ResultadoCotizacion from './ResultadoCotizacion.vue';
-import { servicios } from '@/data/servicios.js';
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import ServicioItem from './ServicioItem.vue'
+import ResultadoCotizacion from './ResultadoCotizacion.vue'
+import serviciosService from '@/services/serviciosService'
 
 export default {
   name: 'CotizacionForm',
@@ -252,261 +282,420 @@ export default {
     ResultadoCotizacion
   },
   setup() {
-    const cantidades = reactive({});
-    const cantidadesEquipos = reactive({});
-    const preciosVenta = reactive({});
+    // Estados reactivos
+    const servicios = ref([])
+    const serviciosOriginales = ref([])
+    const loading = ref(false)
+    const loadingServicios = ref(false)
+    const loadingMessage = ref('')
+    const error = ref('')
     
+    const cantidades = reactive({})
+    const cantidadesEquipos = reactive({})
+    const preciosVenta = reactive({})
+    
+    const serviciosSeleccionados = ref([])
+    const añosContrato = ref(1)
+    
+    // Filtros
+    const filtros = reactive({
+      busqueda: '',
+      categoria: '',
+      rangoPrecio: ''
+    })
+    
+    // Paginación
+    const paginaActual = ref(1)
+    const serviciosPorPagina = ref(9)
+    const paginaInput = ref(1)
+    
+    // Cache para búsquedas
+    const cacheResultados = reactive({})
+    const timeoutBusqueda = ref(null)
+
+    // Función para resetear paginación
+    const resetearPaginacion = () => {
+      paginaActual.value = 1
+      paginaInput.value = 1
+    }
+
+    // Función para cargar servicios desde el backend
+    const cargarServicios = async (params = {}) => {
+      try {
+        loading.value = true
+        loadingMessage.value = 'Cargando servicios...'
+        error.value = ''
+
+        console.log('🔄 Iniciando carga de servicios...')
+
+        const resultado = await serviciosService.getServicios({
+          estado: 'activo',
+          limit: 100,
+          ...params
+        })
+
+        console.log('📊 Resultado del backend:', resultado)
+
+        if (resultado.success) {
+          // Formatear servicios usando el helper del servicio
+          servicios.value = resultado.servicios.map(servicio => {
+            const servicioFormateado = serviciosService.formatServicioDisplay(servicio)
+            console.log('📝 Servicio formateado:', servicioFormateado)
+            return servicioFormateado
+          })
+          
+          serviciosOriginales.value = [...servicios.value]
+          inicializarDatos()
+          console.log('✅ Servicios cargados:', servicios.value.length)
+        } else {
+          throw new Error(resultado.message || 'Error cargando servicios')
+        }
+      } catch (err) {
+        console.error('❌ Error cargando servicios:', err)
+        error.value = err.message || 'Error al cargar los servicios. Verifique su conexión.'
+        servicios.value = []
+      } finally {
+        loading.value = false
+        loadingMessage.value = ''
+      }
+    }
+
+    // Función para buscar servicios con debounce
+    const buscarServicios = async () => {
+      const termino = filtros.busqueda.trim()
+      
+      if (timeoutBusqueda.value) {
+        clearTimeout(timeoutBusqueda.value)
+      }
+
+      if (!termino) {
+        servicios.value = [...serviciosOriginales.value]
+        aplicarFiltros()
+        return
+      }
+
+      if (cacheResultados[termino]) {
+        servicios.value = cacheResultados[termino]
+        aplicarFiltros()
+        return
+      }
+
+      timeoutBusqueda.value = setTimeout(async () => {
+        try {
+          loadingServicios.value = true
+          
+          const resultado = await serviciosService.searchServicios(termino, 50)
+          
+          if (resultado.success) {
+            const serviciosFormateados = resultado.servicios.map(serviciosService.formatServicioDisplay)
+            cacheResultados[termino] = serviciosFormateados
+            servicios.value = serviciosFormateados
+            aplicarFiltros()
+            console.log(`🔍 Búsqueda "${termino}": ${serviciosFormateados.length} resultados`)
+          } else {
+            throw new Error(resultado.message)
+          }
+        } catch (err) {
+          console.error('❌ Error en búsqueda:', err)
+          error.value = 'Error en la búsqueda de servicios'
+        } finally {
+          loadingServicios.value = false
+        }
+      }, 300)
+    }
+
+    // Función para aplicar filtros locales
+    const aplicarFiltros = () => {
+      resetearPaginacion()
+    }
+
+    // Función para filtrar por categoría
+    const filtrarPorCategoria = () => {
+      aplicarFiltros()
+    }
+
+    // Función para filtrar por precio
+    const filtrarPorPrecio = () => {
+      aplicarFiltros()
+    }
+
+    // Función para inicializar datos reactivos
     const inicializarDatos = () => {
-      servicios.forEach(servicio => {
-        cantidades[servicio.id] = 0;
-        cantidadesEquipos[servicio.id] = 0;
-        preciosVenta[servicio.id] = servicio.precioVenta || 0;
-      });
-    };
+      servicios.value.forEach(servicio => {
+        const id = servicio.servicios_id
+        if (!(id in cantidades)) {
+          cantidades[id] = 0
+          cantidadesEquipos[id] = 0
+          preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+        }
+      })
+    }
 
-    inicializarDatos();
+    // Función para recargar servicios
+    const recargarServicios = () => {
+      cargarServicios()
+    }
 
-    return {
-      cantidades,
-      cantidadesEquipos,
-      preciosVenta,
-      inicializarDatos
-    };
-  },
-  data() {
-    return {
-      servicios,
-      serviciosSeleccionados: [],
-      añosContrato: 1,
-      
-      // Filtros
-      filtros: {
-        busqueda: '',
-        categoria: '',
-        rangoPrecio: ''
-      },
-      
-      // Paginación
-      paginaActual: 1,
-      serviciosPorPagina: 9,
-      paginaInput: 1
-    };
-  },
-  computed: {
-    // Categorías disponibles
-    categoriasDisponibles() {
-      const categorias = [...new Set(this.servicios.map(s => s.categoria))];
+    // Computed properties
+    const categoriasDisponibles = computed(() => {
+      const categorias = [...new Set(servicios.value.map(s => s.categoria?.nombre || 'Sin categoría'))]
       return categorias.map(cat => ({
         value: cat,
-        label: this.obtenerNombreCategoria(cat)
-      }));
-    },
+        label: cat
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    })
 
-    // Servicios filtrados
-    serviciosFiltrados() {
-      let filtrados = [...this.servicios];
+    const serviciosFiltrados = computed(() => {
+      let filtrados = [...servicios.value]
 
-      // Filtro de búsqueda
-      if (this.filtros.busqueda) {
-        const termino = this.filtros.busqueda.toLowerCase();
+      if (filtros.categoria) {
         filtrados = filtrados.filter(servicio => 
-          servicio.nombre.toLowerCase().includes(termino) ||
-          servicio.descripcion.toLowerCase().includes(termino) ||
-          servicio.equipos.toLowerCase().includes(termino)
-        );
+          (servicio.categoria?.nombre || 'Sin categoría') === filtros.categoria
+        )
       }
 
-      // Filtro de categoría
-      if (this.filtros.categoria) {
-        filtrados = filtrados.filter(servicio => servicio.categoria === this.filtros.categoria);
-      }
-
-      // Filtro de rango de precio
-      if (this.filtros.rangoPrecio) {
+      if (filtros.rangoPrecio) {
         filtrados = filtrados.filter(servicio => {
-          const precio = servicio.precioModerado;
-          switch (this.filtros.rangoPrecio) {
+          const precio = servicio.precio_recomendado || servicio.precio_minimo || 0
+          switch (filtros.rangoPrecio) {
             case 'economico':
-              return precio < 500;
+              return precio < 1000
             case 'medio':
-              return precio >= 500 && precio <= 1000;
+              return precio >= 1000 && precio <= 5000
             case 'premium':
-              return precio > 1000;
+              return precio > 5000
             default:
-              return true;
+              return true
           }
-        });
+        })
       }
 
-      return filtrados;
-    },
+      return filtrados
+    })
 
-    // Paginación
-    totalPaginas() {
-      return Math.ceil(this.serviciosFiltrados.length / this.serviciosPorPagina);
-    },
+    const totalPaginas = computed(() => {
+      return Math.ceil(serviciosFiltrados.value.length / serviciosPorPagina.value)
+    })
 
-    serviciosPaginados() {
-      const inicio = (this.paginaActual - 1) * this.serviciosPorPagina;
-      const fin = inicio + this.serviciosPorPagina;
-      return this.serviciosFiltrados.slice(inicio, fin);
-    },
+    const serviciosPaginados = computed(() => {
+      const inicio = (paginaActual.value - 1) * serviciosPorPagina.value
+      const fin = inicio + serviciosPorPagina.value
+      return serviciosFiltrados.value.slice(inicio, fin)
+    })
 
-    paginasVisibles() {
-      const total = this.totalPaginas;
-      const actual = this.paginaActual;
-      const rango = 2; // Mostrar 2 páginas a cada lado de la actual
+    const paginasVisibles = computed(() => {
+      const total = totalPaginas.value
+      const actual = paginaActual.value
+      const rango = 2
 
-      let inicio = Math.max(1, actual - rango);
-      let fin = Math.min(total, actual + rango);
+      let inicio = Math.max(1, actual - rango)
+      let fin = Math.min(total, actual + rango)
 
-      // Ajustar si estamos cerca del inicio o fin
       if (fin - inicio < rango * 2) {
         if (inicio === 1) {
-          fin = Math.min(total, inicio + rango * 2);
+          fin = Math.min(total, inicio + rango * 2)
         } else if (fin === total) {
-          inicio = Math.max(1, fin - rango * 2);
+          inicio = Math.max(1, fin - rango * 2)
         }
       }
 
-      const paginas = [];
+      const paginas = []
       for (let i = inicio; i <= fin; i++) {
-        paginas.push(i);
+        paginas.push(i)
       }
-      return paginas;
-    },
+      return paginas
+    })
 
-    // Estados
-    hayFiltrosActivos() {
-      return this.filtros.busqueda || this.filtros.categoria || this.filtros.rangoPrecio;
-    },
+    const hayFiltrosActivos = computed(() => {
+      return filtros.busqueda || filtros.categoria || filtros.rangoPrecio
+    })
 
-    hayServicios() {
-      return Object.values(this.cantidades).some(cantidad => cantidad > 0) ||
-             Object.values(this.cantidadesEquipos).some(cantidad => cantidad > 0);
+    const hayServicios = computed(() => {
+      return Object.values(cantidades).some(cantidad => cantidad > 0) ||
+             Object.values(cantidadesEquipos).some(cantidad => cantidad > 0)
+    })
+
+    // Métodos
+    const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
+      cantidadesEquipos[servicioId] = nuevaCantidad || 0
     }
-  },
-  methods: {
-    // Métodos de años
-    actualizarCantidadEquipos(servicioId, nuevaCantidad) {
-      this.cantidadesEquipos[servicioId] = nuevaCantidad || 0;
-    },
-    actualizarPrecioVenta(servicioId, nuevoPrecio) {
-      this.preciosVenta[servicioId] = nuevoPrecio || 0;
-    },
-    incrementarAños() {
-      if (this.añosContrato < 10) {
-        this.añosContrato++;
+    
+    const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
+      preciosVenta[servicioId] = nuevoPrecio || 0
+    }
+    
+    const incrementarAños = () => {
+      if (añosContrato.value < 10) {
+        añosContrato.value++
       }
-    },
-    decrementarAños() {
-      if (this.añosContrato > 1) {
-        this.añosContrato--;
+    }
+    
+    const decrementarAños = () => {
+      if (añosContrato.value > 1) {
+        añosContrato.value--
       }
-    },
-    validarAños() {
-      if (this.añosContrato < 1) {
-        this.añosContrato = 1;
-      } else if (this.añosContrato > 10) {
-        this.añosContrato = 10;
+    }
+    
+    const validarAños = () => {
+      if (añosContrato.value < 1) {
+        añosContrato.value = 1
+      } else if (añosContrato.value > 10) {
+        añosContrato.value = 10
       }
-    },
+    }
 
-    // Métodos de filtros
-    obtenerNombreCategoria(categoria) {
-      const nombres = {
-        hosting: 'Hosting',
-        database: 'Base de Datos',
-        cdn: 'CDN',
-        backup: 'Backup',
-        monitoring: 'Monitoreo',
-        'load-balancer': 'Balanceador',
-        security: 'Seguridad'
-      };
-      return nombres[categoria] || categoria.charAt(0).toUpperCase() + categoria.slice(1);
-    },
+    const limpiarBusqueda = () => {
+      filtros.busqueda = ''
+      servicios.value = [...serviciosOriginales.value]
+      aplicarFiltros()
+    }
 
-    limpiarBusqueda() {
-      this.filtros.busqueda = '';
-      this.resetearPaginacion();
-    },
+    const limpiarFiltros = () => {
+      filtros.busqueda = ''
+      filtros.categoria = ''
+      filtros.rangoPrecio = ''
+      servicios.value = [...serviciosOriginales.value]
+      resetearPaginacion()
+    }
 
-    limpiarFiltros() {
-      this.filtros = {
-        busqueda: '',
-        categoria: '',
-        rangoPrecio: ''
-      };
-      this.resetearPaginacion();
-    },
-
-    // Métodos de paginación
-    resetearPaginacion() {
-      this.paginaActual = 1;
-      this.paginaInput = 1;
-    },
-
-    cambiarPagina(pagina) {
-      if (pagina >= 1 && pagina <= this.totalPaginas) {
-        this.paginaActual = pagina;
-        this.paginaInput = pagina;
-        // Scroll suave al inicio de los servicios
-        this.$nextTick(() => {
-          const elemento = this.$el.querySelector('.servicios-section');
+    const cambiarPagina = (pagina) => {
+      if (pagina >= 1 && pagina <= totalPaginas.value) {
+        paginaActual.value = pagina
+        paginaInput.value = pagina
+        nextTick(() => {
+          const elemento = document.querySelector('.servicios-section')
           if (elemento) {
-            elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            elemento.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }
-        });
+        })
       }
-    },
+    }
 
-    irAPagina() {
-      if (this.paginaInput >= 1 && this.paginaInput <= this.totalPaginas) {
-        this.cambiarPagina(this.paginaInput);
+    const irAPagina = () => {
+      if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
+        cambiarPagina(paginaInput.value)
       } else {
-        this.paginaInput = this.paginaActual;
+        paginaInput.value = paginaActual.value
       }
-    },
+    }
 
-    // Métodos principales
-    calcularCotizacion() {
-      this.serviciosSeleccionados = this.servicios
+    const calcularCotizacion = () => {
+      serviciosSeleccionados.value = servicios.value
         .filter(servicio => 
-          this.cantidades[servicio.id] > 0 || 
-          this.cantidadesEquipos[servicio.id] > 0
+          cantidades[servicio.servicios_id] > 0 || 
+          cantidadesEquipos[servicio.servicios_id] > 0
         )
         .map(servicio => {
-          const precioVentaFinal = this.preciosVenta[servicio.id] || servicio.precioModerado;
+          const id = servicio.servicios_id
+          const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
+          
           return {
-            servicio,
-            cantidadServidores: this.cantidades[servicio.id],
-            cantidadEquipos: this.cantidadesEquipos[servicio.id],
+            servicio: {
+              servicios_id: id,
+              nombre: servicio.nombre,
+              categoria: servicio.categoria?.nombre || 'Sin categoría',
+              precioMinimo: servicio.precio_minimo,
+              precio_recomendado: servicio.precio_recomendado,
+              descripcion: servicio.descripcion
+            },
+            cantidadServidores: cantidades[id] || 0,
+            cantidadEquipos: cantidadesEquipos[id] || 0,
             precioVentaFinal,
-            añosContrato: this.añosContrato
-          };
-        });
-    },
+            añosContrato: añosContrato.value
+          }
+        })
 
-    limpiarFormulario() {
-      this.servicios.forEach(servicio => {
-        this.cantidades[servicio.id] = 0;
-        this.cantidadesEquipos[servicio.id] = 0;
-        this.preciosVenta[servicio.id] = servicio.precioVenta || 0;
-      });
-      this.serviciosSeleccionados = [];
-      this.añosContrato = 1;
-      // No limpiar filtros al limpiar formulario
+      console.log('📋 Servicios seleccionados:', serviciosSeleccionados.value)
     }
-  },
 
-  // Watcher para mantener paginaInput sincronizado
-  watch: {
-    paginaActual(newVal) {
-      this.paginaInput = newVal;
+    const limpiarFormulario = () => {
+      servicios.value.forEach(servicio => {
+        const id = servicio.servicios_id
+        cantidades[id] = 0
+        cantidadesEquipos[id] = 0
+        preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+      })
+      
+      serviciosSeleccionados.value = []
+      añosContrato.value = 1
+      
+      console.log('🧹 Formulario limpiado')
+    }
+
+    // Cargar servicios al montar el componente
+    onMounted(() => {
+      console.log('🚀 Componente montado, cargando servicios...')
+      cargarServicios()
+    })
+
+    // Watchers
+    watch([() => filtros.categoria, () => filtros.rangoPrecio], () => {
+      if (filtros.busqueda) {
+        const terminoBusqueda = filtros.busqueda
+        filtros.busqueda = ''
+        nextTick(() => {
+          filtros.busqueda = terminoBusqueda
+          buscarServicios()
+        })
+      }
+    })
+
+    watch(paginaActual, (newVal) => {
+      paginaInput.value = newVal
+    })
+
+    return {
+      // Estados
+      servicios,
+      serviciosOriginales,
+      loading,
+      loadingServicios,
+      loadingMessage,
+      error,
+      cantidades,
+      cantidadesEquipos,
+      preciosVenta,
+      serviciosSeleccionados,
+      añosContrato,
+      filtros,
+      paginaActual,
+      serviciosPorPagina,
+      paginaInput,
+      
+      // Computed
+      categoriasDisponibles,
+      serviciosFiltrados,
+      totalPaginas,
+      serviciosPaginados,
+      paginasVisibles,
+      hayFiltrosActivos,
+      hayServicios,
+      
+      // Funciones
+      cargarServicios,
+      buscarServicios,
+      aplicarFiltros,
+      filtrarPorCategoria,
+      filtrarPorPrecio,
+      inicializarDatos,
+      recargarServicios,
+      resetearPaginacion,
+      actualizarCantidadEquipos,
+      actualizarPrecioVenta,
+      incrementarAños,
+      decrementarAños,
+      validarAños,
+      limpiarBusqueda,
+      limpiarFiltros,
+      cambiarPagina,
+      irAPagina,
+      calcularCotizacion,
+      limpiarFormulario
     }
   }
 }
 </script>
+
 
 <style scoped>
 .cotizacion-form-container {

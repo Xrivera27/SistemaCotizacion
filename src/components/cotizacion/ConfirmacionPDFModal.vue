@@ -1,10 +1,17 @@
-<!-- components/ConfirmacionPDFModal.vue -->
 <template>
   <div v-if="mostrar" class="modal-overlay" @click.self="cerrar">
     <div class="modal-container">
+      <!-- Loading overlay -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>{{ loadingMessage }}</p>
+        </div>
+      </div>
+
       <div class="modal-header">
         <h3>
-          
+          <i class="fas fa-file-pdf"></i>
           Confirmar Generación de PDF
         </h3>
         <button @click="cerrar" class="btn-cerrar">
@@ -13,25 +20,46 @@
       </div>
 
       <div class="modal-content">
+        <!-- Error message -->
+        <div v-if="error" class="error-message">
+          <i class="fas fa-exclamation-triangle"></i>
+          {{ error }}
+          <button @click="limpiarError" class="btn-cerrar-error">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Success message -->
+        <div v-if="successMessage" class="success-message">
+          <i class="fas fa-check-circle"></i>
+          {{ successMessage }}
+          <button @click="limpiarSuccess" class="btn-cerrar-success">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
         <!-- Información del cliente -->
         <div class="cliente-seleccionado">
           <h4>Cliente Seleccionado</h4>
           <div v-if="cliente" class="cliente-info">
             <div class="info-item">
-              <strong>{{ cliente.nombreEncargado }}</strong>
-              <span>{{ cliente.nombreEmpresa }}</span>
+              <strong>{{ cliente.nombreEncargado || cliente.nombre_encargado }}</strong>
+              <span>{{ cliente.nombreEmpresa || cliente.nombre_empresa }}</span>
+              <small v-if="cliente.documentofiscal || cliente.documento_fiscal">
+                RTN: {{ formatRTN(cliente.documentofiscal || cliente.documento_fiscal) }}
+              </small>
             </div>
             <!-- Botones para gestionar cliente -->
             <div class="cliente-actions">
-              <button @click="editarCliente" class="btn-editar" title="Editar cliente">
+              <button @click="editarCliente" class="btn-editar" title="Editar cliente" :disabled="loading">
                 <i class="fas fa-edit"></i>
                 Editar
               </button>
-              <button @click="cambiarCliente" class="btn-cambiar" title="Cambiar cliente">
+              <button @click="cambiarCliente" class="btn-cambiar" title="Cambiar cliente" :disabled="loading">
                 <i class="fas fa-exchange-alt"></i>
                 Cambiar
               </button>
-              <button @click="removerCliente" class="btn-remover" title="Quitar cliente">
+              <button @click="removerCliente" class="btn-remover" title="Quitar cliente" :disabled="loading">
                 <i class="fas fa-times"></i>
                 Quitar
               </button>
@@ -39,7 +67,7 @@
           </div>
           <div v-else class="sin-cliente">
             <p>No hay cliente seleccionado</p>
-            <button @click="buscarCliente" class="btn-buscar-cliente">
+            <button @click="buscarCliente" class="btn-buscar-cliente" :disabled="loading">
               <i class="fas fa-search"></i>
               Buscar/Agregar Cliente
             </button>
@@ -53,15 +81,15 @@
             <strong>Precios por debajo del mínimo detectados</strong>
           </div>
           <div class="servicios-problematicos">
-            <div v-for="item in preciosPorDebajoMinimo" :key="item.servicio.id" class="servicio-problema">
+            <div v-for="item in preciosPorDebajoMinimo" :key="item.servicio.servicios_id" class="servicio-problema">
               <span class="servicio-nombre">{{ item.servicio.nombre }}</span>
-              <span class="precio-actual">Actual: ${{ item.precioVentaFinal }}</span>
-              <span class="precio-minimo">Mínimo: ${{ item.servicio.precioMinimo }}</span>
+              <span class="precio-actual">Actual: {{ formatCurrency(item.precioVentaFinal) }}</span>
+              <span class="precio-minimo">Mínimo: {{ formatCurrency(item.servicio.precioMinimo || item.servicio.precio_minimo) }}</span>
             </div>
           </div>
           <div class="accion-requerida">
             <p><strong>Esta cotización requiere aprobación</strong></p>
-            <p>No se puede generar PDF hasta que se apruebe o se ajusten los precios.</p>
+            <p>Se guardará para revisión administrativa. No se puede generar PDF hasta que se apruebe.</p>
           </div>
         </div>
 
@@ -72,56 +100,62 @@
             <label class="checkbox-option">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.nombreEncargado"
+                v-model="configuracionPDF.incluirNombreEncargado"
               >
               <span class="checkmark"></span>
-              Nombre del Encargado: {{ cliente.nombreEncargado }}
+              Nombre del Encargado: {{ cliente.nombreEncargado || cliente.nombre_encargado }}
             </label>
 
             <label class="checkbox-option">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.nombreEmpresa"
+                v-model="configuracionPDF.incluirNombreEmpresa"
               >
               <span class="checkmark"></span>
-              Nombre de la Empresa: {{ cliente.nombreEmpresa }}
+              Nombre de la Empresa: {{ cliente.nombreEmpresa || cliente.nombre_empresa }}
             </label>
 
-            <label class="checkbox-option">
+            <label class="checkbox-option" v-if="cliente.documentofiscal || cliente.documento_fiscal">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.documentofiscal"
+                v-model="configuracionPDF.incluirDocumentoFiscal"
               >
               <span class="checkmark"></span>
-              Documento Fiscal: {{ cliente.documentofiscal }}
+              Documento Fiscal: {{ formatRTN(cliente.documentofiscal || cliente.documento_fiscal) }}
             </label>
 
-            <label class="checkbox-option">
+            <label class="checkbox-option" v-if="cliente.telefonoEmpresa || cliente.telefono_empresa">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.telefonoEmpresa"
+                v-model="configuracionPDF.incluirTelefonoEmpresa"
               >
               <span class="checkmark"></span>
-              Teléfono Empresa: {{ cliente.telefonoEmpresa }}
+              Teléfono Empresa: {{ formatTelefono(cliente.telefonoEmpresa || cliente.telefono_empresa) }}
             </label>
 
-            <label class="checkbox-option">
+            <label class="checkbox-option" v-if="cliente.correoEmpresa || cliente.correo_empresa">
               <input 
                 type="checkbox" 
-                v-model="incluirInfo.correoEmpresa"
+                v-model="configuracionPDF.incluirCorreoEmpresa"
               >
               <span class="checkmark"></span>
-              Correo Empresa: {{ cliente.correoEmpresa }}
+              Correo Empresa: {{ cliente.correoEmpresa || cliente.correo_empresa }}
             </label>
           </div>
         </div>
+
+       
 
         <!-- Resumen de cotización -->
         <div v-if="cliente" class="resumen-cotizacion">
           <h4>Resumen de Cotización</h4>
           <div class="resumen-item">
+            <span>Servicios:</span>
+            <strong>{{ serviciosSeleccionados.length }} servicio{{ serviciosSeleccionados.length > 1 ? 's' : '' }}</strong>
+          </div>
+          <div class="resumen-item">
             <span>Precio Total:</span>
-            <strong>${{ precioTotal.toLocaleString() }}</strong>
+            <strong>{{ formatCurrency(precioTotal) }}</strong>
           </div>
           <div class="resumen-item">
             <span>Duración:</span>
@@ -131,21 +165,26 @@
             <span>Tipo de Precio:</span>
             <strong>{{ tipoPrecio === 'minimo' ? 'Precio Mínimo' : 'Precio de Venta' }}</strong>
           </div>
+          <div class="resumen-item" v-if="comentario.trim()">
+            <span>Comentarios:</span>
+            <strong>{{ comentario.substring(0, 50) }}{{ comentario.length > 50 ? '...' : '' }}</strong>
+          </div>
         </div>
 
         <!-- Acciones -->
         <div class="modal-actions">
-          <button @click="cancelar" class="btn-cancelar">
-            
+          <button @click="cancelar" class="btn-cancelar" :disabled="loading">
+            <i class="fas fa-times"></i>
             Cancelar
           </button>
 
           <button 
-            v-if="preciosPorDebajoMinimo.length > 0"
+            v-if="preciosPorDebajoMinimo.length > 0 && cliente"
             @click="guardarCotizacion"
             class="btn-guardar"
+            :disabled="loading"
           >
-           
+            <i class="fas fa-save"></i>
             Guardar para Aprobación
           </button>
 
@@ -153,7 +192,7 @@
             v-if="cliente && preciosPorDebajoMinimo.length === 0"
             @click="confirmarPDF"
             class="btn-generar"
-            :disabled="!hayInformacionSeleccionada"
+            :disabled="!hayInformacionSeleccionada || loading"
           >
             <i class="fas fa-file-pdf"></i>
             Generar PDF
@@ -163,8 +202,9 @@
             v-if="!cliente"
             @click="buscarCliente"
             class="btn-buscar"
+            :disabled="loading"
           >
-           
+            <i class="fas fa-search"></i>
             Seleccionar Cliente
           </button>
         </div>
@@ -177,12 +217,16 @@
       :cliente-seleccionado="clienteParaEditar"
       @cerrar="cerrarModalCliente"
       @cliente-seleccionado="onClienteSeleccionado"
+      @cliente-creado="onClienteCreado"
+      @cliente-actualizado="onClienteActualizado"
     />
   </div>
 </template>
 
 <script>
-import BuscarClienteModal from './BuscarClienteModal.vue';
+import { ref, computed, watch } from 'vue'
+import BuscarClienteModal from './BuscarClienteModal.vue'
+import clientesService from '@/services/clientes'
 
 export default {
   name: 'ConfirmacionPDFModal',
@@ -212,130 +256,348 @@ export default {
     }
   },
   emits: ['cerrar', 'generar-pdf', 'guardar-cotizacion', 'limpiar-formulario'],
-  data() {
-    return {
-      cliente: null,
-      mostrarModalCliente: false,
-      clienteParaEditar: null, // Para pasar al modal cuando editamos
-      incluirInfo: {
-        nombreEncargado: true,
-        nombreEmpresa: true,
-        documentofiscal: false,
-        telefonoEmpresa: false,
-        correoEmpresa: true
-      }
-    };
-  },
-  computed: {
-    preciosPorDebajoMinimo() {
-      return this.serviciosSeleccionados.filter(item => {
-        const totalUnidades = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
-        return totalUnidades > 0 && item.precioVentaFinal < item.servicio.precioMinimo;
-      });
-    },
-    hayInformacionSeleccionada() {
-      return Object.values(this.incluirInfo).some(valor => valor);
+  setup(props, { emit }) {
+    // Estados reactivos
+    const cliente = ref(null)
+    const mostrarModalCliente = ref(false)
+    const clienteParaEditar = ref(null)
+    const comentario = ref('')
+    const loading = ref(false)
+    const loadingMessage = ref('')
+    const error = ref('')
+    const successMessage = ref('')
+
+    // Configuración del PDF con valores por defecto
+    const configuracionPDF = ref({
+      incluirNombreEncargado: true,
+      incluirNombreEmpresa: true,
+      incluirDocumentoFiscal: false,
+      incluirTelefonoEmpresa: false,
+      incluirCorreoEmpresa: true
+    })
+
+    // Computed properties
+    const preciosPorDebajoMinimo = computed(() => {
+      return props.serviciosSeleccionados.filter(item => {
+        const totalUnidades = esServicioBackup(item.servicio) 
+          ? (item.cantidadServidores || 0)
+          : (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
+        const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
+        return totalUnidades > 0 && item.precioVentaFinal < precioMinimo
+      })
+    })
+
+    const hayInformacionSeleccionada = computed(() => {
+      return Object.values(configuracionPDF.value).some(valor => valor)
+    })
+
+    // Métodos
+    const esServicioBackup = (servicio) => {
+      const categoria = servicio.categoria?.toLowerCase() || ''
+      return categoria.includes('backup') || categoria.includes('respaldo')
     }
-  },
-  methods: {
-    cerrar() {
-      this.$emit('cerrar');
-    },
-    cancelar() {
-      this.cliente = null;
-      this.clienteParaEditar = null;
-      this.cerrar();
-    },
-    buscarCliente() {
-      this.clienteParaEditar = null; // Modo agregar nuevo
-      this.mostrarModalCliente = true;
-    },
-    editarCliente() {
-      if (this.cliente) {
-        this.clienteParaEditar = { ...this.cliente }; // Copia para editar
-        this.mostrarModalCliente = true;
+
+    const formatCurrency = (amount) => {
+      return clientesService.formatPrice(amount || 0)
+    }
+
+    const formatRTN = (rtn) => {
+      return clientesService.formatRTN(rtn)
+    }
+
+    const formatTelefono = (telefono) => {
+      return clientesService.formatTelefono(telefono)
+    }
+
+    const limpiarError = () => {
+      error.value = ''
+    }
+
+    const limpiarSuccess = () => {
+      successMessage.value = ''
+    }
+
+    const resetearEstados = () => {
+      cliente.value = null
+      clienteParaEditar.value = null
+      comentario.value = ''
+      error.value = ''
+      successMessage.value = ''
+      configuracionPDF.value = {
+        incluirNombreEncargado: true,
+        incluirNombreEmpresa: true,
+        incluirDocumentoFiscal: false,
+        incluirTelefonoEmpresa: false,
+        incluirCorreoEmpresa: true
       }
-    },
-    cambiarCliente() {
-      this.clienteParaEditar = null; // Modo buscar/cambiar
-      this.mostrarModalCliente = true;
-    },
-    removerCliente() {
+    }
+
+    const cerrar = () => {
+      if (!loading.value) {
+        resetearEstados()
+        emit('cerrar')
+      }
+    }
+
+    const cancelar = () => {
+      if (!loading.value) {
+        resetearEstados()
+        emit('cerrar')
+      }
+    }
+
+    const buscarCliente = () => {
+      clienteParaEditar.value = null // Modo agregar nuevo
+      mostrarModalCliente.value = true
+    }
+
+    const editarCliente = () => {
+      if (cliente.value) {
+        clienteParaEditar.value = { ...cliente.value } // Copia para editar
+        mostrarModalCliente.value = true
+      }
+    }
+
+    const cambiarCliente = () => {
+      clienteParaEditar.value = null // Modo buscar/cambiar
+      mostrarModalCliente.value = true
+    }
+
+    const removerCliente = () => {
       if (confirm('¿Estás seguro de que deseas quitar el cliente seleccionado?')) {
-        this.cliente = null;
-        this.clienteParaEditar = null;
-        // Resetear selecciones de información
-        this.incluirInfo = {
-          nombreEncargado: true,
-          nombreEmpresa: true,
-          documentoFiscal: false,
-          telefonoEmpresa: false,
-          correoEmpresa: true
-        };
+        cliente.value = null
+        clienteParaEditar.value = null
+        // Resetear configuración PDF
+        configuracionPDF.value = {
+          incluirNombreEncargado: true,
+          incluirNombreEmpresa: true,
+          incluirDocumentoFiscal: false,
+          incluirTelefonoEmpresa: false,
+          incluirCorreoEmpresa: true
+        }
+        comentario.value = ''
       }
-    },
-    cerrarModalCliente() {
-      this.mostrarModalCliente = false;
-      this.clienteParaEditar = null;
-    },
-    onClienteSeleccionado(cliente) {
-      this.cliente = cliente;
-      this.mostrarModalCliente = false;
-      this.clienteParaEditar = null;
+    }
+
+    const cerrarModalCliente = () => {
+      mostrarModalCliente.value = false
+      clienteParaEditar.value = null
+    }
+
+    const onClienteSeleccionado = (clienteSeleccionado) => {
+      console.log('🏢 Cliente seleccionado:', clienteSeleccionado)
+      cliente.value = clienteSeleccionado
+      mostrarModalCliente.value = false
+      clienteParaEditar.value = null
       
-      // Resetear las opciones de información cuando se selecciona un nuevo cliente
-      this.incluirInfo = {
-        nombreEncargado: true,
-        nombreEmpresa: true,
-        documentofiscal: false,
-        telefonoEmpresa: false,
-        correoEmpresa: true
-      };
-    },
-    confirmarPDF() {
-      if (!this.cliente) {
-        alert('Debe seleccionar un cliente');
-        return;
+      // Resetear configuración PDF con valores por defecto
+      configuracionPDF.value = {
+        incluirNombreEncargado: true,
+        incluirNombreEmpresa: true,
+        incluirDocumentoFiscal: false,
+        incluirTelefonoEmpresa: false,
+        incluirCorreoEmpresa: true
       }
+      
+      successMessage.value = `Cliente ${clienteSeleccionado.nombreEmpresa || clienteSeleccionado.nombre_empresa} seleccionado correctamente`
+    }
 
-      if (!this.hayInformacionSeleccionada) {
-        alert('Debe seleccionar al menos un campo de información del cliente');
-        return;
+    const onClienteCreado = (clienteCreado) => {
+      console.log('🆕 Cliente creado:', clienteCreado)
+      cliente.value = clienteCreado
+      mostrarModalCliente.value = false
+      clienteParaEditar.value = null
+      
+      configuracionPDF.value = {
+        incluirNombreEncargado: true,
+        incluirNombreEmpresa: true,
+        incluirDocumentoFiscal: false,
+        incluirTelefonoEmpresa: false,
+        incluirCorreoEmpresa: true
       }
-
-      const datosParaPDF = {
-        cliente: this.cliente,
-        informacionIncluir: this.incluirInfo,
-        servicios: this.serviciosSeleccionados,
-        añosContrato: this.añosContrato,
-        precioTotal: this.precioTotal,
-        tipoPrecio: this.tipoPrecio
-      };
-
-      this.$emit('generar-pdf', datosParaPDF);
-      this.cerrar();
       
-      // NUEVO: Emitir evento para limpiar formulario
-      this.$emit('limpiar-formulario');
-    },
-    guardarCotizacion() {
-      const datosCotizacion = {
-        cliente: this.cliente,
-        servicios: this.serviciosSeleccionados,
-        añosContrato: this.añosContrato,
-        precioTotal: this.precioTotal,
-        tipoPrecio: this.tipoPrecio,
-        estado: 'pendiente_aprobacion',
-        fecha: new Date().toISOString(),
-        preciosPorDebajoMinimo: this.preciosPorDebajoMinimo
-      };
+      successMessage.value = `Cliente ${clienteCreado.nombreEmpresa || clienteCreado.nombre_empresa} creado y seleccionado correctamente`
+    }
 
-      this.$emit('guardar-cotizacion', datosCotizacion);
-      alert('Cotización guardada para aprobación');
-      this.cerrar();
+    const onClienteActualizado = (clienteActualizado) => {
+      console.log('✏️ Cliente actualizado:', clienteActualizado)
+      cliente.value = clienteActualizado
+      mostrarModalCliente.value = false
+      clienteParaEditar.value = null
       
-      // NUEVO: Emitir evento para limpiar formulario
-      this.$emit('limpiar-formulario');
+      successMessage.value = `Cliente ${clienteActualizado.nombreEmpresa || clienteActualizado.nombre_empresa} actualizado correctamente`
+    }
+
+ const validarDatos = () => {
+  if (!cliente.value) {
+    throw new Error('Debe seleccionar un cliente')
+  }
+
+  if (preciosPorDebajoMinimo.value.length === 0 && !hayInformacionSeleccionada.value) {
+    throw new Error('Debe seleccionar al menos un campo de información del cliente')
+  }
+
+  // ✅ CORREGIDO: Solo incluir clientes_id si existe (cliente existente)
+  const clienteValidado = {
+    nombreEncargado: cliente.value.nombreEncargado || cliente.value.nombre_encargado,
+    nombreEmpresa: cliente.value.nombreEmpresa || cliente.value.nombre_empresa,
+    documentofiscal: cliente.value.documentofiscal || cliente.value.documento_fiscal,
+    telefonoEmpresa: cliente.value.telefonoEmpresa || cliente.value.telefono_empresa,
+    correoEmpresa: cliente.value.correoEmpresa || cliente.value.correo_empresa,
+    telefonoPersonal: cliente.value.telefonoPersonal || cliente.value.telefono_personal,
+    correoPersonal: cliente.value.correoPersonal || cliente.value.correo_personal
+  }
+
+  // ✅ SOLO agregar clientes_id si es un cliente existente
+  if (cliente.value.clientes_id || cliente.value.id) {
+    clienteValidado.clientes_id = cliente.value.clientes_id || cliente.value.id
+  }
+  // Si no tiene ID, es un cliente nuevo y el backend lo creará
+
+  if (!clienteValidado.nombreEncargado || !clienteValidado.nombreEmpresa) {
+    throw new Error('El cliente debe tener al menos nombre del encargado y nombre de empresa')
+  }
+
+  return clienteValidado
+}
+
+const confirmarPDF = async () => {
+  try {
+    loading.value = true
+    loadingMessage.value = 'Preparando datos para PDF...'
+    error.value = ''
+
+    const clienteValidado = validarDatos()
+
+    const datosParaPDF = {
+      cliente: clienteValidado,
+      configuracionPDF: { ...configuracionPDF.value },
+      servicios: props.serviciosSeleccionados,
+      añosContrato: props.añosContrato,
+      precioTotal: props.precioTotal,
+      tipoPrecio: props.tipoPrecio,
+      comentario: comentario.value.trim()
+    }
+
+    console.log('📄 Datos antes de formatear:', datosParaPDF)
+
+    const datosFormateados = await clientesService.formatDataParaPDF(datosParaPDF)
+
+    console.log('📄 Enviando datos formateados para generar PDF:', datosFormateados)
+
+    emit('generar-pdf', datosFormateados)
+    
+    // ✅ NO cerrar aquí - esperar a que el componente padre confirme el éxito
+    
+  } catch (err) {
+    console.error('❌ Error preparando PDF:', err)
+    error.value = err.message || 'Error al preparar los datos para el PDF'
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
+
+    const guardarCotizacion = async () => {
+  try {
+    loading.value = true
+    loadingMessage.value = 'Preparando cotización para guardar...'
+    error.value = ''
+
+    const clienteValidado = validarDatos()
+
+    const datosCotizacion = {
+      cliente: clienteValidado,
+      configuracionPDF: { ...configuracionPDF.value },
+      servicios: props.serviciosSeleccionados,
+      añosContrato: props.añosContrato,
+      precioTotal: props.precioTotal,
+      tipoPrecio: props.tipoPrecio,
+      comentario: comentario.value.trim(),
+      estado: 'pendiente_aprobacion',
+      fecha: new Date().toISOString(),
+      preciosPorDebajoMinimo: preciosPorDebajoMinimo.value
+    }
+
+    console.log('💾 Datos antes de formatear:', datosCotizacion)
+
+    // ✅ CORREGIDO: Usar await correctamente
+    const datosFormateados = await clientesService.formatDataParaPDF(datosCotizacion)
+
+    console.log('💾 Enviando datos formateados para guardar:', datosFormateados)
+
+    emit('guardar-cotizacion', datosFormateados)
+    
+  } catch (err) {
+    console.error('❌ Error preparando cotización:', err)
+    error.value = err.message || 'Error al preparar la cotización'
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
+    // Watchers para auto-limpiar mensajes
+    watch(error, (newError) => {
+      if (newError) {
+        setTimeout(() => {
+          if (error.value === newError) {
+            error.value = ''
+          }
+        }, 5000)
+      }
+    })
+
+    watch(successMessage, (newSuccess) => {
+      if (newSuccess) {
+        setTimeout(() => {
+          if (successMessage.value === newSuccess) {
+            successMessage.value = ''
+          }
+        }, 4000)
+      }
+    })
+
+    // Resetear estados cuando se cierra el modal
+    watch(() => props.mostrar, (mostrarModal) => {
+      if (!mostrarModal) {
+        resetearEstados()
+      }
+    })
+
+    return {
+      // Estados
+      cliente,
+      mostrarModalCliente,
+      clienteParaEditar,
+      comentario,
+      loading,
+      loadingMessage,
+      error,
+      successMessage,
+      configuracionPDF,
+      
+      // Computed
+      preciosPorDebajoMinimo,
+      hayInformacionSeleccionada,
+      
+      // Métodos
+      formatCurrency,
+      formatRTN,
+      formatTelefono,
+      limpiarError,
+      limpiarSuccess,
+      cerrar,
+      cancelar,
+      buscarCliente,
+      editarCliente,
+      cambiarCliente,
+      removerCliente,
+      cerrarModalCliente,
+      onClienteSeleccionado,
+      onClienteCreado,
+      onClienteActualizado,
+      confirmarPDF,
+      guardarCotizacion
     }
   }
 }

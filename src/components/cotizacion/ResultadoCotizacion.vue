@@ -1,5 +1,13 @@
 <template>
   <div v-if="mostrarResultados" class="resultados-container" id="cotizacion-pdf">
+    <!-- Loading overlay -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>{{ loadingMessage }}</p>
+      </div>
+    </div>
+
     <div class="resultados-header">
       <h2>
         <i class="fas fa-file-invoice"></i>
@@ -16,14 +24,16 @@
 
     <div class="servicios-seleccionados">
       <h3>Servicios Seleccionados:</h3>
-      <div v-for="item in serviciosSeleccionados" :key="item.servicio.id" class="servicio-seleccionado">
+      <div v-for="item in serviciosSeleccionados" :key="item.servicio.servicios_id" class="servicio-seleccionado">
         <div class="servicio-info">
-          <span class="servicio-icon">{{ item.servicio.icon }}</span>
+          <span class="servicio-icon">
+            <i class="fas fa-cloud"></i>
+          </span>
           <div class="servicio-detalles">
             <strong>{{ item.servicio.nombre }}</strong>
-            <p>{{ item.servicio.descripcion }}</p>
+            <p>{{ item.servicio.descripcion || 'Servicio cloud empresarial' }}</p>
             <div class="equipos-info">
-              <strong>Equipos:</strong> {{ item.servicio.equipos }}
+              <strong>Categoría:</strong> {{ item.servicio.categoria || 'General' }}
             </div>
             <div class="cantidades-info">
               <!-- Mostrar información diferente para servicios de backup -->
@@ -54,23 +64,23 @@
               </template>
             </div>
             <div class="precios-detalle">
-              <span class="precio-minimo">Mín: ${{ item.servicio.precioMinimo }}/año</span>
-              <span class="precio-venta-usado">Venta: ${{ item.precioVentaFinal }}/año</span>
+              <span class="precio-minimo">Mín: {{ formatCurrency(item.servicio.precioMinimo) }}/año</span>
+              <span class="precio-venta-usado">Venta: {{ formatCurrency(item.precioVentaFinal) }}/año</span>
             </div>
             <div class="calculo-detalle">
               <!-- Mostrar cálculo diferente para servicios de backup -->
               <small v-if="esServicioBackup(item.servicio)">
-                {{ item.cantidadServidores }} GB × ${{ item.precioVentaFinal }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+                {{ item.cantidadServidores }} GB × {{ formatCurrency(item.precioVentaFinal) }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
               </small>
               <small v-else>
-                {{ totalUnidades(item) }} unidad(es) × ${{ item.precioVentaFinal }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+                {{ totalUnidades(item) }} unidad(es) × {{ formatCurrency(item.precioVentaFinal) }}/año × {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
               </small>
             </div>
           </div>
         </div>
         <div class="servicio-subtotal">
-          <div class="subtotal-anual">${{ calcularSubtotalAnual(item) }}/año</div>
-          <div class="subtotal-total">${{ calcularSubtotalTotal(item).toLocaleString() }} total</div>
+          <div class="subtotal-anual">{{ formatCurrency(calcularSubtotalAnual(item)) }}/año</div>
+          <div class="subtotal-total">{{ formatCurrency(calcularSubtotalTotal(item)) }} total</div>
         </div>
       </div>
     </div>
@@ -81,8 +91,8 @@
           <i class="fas fa-circle text-danger"></i>
           Precio Mínimo
         </h4>
-        <div class="precio-valor">${{ precioMinimoAnual }}/año</div>
-        <div class="precio-total-contrato">${{ precioMinimoTotal.toLocaleString() }} total</div>
+        <div class="precio-valor">{{ formatCurrency(precioMinimoAnual) }}/año</div>
+        <div class="precio-total-contrato">{{ formatCurrency(precioMinimoTotal) }} total</div>
         <p>Precio mínimo para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
       </div>
 
@@ -91,10 +101,10 @@
           <i class="fas fa-circle text-success"></i>
           Precio de Venta
         </h4>
-        <div class="precio-valor">${{ precioVentaAnual }}/año</div>
-        <div class="precio-total-contrato">${{ precioVentaTotal.toLocaleString() }} total</div>
+        <div class="precio-valor">{{ formatCurrency(precioVentaAnual) }}/año</div>
+        <div class="precio-total-contrato">{{ formatCurrency(precioVentaTotal) }} total</div>
         <p>Precio final para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
-        <small>Ganancia: ${{ gananciaPotencial.toLocaleString() }} total</small>
+        <small>Ganancia: {{ formatCurrency(gananciaPotencial) }} total</small>
       </div>
     </div>
 
@@ -118,22 +128,22 @@
         </div>
         <div class="metrica">
           <span class="metrica-label">Margen vs Mínimo:</span>
-          <span class="metrica-valor ganancia">+${{ (precioVentaTotal - precioMinimoTotal).toLocaleString() }} ({{ porcentajeMargenMinimo }}%)</span>
+          <span class="metrica-valor ganancia">+{{ formatCurrency(precioVentaTotal - precioMinimoTotal) }} ({{ porcentajeMargenMinimo }}%)</span>
         </div>
         <div class="metrica">
           <span class="metrica-label">Ingreso anual:</span>
-          <span class="metrica-valor destacado">${{ precioVentaAnual }}/año</span>
+          <span class="metrica-valor destacado">{{ formatCurrency(precioVentaAnual) }}/año</span>
         </div>
         <div class="metrica">
           <span class="metrica-label">Valor total del contrato:</span>
-          <span class="metrica-valor destacado-total">${{ precioVentaTotal.toLocaleString() }}</span>
+          <span class="metrica-valor destacado-total">{{ formatCurrency(precioVentaTotal) }}</span>
         </div>
       </div>
     </div>
 
     <div class="selector-precio-pdf">
       <h3>
-         
+        <i class="fas fa-file-pdf"></i>
         Precio para la cotización del cliente
       </h3>
       <div class="opciones-precio-pdf">
@@ -147,7 +157,7 @@
           <span class="radio-custom"></span>
           <div class="precio-info">
             <strong>Precio Mínimo</strong>
-            <span class="precio-cantidad">${{ precioMinimoTotal.toLocaleString() }} total</span>
+            <span class="precio-cantidad">{{ formatCurrency(precioMinimoTotal) }} total</span>
             <small>Precio competitivo especial</small>
           </div>
         </label>
@@ -162,261 +172,440 @@
           <span class="radio-custom"></span>
           <div class="precio-info">
             <strong>Precio de Venta</strong>
-            <span class="precio-cantidad">${{ precioVentaTotal.toLocaleString() }} total</span>
+            <span class="precio-cantidad">{{ formatCurrency(precioVentaTotal) }} total</span>
             <small>Precio estándar recomendado</small>
           </div>
         </label>
       </div>
+      
+      <!-- Advertencia si hay precios por debajo del mínimo -->
+      <div v-if="hayPreciosPorDebajoMinimo" class="advertencia-precios">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Atención:</strong> Algunos servicios tienen precios por debajo del mínimo. 
+        La cotización requerirá aprobación administrativa.
+      </div>
+    </div>
+
+    <!-- Error message -->
+    <div v-if="error" class="error-message">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ error }}
+      <button @click="limpiarError" class="btn-cerrar-error">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Success message -->
+    <div v-if="successMessage" class="success-message">
+      <i class="fas fa-check-circle"></i>
+      {{ successMessage }}
+      <button @click="limpiarSuccess" class="btn-cerrar-success">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
 
     <div class="acciones">
-     <button @click="exportarPDF" class="btn-exportar" :disabled="!precioSeleccionadoPDF">
-       <i class="fas fa-file-pdf"></i>
-       Generar PDF para Cliente
-     </button>
-     <button @click="reiniciar" class="btn-reiniciar">
-       <i class="fas fa-redo-alt"></i>
-       Nueva Cotización
-     </button>
-   </div>
+      
+      <button 
+        @click="exportarPDF" 
+        class="btn-exportar" 
+        :disabled="!precioSeleccionadoPDF || loading"
+      >
+        <i class="fas fa-file-pdf"></i>
+        Generar PDF para Cliente
+      </button>
+      
+      <button @click="reiniciar" class="btn-reiniciar" :disabled="loading">
+        <i class="fas fa-redo-alt"></i>
+        Nueva Cotización
+      </button>
+    </div>
 
-   <!-- Modal de Confirmación PDF -->
-   <ConfirmacionPDFModal
-     :mostrar="mostrarModalConfirmacion"
-     :servicios-seleccionados="serviciosSeleccionados"
-     :años-contrato="añosContrato"
-     :precio-total="precioSeleccionadoPDF === 'minimo' ? precioMinimoTotal : precioVentaTotal"
-     :tipo-precio="precioSeleccionadoPDF"
-     @cerrar="mostrarModalConfirmacion = false"
-     @generar-pdf="onGenerarPDF"
-     @guardar-cotizacion="onGuardarCotizacion"
-     @limpiar-formulario="onLimpiarFormulario"
-   />
- </div>
+    <!-- Modal de Confirmación PDF -->
+    <ConfirmacionPDFModal
+      :mostrar="mostrarModalConfirmacion"
+      :servicios-seleccionados="serviciosSeleccionados"
+      :años-contrato="añosContrato"
+      :precio-total="precioSeleccionadoPDF === 'minimo' ? precioMinimoTotal : precioVentaTotal"
+      :tipo-precio="precioSeleccionadoPDF"
+      @cerrar="cerrarModalConfirmacion"
+      @generar-pdf="onGenerarPDF"
+      @guardar-cotizacion="onGuardarCotizacion"
+      @limpiar-formulario="onLimpiarFormulario"
+    />
+  </div>
 </template>
 
 <script>
-import { generarPDFConCliente } from '@/utils/pdfGenerator.js';
-import ConfirmacionPDFModal from './ConfirmacionPDFModal.vue';
+import { ref, computed, watch } from 'vue'
+import ConfirmacionPDFModal from './ConfirmacionPDFModal.vue'
+import crearcotizacionService from '@/services/crearcotizacion'
 
 export default {
- name: 'ResultadoCotizacion',
- components: {
-   ConfirmacionPDFModal
- },
- props: {
-   serviciosSeleccionados: {
-     type: Array,
-     required: true
-   },
-   añosContrato: {
-     type: Number,
-     default: 1
-   }
- },
- data() {
-   return {
-     precioSeleccionadoPDF: 'venta', // Por defecto precio de venta
-     mostrarModalConfirmacion: false,
-     cotizacionesGuardadas: [] // Para almacenar cotizaciones pendientes
-   };
- },
- emits: ['reiniciar', 'limpiar-formulario'],
- computed: {
-   mostrarResultados() {
-     return this.serviciosSeleccionados.length > 0;
-   },
-   fechaActual() {
-     return new Date().toLocaleDateString('es-ES');
-   },
-   totalServidores() {
-     return this.serviciosSeleccionados.reduce((total, item) => {
-       // Solo contar servidores para servicios que NO son de backup
-       if (!this.esServicioBackup(item.servicio)) {
-         return total + (item.cantidadServidores || 0);
-       }
-       return total;
-     }, 0);
-   },
-   totalEquipos() {
-     return this.serviciosSeleccionados.reduce((total, item) => {
-       return total + (item.cantidadEquipos || 0);
-     }, 0);
-   },
-   totalGB() {
-     return this.serviciosSeleccionados.reduce((total, item) => {
-       // Solo contar GB para servicios de backup
-       if (this.esServicioBackup(item.servicio)) {
-         return total + (item.cantidadServidores || 0);
-       }
-       return total;
-     }, 0);
-   },
-   precioMinimoAnual() {
-     return this.serviciosSeleccionados.reduce((total, item) => {
-       const totalUnidades = this.esServicioBackup(item.servicio) 
-         ? (item.cantidadServidores || 0)  // Para backup, usar solo cantidadServidores (que representa GB)
-         : (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
-       return total + (totalUnidades * item.servicio.precioMinimo);
-     }, 0);
-   },
-   precioMinimoTotal() {
-     return this.precioMinimoAnual * this.añosContrato;
-   },
-   precioVentaAnual() {
-     return this.serviciosSeleccionados.reduce((total, item) => {
-       return total + this.calcularSubtotalAnual(item);
-     }, 0);
-   },
-   precioVentaTotal() {
-     return this.precioVentaAnual * this.añosContrato;
-   },
-   gananciaPotencial() {
-     return Math.max(0, this.precioVentaTotal - this.precioMinimoTotal);
-   },
-   porcentajeMargenMinimo() {
-     if (this.precioMinimoTotal === 0) return 0;
-     return Math.round(((this.precioVentaTotal - this.precioMinimoTotal) / this.precioMinimoTotal) * 100);
-   },
-   hayPreciosPorDebajoMinimo() {
-     return this.serviciosSeleccionados.some(item => {
-       const totalUnidades = this.esServicioBackup(item.servicio) 
-         ? (item.cantidadServidores || 0)  // Para backup, usar solo cantidadServidores (que representa GB)
-         : (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
-       return totalUnidades > 0 && item.precioVentaFinal < item.servicio.precioMinimo;
-     });
-   }
- },
- methods: {
-   esServicioBackup(servicio) {
-     return servicio.categoria === 'backup' || servicio.categoria === 'respaldo';
-   },
-   totalUnidades(item) {
-     if (this.esServicioBackup(item.servicio)) {
-       return item.cantidadServidores || 0; // Para backup, solo cantidadServidores (que representa GB)
-     }
-     return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
-   },
-   calcularSubtotalAnual(item) {
-     const totalUnidades = this.totalUnidades(item);
-     return totalUnidades * item.precioVentaFinal;
-   },
-   calcularSubtotalTotal(item) {
-     return this.calcularSubtotalAnual(item) * this.añosContrato;
-   },
-   
-   reiniciar() {
-     this.$emit('reiniciar');
-   },
+  name: 'ResultadoCotizacion',
+  components: {
+    ConfirmacionPDFModal
+  },
+  props: {
+    serviciosSeleccionados: {
+      type: Array,
+      required: true
+    },
+    añosContrato: {
+      type: Number,
+      default: 1
+    }
+  },
+  emits: ['reiniciar', 'limpiar-formulario'],
+  setup(props, { emit }) {
+    // Estados reactivos
+    const precioSeleccionadoPDF = ref('venta')
+    const mostrarModalConfirmacion = ref(false)
+    const loading = ref(false)
+    const loadingMessage = ref('')
+    const error = ref('')
+    const successMessage = ref('')
 
-   onLimpiarFormulario() {
-     // Emitir evento hacia el componente padre (CotizacionForm)
-     this.$emit('limpiar-formulario');
-   },
+    // ✅ MÉTODOS HELPER PRIMERO (antes de los computed)
+    const esServicioBackup = (servicio) => {
+      const categoria = servicio.categoria?.toLowerCase() || servicio.categoria?.toLowerCase() || ''
+      return categoria.includes('backup') || categoria.includes('respaldo')
+    }
 
-   guardarCotizacion() {
-     const datosCotizacion = {
-       servicios: this.serviciosSeleccionados,
-       añosContrato: this.añosContrato,
-       precioTotal: this.precioSeleccionadoPDF === 'minimo' ? this.precioMinimoTotal : this.precioVentaTotal,
-       tipoPrecio: this.precioSeleccionadoPDF,
-       estado: this.hayPreciosPorDebajoMinimo ? 'pendiente_aprobacion' : 'borrador',
-       fecha: new Date().toISOString(),
-       vendedor: 'vendor1', // En backend esto vendrá de la sesión
-       id: Date.now()
-     };
+    const totalUnidades = (item) => {
+      if (esServicioBackup(item.servicio)) {
+        return item.cantidadServidores || 0
+      }
+      return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
+    }
 
-     this.cotizacionesGuardadas.push(datosCotizacion);
-     
-     if (this.hayPreciosPorDebajoMinimo) {
-       alert('Cotización guardada como "Pendiente de Aprobación" debido a precios por debajo del mínimo.');
-     } else {
-       alert('Cotización guardada exitosamente como borrador.');
-     }
-     
-     console.log('Cotización guardada:', datosCotizacion);
+    const calcularSubtotalAnual = (item) => {
+      const totalUnidadesItem = totalUnidades(item)
+      return totalUnidadesItem * (item.precioVentaFinal || 0)
+    }
 
-     // Limpiar formulario después de guardar
-     setTimeout(() => {
-       this.onLimpiarFormulario();
-     }, 1000);
-   },
+    const calcularSubtotalTotal = (item) => {
+      return calcularSubtotalAnual(item) * props.añosContrato
+    }
 
-   exportarPDF() {
-     if (!this.precioSeleccionadoPDF) {
-       alert('Por favor selecciona un tipo de precio para la cotización');
-       return;
-     }
-     this.mostrarModalConfirmacion = true;
-   },
+    const formatCurrency = (amount) => {
+      return crearcotizacionService.formatCurrency(amount || 0)
+    }
 
-   onGenerarPDF(datosParaPDF) {
-     this.generarPDFConDatos(datosParaPDF);
-   },
+    // ✅ COMPUTED PROPERTIES DESPUÉS DE LOS MÉTODOS
+    const mostrarResultados = computed(() => {
+      return props.serviciosSeleccionados.length > 0
+    })
 
-   onGuardarCotizacion(datosCotizacion) {
-     // Simular guardado en array local
-     const cotizacion = {
-       ...datosCotizacion,
-       id: Date.now(),
-       vendedor: 'vendor1' // En backend esto vendrá de la sesión
-     };
-     
-     this.cotizacionesGuardadas.push(cotizacion);
-     console.log('Cotización guardada para aprobación:', cotizacion);
-   },
+    const fechaActual = computed(() => {
+      return new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    })
 
-   async generarPDFConDatos(datosParaPDF) {
-     try {
-       // Datos de la empresa
-       const datosEmpresa = {
-         nombre: 'CloudTech Solutions',
-         direccion: 'Av. Tecnología 123, Ciudad Tech',
-         telefono: '+1 (555) 123-4567',
-         email: 'ventas@cloudtech.com',
-         website: 'www.cloudtech.com'
-       };
+    const totalServidores = computed(() => {
+      return props.serviciosSeleccionados.reduce((total, item) => {
+        if (!esServicioBackup(item.servicio)) {
+          return total + (item.cantidadServidores || 0)
+        }
+        return total
+      }, 0)
+    })
 
-       // Preparar datos del cliente para el PDF
-       const clienteParaPDF = {
-         ...datosParaPDF.cliente,
-         informacionIncluir: datosParaPDF.informacionIncluir
-       };
+    const totalEquipos = computed(() => {
+      return props.serviciosSeleccionados.reduce((total, item) => {
+        return total + (item.cantidadEquipos || 0)
+      }, 0)
+    })
 
-       const pdf = await generarPDFConCliente(
-         datosEmpresa,
-         clienteParaPDF,
-         datosParaPDF.servicios,
-         datosParaPDF.añosContrato,
-         datosParaPDF.precioTotal,
-         datosParaPDF.tipoPrecio
-       );
+    const totalGB = computed(() => {
+      return props.serviciosSeleccionados.reduce((total, item) => {
+        if (esServicioBackup(item.servicio)) {
+          return total + (item.cantidadServidores || 0)
+        }
+        return total
+      }, 0)
+    })
 
-       const nombreEmpresaLimpio = datosParaPDF.cliente.nombreEmpresa.replace(/[^a-zA-Z0-9]/g, '_');
-       const nombreArchivo = `Cotizacion_${nombreEmpresaLimpio}_${datosParaPDF.tipoPrecio}_${new Date().getTime()}.pdf`;
-       pdf.save(nombreArchivo);
+    const precioMinimoAnual = computed(() => {
+      return props.serviciosSeleccionados.reduce((total, item) => {
+        const totalUnidadesItem = totalUnidades(item)
+        return total + (totalUnidadesItem * (item.servicio.precioMinimo || item.servicio.precio_minimo || 0))
+      }, 0)
+    })
 
-       console.log('PDF generado exitosamente para:', datosParaPDF.cliente.nombreEmpresa);
-       alert(`PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`);
+    const precioMinimoTotal = computed(() => {
+      return precioMinimoAnual.value * props.añosContrato
+    })
 
-       // Opcional: Guardar registro de PDF generado
-       const registroPDF = {
-         cliente: datosParaPDF.cliente,
-         archivo: nombreArchivo,
-         fecha: new Date().toISOString(),
-         tipoPrecio: datosParaPDF.tipoPrecio,
-         monto: datosParaPDF.precioTotal,
-         vendedor: 'vendor1'
-       };
-       
-       console.log('Registro de PDF generado:', registroPDF);
+    const precioVentaAnual = computed(() => {
+      return props.serviciosSeleccionados.reduce((total, item) => {
+        return total + calcularSubtotalAnual(item)
+      }, 0)
+    })
 
-     } catch (error) {
-       console.error('Error detallado al generar PDF:', error);
-       alert(`Error al generar el PDF: ${error.message || 'Error desconocido'}`);
-     }
-   }
- }
+    const precioVentaTotal = computed(() => {
+      return precioVentaAnual.value * props.añosContrato
+    })
+
+    const gananciaPotencial = computed(() => {
+      return Math.max(0, precioVentaTotal.value - precioMinimoTotal.value)
+    })
+
+    const porcentajeMargenMinimo = computed(() => {
+      if (precioMinimoTotal.value === 0) return 0
+      return Math.round(((precioVentaTotal.value - precioMinimoTotal.value) / precioMinimoTotal.value) * 100)
+    })
+
+    const hayPreciosPorDebajoMinimo = computed(() => {
+      return props.serviciosSeleccionados.some(item => {
+        const totalUnidadesItem = totalUnidades(item)
+        const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
+        return totalUnidadesItem > 0 && item.precioVentaFinal < precioMinimo
+      })
+    })
+
+    // Resto de métodos
+    const limpiarError = () => {
+      error.value = ''
+    }
+
+    const limpiarSuccess = () => {
+      successMessage.value = ''
+    }
+
+    const reiniciar = () => {
+      emit('reiniciar')
+    }
+
+    const onLimpiarFormulario = () => {
+      emit('limpiar-formulario')
+    }
+
+    const cerrarModalConfirmacion = () => {
+      mostrarModalConfirmacion.value = false
+    }
+
+    const guardarCotizacion = async () => {
+      if (!precioSeleccionadoPDF.value) {
+        error.value = 'Por favor selecciona un tipo de precio para la cotización'
+        return
+      }
+
+      try {
+        loading.value = true
+        loadingMessage.value = 'Guardando cotización...'
+        error.value = ''
+        successMessage.value = ''
+
+        const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+          props.serviciosSeleccionados,
+          null,
+          props.añosContrato,
+          precioSeleccionadoPDF.value,
+          {
+            incluirNombreEncargado: true,
+            incluirNombreEmpresa: true,
+            incluirDocumentoFiscal: false,
+            incluirTelefonoEmpresa: false,
+            incluirCorreoEmpresa: true
+          },
+          `Cotización ${hayPreciosPorDebajoMinimo.value ? 'con precios especiales' : 'estándar'} - ${fechaActual.value}`
+        )
+
+        const validacion = crearcotizacionService.validateCotizacionData(cotizacionData)
+        
+        if (!validacion.isValid) {
+          throw new Error(`Datos inválidos: ${validacion.errors.join(', ')}`)
+        }
+
+        console.log('📋 Guardando cotización como borrador:', cotizacionData)
+        mostrarModalConfirmacion.value = true
+
+      } catch (err) {
+        console.error('❌ Error preparando cotización:', err)
+        error.value = err.message || 'Error al preparar la cotización'
+      } finally {
+        loading.value = false
+        loadingMessage.value = ''
+      }
+    }
+
+    const exportarPDF = () => {
+      if (!precioSeleccionadoPDF.value) {
+        error.value = 'Por favor selecciona un tipo de precio para la cotización'
+        return
+      }
+      mostrarModalConfirmacion.value = true
+    }
+
+const onGenerarPDF = async (datosParaPDF) => {
+  try {
+    loading.value = true
+    loadingMessage.value = 'Generando PDF...'
+    error.value = ''
+
+    const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+      datosParaPDF.servicios,
+      datosParaPDF.cliente,
+      props.añosContrato,
+      datosParaPDF.tipoPrecio,
+      datosParaPDF.configuracionPDF,
+      datosParaPDF.comentario || ''
+    )
+
+    console.log('💾 Creando cotización en backend:', cotizacionData)
+
+    const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+
+    if (!resultado.success) {
+      throw new Error(resultado.message || 'Error al crear la cotización')
+    }
+
+    const cotizacionCreada = resultado.cotizacion
+    console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
+
+    console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
+    
+    const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
+
+    if (!resultadoPDF.success) {
+      throw new Error(resultadoPDF.message || 'Error al generar el PDF')
+    }
+
+    await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
+
+    successMessage.value = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
+    
+    if (resultado.requiere_aprobacion) {
+      successMessage.value += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+    }
+
+    cerrarModalConfirmacion()
+    console.log('✅ Proceso completado exitosamente')
+
+    // ✅ NUEVO: Limpiar formulario después del éxito
+    setTimeout(() => {
+      onLimpiarFormulario()
+    }, 1500) // Dar tiempo para que se vea el mensaje de éxito
+
+  } catch (err) {
+    console.error('❌ Error en proceso de PDF:', err)
+    error.value = err.message || 'Error al generar el PDF'
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
+
+    const onGuardarCotizacion = async (datosCotizacion) => {
+  try {
+    loading.value = true
+    loadingMessage.value = 'Guardando cotización...'
+    error.value = ''
+
+    // ✅ CORREGIDO: Usar los servicios ya formateados que vienen del modal
+    const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+      datosCotizacion.servicios,  // ✅ USAR LOS YA FORMATEADOS DEL MODAL
+      datosCotizacion.cliente,
+      props.añosContrato,
+      datosCotizacion.tipoPrecio,
+      datosCotizacion.configuracionPDF,
+      datosCotizacion.comentario || ''
+    )
+
+    console.log('💾 Guardando cotización:', cotizacionData)
+
+    const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+
+    if (!resultado.success) {
+      throw new Error(resultado.message || 'Error al guardar la cotización')
+    }
+
+    const cotizacionCreada = resultado.cotizacion
+    console.log('✅ Cotización guardada con ID:', cotizacionCreada.cotizaciones_id)
+
+    let mensaje = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
+    
+    if (resultado.requiere_aprobacion) {
+      mensaje += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+    }
+
+    successMessage.value = mensaje
+    cerrarModalConfirmacion()
+
+    setTimeout(() => {
+      onLimpiarFormulario()
+    }, 2000)
+
+  } catch (err) {
+    console.error('❌ Error guardando cotización:', err)
+    error.value = err.message || 'Error al guardar la cotización'
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
+
+    // Watchers para auto-limpiar mensajes
+    watch(error, (newError) => {
+      if (newError) {
+        setTimeout(() => {
+          error.value = ''
+        }, 5000)
+      }
+    })
+
+    watch(successMessage, (newSuccess) => {
+      if (newSuccess) {
+        setTimeout(() => {
+          successMessage.value = ''
+        }, 5000)
+      }
+    })
+
+    return {
+      // Estados
+      precioSeleccionadoPDF,
+      mostrarModalConfirmacion,
+      loading,
+      loadingMessage,
+      error,
+      successMessage,
+      
+      // Computed
+      mostrarResultados,
+      fechaActual,
+      totalServidores,
+      totalEquipos,
+      totalGB,
+      precioMinimoAnual,
+      precioMinimoTotal,
+      precioVentaAnual,
+      precioVentaTotal,
+      gananciaPotencial,
+      porcentajeMargenMinimo,
+      hayPreciosPorDebajoMinimo,
+      
+      // Métodos
+      esServicioBackup,
+      totalUnidades,
+      calcularSubtotalAnual,
+      calcularSubtotalTotal,
+      formatCurrency,
+      limpiarError,
+      limpiarSuccess,
+      reiniciar,
+      onLimpiarFormulario,
+      cerrarModalConfirmacion,
+      guardarCotizacion,
+      exportarPDF,
+      onGenerarPDF,
+      onGuardarCotizacion
+    }
+  }
 }
 </script>
 
