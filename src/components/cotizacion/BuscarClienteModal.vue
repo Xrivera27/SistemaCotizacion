@@ -578,84 +578,83 @@ export default {
       validationErrors.value = {}
     }
 
-    // ✅ CORREGIDO: Método para guardar cliente
     const guardarCliente = async () => {
-      try {
-        loading.value = true
-        loadingMessage.value = modoEdicion.value ? 'Actualizando cliente...' : 'Creando cliente...'
-        error.value = ''
-        validationErrors.value = {}
+  try {
+    loading.value = true
+    loadingMessage.value = modoEdicion.value ? 'Actualizando cliente...' : 'Creando cliente...'
+    error.value = ''
+    validationErrors.value = {}
 
-        // Validaciones finales
-        if (!formularioValido.value) {
-          throw new Error('Por favor completa todos los campos obligatorios correctamente')
-        }
+    // ✅ DEBUG TEMPORAL
+    console.log('🐛 DEBUG - Iniciando guardarCliente')
+    console.log('🐛 DEBUG - Modo edición:', modoEdicion.value)
+    console.log('🐛 DEBUG - Formulario válido:', formularioValido.value)
+    console.log('🐛 DEBUG - clienteForm.value:', clienteForm.value)
 
-        // ✅ PREPARAR DATOS DEL CLIENTE CON ESTRUCTURA CORRECTA
-        const datosCliente = {
-          nombre_encargado: clienteForm.value.nombre_encargado.trim(),
-          telefono_personal: clienteForm.value.telefono_personal?.trim() || null,
-          telefono_empresa: clienteForm.value.telefono_empresa?.trim() || null,
-          nombre_empresa: clienteForm.value.nombre_empresa.trim(),
-          documento_fiscal: clienteForm.value.documento_fiscal.trim(),
-          correo_personal: clienteForm.value.correo_personal?.trim() || null,
-          correo_empresa: clienteForm.value.correo_empresa?.trim() || null,
-          estado: 'activo'
-        }
-
-        console.log('💾 Datos a enviar:', datosCliente)
-
-        let resultado
-        if (modoEdicion.value) {
-          // Actualizar cliente existente
-          resultado = await clientesService.updateCliente(clienteForm.value.clientes_id, datosCliente)
-          
-          if (resultado.success) {
-            const clienteActualizado = clientesService.formatClienteDisplay(resultado.cliente)
-            successMessage.value = `Cliente ${clienteActualizado.nombre_empresa} actualizado correctamente`
-            emit('cliente-actualizado', clienteActualizado)
-            
-            setTimeout(() => {
-              cerrar()
-            }, 1500)
-          } else {
-            throw new Error(resultado.message || 'Error al actualizar el cliente')
-          }
-        } else {
-          // Crear nuevo cliente
-          resultado = await clientesService.createCliente(datosCliente)
-          
-          if (resultado.success) {
-            const clienteCreado = clientesService.formatClienteDisplay(resultado.cliente)
-            successMessage.value = `Cliente ${clienteCreado.nombre_empresa} creado correctamente`
-            emit('cliente-creado', clienteCreado)
-            
-            setTimeout(() => {
-              cerrar()
-            }, 1500)
-          } else {
-            throw new Error(resultado.message || 'Error al crear el cliente')
-          }
-        }
-
-      } catch (err) {
-        console.error('❌ Error guardando cliente:', err)
-        
-        // Manejar errores de validación del servidor
-        if (err.response?.data?.errors) {
-          const erroresServidor = err.response.data.errors
-          Object.keys(erroresServidor).forEach(campo => {
-            validationErrors.value[campo] = erroresServidor[campo][0] // Primer error del campo
-          })
-          error.value = 'Por favor corrige los errores en el formulario'
-        } else {
-          error.value = err.message || 'Error al guardar el cliente'
-        }
-      } finally {
-        loading.value = false
-        loadingMessage.value = ''
-      }
+    // Validaciones finales
+    if (!formularioValido.value) {
+      throw new Error('Por favor completa todos los campos obligatorios correctamente')
     }
+
+    // ✅ PREPARAR DATOS DEL CLIENTE CON ESTRUCTURA CORRECTA
+    const datosCliente = {
+      nombre_encargado: clienteForm.value.nombre_encargado.trim(),
+      telefono_personal: clienteForm.value.telefono_personal?.trim() || null,
+      telefono_empresa: clienteForm.value.telefono_empresa?.trim() || null,
+      nombre_empresa: clienteForm.value.nombre_empresa.trim(),
+      documento_fiscal: clienteForm.value.documento_fiscal.trim(),
+      correo_personal: clienteForm.value.correo_personal?.trim() || null,
+      correo_empresa: clienteForm.value.correo_empresa?.trim() || null,
+      estado: 'activo'
+    }
+
+    console.log('🐛 DEBUG - Datos preparados:', datosCliente)
+
+    let resultado
+    if (modoEdicion.value) {
+      // Actualizar cliente existente
+      console.log('🐛 DEBUG - Actualizando cliente ID:', clienteForm.value.clientes_id)
+      resultado = await clientesService.updateCliente(clienteForm.value.clientes_id, datosCliente)
+    } else {
+      // Crear nuevo cliente
+      console.log('🐛 DEBUG - Creando nuevo cliente...')
+      resultado = await clientesService.createCliente(datosCliente)
+    }
+
+    console.log('🐛 DEBUG - Resultado del service:', resultado)
+
+    if (resultado.success) {
+      const clienteCreado = clientesService.formatClienteDisplay(resultado.cliente)
+      successMessage.value = `Cliente ${clienteCreado.nombre_empresa} ${modoEdicion.value ? 'actualizado' : 'creado'} correctamente`
+      emit(modoEdicion.value ? 'cliente-actualizado' : 'cliente-creado', clienteCreado)
+      
+      setTimeout(() => {
+        cerrar()
+      }, 1500)
+    } else {
+      console.log('🐛 DEBUG - Error del service:', resultado.message)
+      throw new Error(resultado.message || 'Error al guardar el cliente')
+    }
+
+  } catch (err) {
+    console.error('🐛 DEBUG - Error en guardarCliente:', err)
+    console.error('🐛 DEBUG - Stack trace:', err.stack)
+    
+    // Manejar errores de validación del servidor
+    if (err.response?.data?.errors) {
+      const erroresServidor = err.response.data.errors
+      Object.keys(erroresServidor).forEach(campo => {
+        validationErrors.value[campo] = erroresServidor[campo][0]
+      })
+      error.value = 'Por favor corrige los errores en el formulario'
+    } else {
+      error.value = err.message || 'Error al guardar el cliente'
+    }
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
 
     // ✅ WATCHER CORREGIDO: Cargar clientes iniciales al abrir modal
     watch(() => props.mostrar, (mostrarModal) => {
