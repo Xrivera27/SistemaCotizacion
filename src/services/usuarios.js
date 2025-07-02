@@ -389,6 +389,37 @@ class UsuariosService {
       return dateString;
     }
   }
+
+  // Obtener usuarios disponibles para ser managers
+async getUsuariosParaManager() {
+  try {
+    console.log('👥 Obteniendo usuarios disponibles para manager...');
+    
+    const response = await api.get('/usuarios/managers/disponibles');
+    
+    if (response.data.success) {
+      console.log('✅ Usuarios para manager obtenidos:', response.data.data.usuarios);
+      return {
+        success: true,
+        usuarios: response.data.data.usuarios
+      };
+    }
+    
+    return {
+      success: false,
+      message: response.data.message || 'Error obteniendo usuarios'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo usuarios para manager:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Error de conexión'
+    };
+  }
+}
+
+
 }
 
 // Exportar instancia única

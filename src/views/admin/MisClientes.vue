@@ -566,6 +566,37 @@
               </div>
             </div>
 
+            <!-- ✅ NUEVA SECCIÓN: Asignación de Manager -->
+            <div class="form-section">
+              <h4 class="section-title">
+                <i class="fas fa-user-tie"></i>
+                Asignación de Manager
+              </h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="usuarios_id">Manager Asignado *</label>
+                  <select 
+                    id="usuarios_id"
+                    v-model="formulario.usuarios_id" 
+                    required 
+                    class="form-select"
+                  >
+                    <option value="">Seleccionar Manager</option>
+                    <option 
+                      v-for="usuario in usuariosDisponibles" 
+                      :key="usuario.usuarios_id"
+                      :value="usuario.usuarios_id"
+                    >
+                      {{ usuario.nombre_completo }} ({{ usuario.usuario }}) - {{ usuario.tipo_usuario }}
+                    </option>
+                  </select>
+                  <small class="form-help">
+                    El manager será responsable de gestionar este cliente
+                  </small>
+                </div>
+              </div>
+            </div>
+
             <!-- Estado (solo al editar) -->
             <div class="form-section" v-if="clienteEditando">
               <h4 class="section-title">
@@ -695,527 +726,562 @@
         >
           <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (clienteParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check')"></i>
           {{ cambiandoEstado ? 'Procesando...' : (clienteParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar') }} Cliente
-        </button>
-      </div>
-    </div>
-  </div>
+          </button>
+     </div>
+   </div>
+ </div>
 
-  <!-- Toast de notificaciones -->
-  <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
-    <i class="fas" :class="notification.icon"></i>
-    <span>{{ notification.message }}</span>
-    <button class="notification-close" @click="closeNotification">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
+ <!-- Toast de notificaciones -->
+ <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
+   <i class="fas" :class="notification.icon"></i>
+   <span>{{ notification.message }}</span>
+   <button class="notification-close" @click="closeNotification">
+     <i class="fas fa-times"></i>
+   </button>
+ </div>
 </div>
 </template>
 
 <script>
 import clientesService from '@/services/clientes';
+import usuariosService from '@/services/usuarios'; // ✅ NUEVO IMPORT
 
 export default {
-  name: 'AdminClientes',
-  data() {
-    return {
-      loading: false,
-      loadingMessage: 'Cargando clientes...',
-      vistaActual: 'tabla',
-      modalCliente: null,
-      modalFormulario: false,
-      modalCambiarEstado: false,
-clienteEditando: null,
-clienteParaCambiarEstado: null,
-guardandoCliente: false,
-cambiandoEstado: false,
-paginaSalto: 1,
-itemsPorPagina: 25,
+ name: 'AdminClientes',
+ data() {
+   return {
+     loading: false,
+     loadingMessage: 'Cargando clientes...',
+     vistaActual: 'tabla',
+     modalCliente: null,
+     modalFormulario: false,
+     modalCambiarEstado: false,
+     clienteEditando: null,
+     clienteParaCambiarEstado: null,
+     guardandoCliente: false,
+     cambiandoEstado: false,
+     paginaSalto: 1,
+     itemsPorPagina: 25,
 
-// Datos reales del backend
-clientes: [],
-pagination: null,
-estadisticas: {
- total: 0,
- activos: 0,
- inactivos: 0
-},
+     // Datos reales del backend
+     clientes: [],
+     pagination: null,
+     estadisticas: {
+       total: 0,
+       activos: 0,
+       inactivos: 0
+     },
 
-filtros: {
- busqueda: '',
- estado: ''
-},
+     filtros: {
+       busqueda: '',
+       estado: ''
+     },
 
-formulario: {
- nombre_empresa: '',
- documento_fiscal: '',
- telefono_empresa: '',
- correo_empresa: '',
- nombre_encargado: '',
- telefono_personal: '',
- correo_personal: '',
- estado: 'activo'
-},
+     formulario: {
+       nombre_empresa: '',
+       documento_fiscal: '',
+       telefono_empresa: '',
+       correo_empresa: '',
+       nombre_encargado: '',
+       telefono_personal: '',
+       correo_personal: '',
+       usuarios_id: '', // ✅ NUEVO - Manager seleccionado
+       estado: 'activo'
+     },
 
-erroresFormulario: [],
-busquedaTimeout: null,
+     erroresFormulario: [],
+     busquedaTimeout: null,
+     usuariosDisponibles: [], // ✅ NUEVO - Lista de usuarios para el dropdown
 
-// Sistema de notificaciones
-notification: {
- show: false,
- type: 'success',
- message: '',
- icon: 'fa-check'
-}
-}
-},
-
-computed: {
-paginasVisibles() {
- if (!this.pagination) return [];
- 
- const total = this.pagination.totalPages;
- const actual = this.pagination.currentPage;
- const rango = 2;
- 
- let inicio = Math.max(1, actual - rango);
- let fin = Math.min(total, actual + rango);
- 
- if (fin - inicio < 4) {
-   if (inicio === 1) {
-     fin = Math.min(total, inicio + 4);
-   } else if (fin === total) {
-     inicio = Math.max(1, fin - 4);
-   }
- }
- 
- const paginas = [];
- for (let i = inicio; i <= fin; i++) {
-   paginas.push(i);
- }
- return paginas;
-}
-},
-
-watch: {
-// Actualizar paginaSalto cuando cambie la página actual
-'pagination.currentPage'(newVal) {
- if (newVal) {
-   this.paginaSalto = newVal;
- }
-}
-},
-
-async mounted() {
-console.log('🚀 Componente AdminClientes montado');
-
-await this.cargarDatosIniciales();
-},
-
-methods: {
-// ==================== CARGA DE DATOS ====================
-async cargarDatosIniciales() {
- this.loading = true;
- this.loadingMessage = 'Cargando clientes...';
- 
- try {
-   await Promise.all([
-     this.cargarClientes(),
-     this.cargarEstadisticas()
-   ]);
- } catch (error) {
-   console.error('❌ Error cargando datos iniciales:', error);
-   this.showNotification('Error cargando datos del sistema', 'error');
- } finally {
-   this.loading = false;
- }
-},
-
-async cargarClientes() {
- try {
-   console.log('📋 Cargando clientes con filtros:', this.filtros);
-   
-   const params = {
-     page: this.pagination?.currentPage || 1,
-     limit: this.itemsPorPagina,
-     search: this.filtros.busqueda || undefined,
-     estado: this.filtros.estado || undefined
-   };
-   
-   const result = await clientesService.getClientes(params);
-   
-   if (result.success) {
-     this.clientes = result.clientes;
-     this.pagination = result.pagination;
-     console.log('✅ Clientes cargados:', this.clientes.length);
-   } else {
-     this.showNotification(result.message || 'Error cargando clientes', 'error');
-   }
-   
- } catch (error) {
-   console.error('❌ Error cargando clientes:', error);
-   this.showNotification('Error de conexión al cargar clientes', 'error');
- }
-},
-
-async cargarEstadisticas() {
- try {
-   console.log('📊 Cargando estadísticas...');
-   
-   const result = await clientesService.getEstadisticas();
-   
-   if (result.success) {
-     this.estadisticas = result.estadisticas;
-     console.log('✅ Estadísticas cargadas:', this.estadisticas);
-   } else {
-     console.error('❌ Error cargando estadísticas:', result.message);
-   }
-   
- } catch (error) {
-   console.error('❌ Error cargando estadísticas:', error);
- }
-},
-
-// ==================== BÚSQUEDA Y FILTROS ====================
-buscarClientes() {
- // Debounce para evitar muchas llamadas
- clearTimeout(this.busquedaTimeout);
- this.busquedaTimeout = setTimeout(() => {
-   this.aplicarFiltros();
- }, 500);
-},
-
-async aplicarFiltros() {
- console.log('🔍 Aplicando filtros:', this.filtros);
- 
- // Resetear a la primera página
- if (this.pagination) {
-   this.pagination.currentPage = 1;
- }
- 
- await this.cargarClientes();
-},
-
-limpiarFiltros() {
- this.filtros = {
-   busqueda: '',
-   estado: ''
- };
- 
- this.aplicarFiltros();
-},
-
-// ==================== PAGINACIÓN ====================
-async cambiarItemsPorPagina() {
- if (this.pagination) {
-   this.pagination.currentPage = 1;
- }
- this.paginaSalto = 1;
- await this.cargarClientes();
-},
-
-async irAPrimera() {
- if (this.pagination && this.pagination.currentPage !== 1) {
-   this.pagination.currentPage = 1;
-   await this.cargarClientes();
- }
-},
-
-async irAUltima() {
- if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
-   this.pagination.currentPage = this.pagination.totalPages;
-   await this.cargarClientes();
- }
-},
-
-async paginaAnterior() {
- if (this.pagination && this.pagination.hasPrevPage) {
-   this.pagination.currentPage--;
-   await this.cargarClientes();
- }
-},
-
-async paginaSiguiente() {
- if (this.pagination && this.pagination.hasNextPage) {
-   this.pagination.currentPage++;
-   await this.cargarClientes();
- }
-},
-
-async irAPagina(pagina = null) {
- const targetPage = pagina || this.paginaSalto;
- 
- if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
-   this.pagination.currentPage = targetPage;
-   await this.cargarClientes();
- } else {
-   this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
-   this.paginaSalto = this.pagination?.currentPage || 1;
- }
-},
-
-// ==================== GESTIÓN DE CLIENTES ====================
-nuevoCliente() {
- this.clienteEditando = null;
- this.limpiarFormulario();
- this.modalFormulario = true;
-},
-
-verCliente(cliente) {
- this.modalCliente = cliente;
-},
-
-editarCliente(cliente) {
- this.clienteEditando = cliente;
- this.llenarFormulario(cliente);
- this.modalFormulario = true;
- this.modalCliente = null;
-},
-
-async guardarCliente() {
- if (this.guardandoCliente) return;
- 
- this.erroresFormulario = [];
- 
- // Validaciones básicas
- if (!this.validarFormulario()) {
-   return;
- }
- 
- this.guardandoCliente = true;
- this.loadingMessage = this.clienteEditando ? 'Actualizando cliente...' : 'Creando cliente...';
- 
- try {
-   let result;
-   
-   if (this.clienteEditando) {
-     // Actualizar cliente existente
-     result = await clientesService.updateCliente(this.clienteEditando.clientes_id, this.formulario);
-   } else {
-     // Crear nuevo cliente
-     result = await clientesService.createCliente(this.formulario);
-   }
-   
-   if (result.success) {
-     this.showNotification(
-       result.message || (this.clienteEditando ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente'), 
-       'success'
-     );
-     
-     this.cerrarModalFormulario();
-     
-     // Recargar datos
-     await Promise.all([
-       this.cargarClientes(),
-       this.cargarEstadisticas()
-     ]);
-     
-   } else {
-     // Manejar errores de validación
-     if (result.errors) {
-       this.erroresFormulario = result.errors;
-     } else {
-       this.showNotification(result.message || 'Error al guardar cliente', 'error');
+     // Sistema de notificaciones
+     notification: {
+       show: false,
+       type: 'success',
+       message: '',
+       icon: 'fa-check'
      }
    }
-   
- } catch (error) {
-   console.error('❌ Error guardando cliente:', error);
-   this.showNotification('Error de conexión al guardar cliente', 'error');
- } finally {
-   this.guardandoCliente = false;
- }
-},
+ },
 
-validarFormulario() {
- const errores = [];
- 
- if (!this.formulario.nombre_empresa?.trim()) {
-   errores.push({ field: 'nombre_empresa', message: 'El nombre de la empresa es requerido' });
- }
- 
- if (!this.formulario.documento_fiscal?.trim()) {
-   errores.push({ field: 'documento_fiscal', message: 'El RTN es requerido' });
- }
- 
- if (!this.formulario.nombre_encargado?.trim()) {
-   errores.push({ field: 'nombre_encargado', message: 'El nombre del encargado es requerido' });
- }
- 
- if (!this.formulario.telefono_personal?.trim()) {
-   errores.push({ field: 'telefono_personal', message: 'El teléfono personal es requerido' });
- }
- 
- if (this.formulario.correo_personal && !this.isValidEmail(this.formulario.correo_personal)) {
-   errores.push({ field: 'correo_personal', message: 'Ingrese un correo personal válido' });
- }
- 
- if (this.formulario.correo_empresa && !this.isValidEmail(this.formulario.correo_empresa)) {
-   errores.push({ field: 'correo_empresa', message: 'Ingrese un correo de empresa válido' });
- }
- 
- this.erroresFormulario = errores;
- 
- if (errores.length > 0) {
-   this.showNotification('Por favor corrige los errores en el formulario', 'warning');
-   return false;
- }
- 
- return true;
-},
-
-isValidEmail(email) {
- const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
- return emailRegex.test(email);
-},
-
-llenarFormulario(cliente) {
- this.formulario = {
-   nombre_empresa: cliente.nombre_empresa,
-   documento_fiscal: cliente.documento_fiscal,
-   telefono_empresa: cliente.telefono_empresa || '',
-   correo_empresa: cliente.correo_empresa || '',
-   nombre_encargado: cliente.nombre_encargado,
-   telefono_personal: cliente.telefono_personal || '',
-   correo_personal: cliente.correo_personal || '',
-   estado: cliente.estado
- };
-},
-
-limpiarFormulario() {
- this.formulario = {
-   nombre_empresa: '',
-   documento_fiscal: '',
-   telefono_empresa: '',
-   correo_empresa: '',
-   nombre_encargado: '',
-   telefono_personal: '',
-   correo_personal: '',
-   estado: 'activo'
- };
- this.erroresFormulario = [];
-},
-
-// ==================== CAMBIO DE ESTADO ====================
-mostrarModalCambiarEstado(cliente) {
- this.clienteParaCambiarEstado = cliente;
- this.modalCambiarEstado = true;
-},
-
-async confirmarCambiarEstado() {
- if (this.cambiandoEstado || !this.clienteParaCambiarEstado) return;
- 
- this.cambiandoEstado = true;
- 
- try {
-   const nuevoEstado = this.clienteParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
-   
-   let result;
-   if (nuevoEstado === 'activo') {
-     result = await clientesService.restoreCliente(this.clienteParaCambiarEstado.clientes_id);
-   } else {
-     result = await clientesService.deleteCliente(this.clienteParaCambiarEstado.clientes_id);
+ computed: {
+   paginasVisibles() {
+     if (!this.pagination) return [];
+     
+     const total = this.pagination.totalPages;
+     const actual = this.pagination.currentPage;
+     const rango = 2;
+     
+     let inicio = Math.max(1, actual - rango);
+     let fin = Math.min(total, actual + rango);
+     
+     if (fin - inicio < 4) {
+       if (inicio === 1) {
+         fin = Math.min(total, inicio + 4);
+       } else if (fin === total) {
+         inicio = Math.max(1, fin - 4);
+       }
+     }
+     
+     const paginas = [];
+     for (let i = inicio; i <= fin; i++) {
+       paginas.push(i);
+     }
+     return paginas;
    }
-   
-   if (result.success) {
-     const accion = nuevoEstado === 'activo' ? 'activado' : 'desactivado';
-     this.showNotification(`Cliente ${accion} exitosamente`, 'success');
-     
-     // Actualizar el estado local
-     this.clienteParaCambiarEstado.estado = nuevoEstado;
-     
-     // Recargar datos
-     await Promise.all([
-       this.cargarClientes(),
-       this.cargarEstadisticas()
-     ]);
-     
-   } else {
-     this.showNotification(result.message || 'Error al cambiar estado del cliente', 'error');
+ },
+
+ watch: {
+   // Actualizar paginaSalto cuando cambie la página actual
+   'pagination.currentPage'(newVal) {
+     if (newVal) {
+       this.paginaSalto = newVal;
+     }
    }
-   
- } catch (error) {
-   console.error('❌ Error cambiando estado:', error);
-   this.showNotification('Error de conexión al cambiar estado', 'error');
- } finally {
-   this.cambiandoEstado = false;
-   this.cerrarModalCambiarEstado();
+ },
+
+ async mounted() {
+   console.log('🚀 Componente AdminClientes montado');
+
+   await this.cargarDatosIniciales();
+   await this.cargarUsuariosDisponibles(); // ✅ NUEVO
+ },
+
+ methods: {
+   // ==================== CARGA DE DATOS ====================
+   async cargarDatosIniciales() {
+     this.loading = true;
+     this.loadingMessage = 'Cargando clientes...';
+     
+     try {
+       await Promise.all([
+         this.cargarClientes(),
+         this.cargarEstadisticas()
+       ]);
+     } catch (error) {
+       console.error('❌ Error cargando datos iniciales:', error);
+       this.showNotification('Error cargando datos del sistema', 'error');
+     } finally {
+       this.loading = false;
+     }
+   },
+
+  async cargarClientes() {
+  try {
+    console.log('📋 Cargando clientes con filtros:', this.filtros);
+    
+    const params = {
+      page: this.pagination?.currentPage || 1,
+      limit: this.itemsPorPagina,
+      search: this.filtros.busqueda || undefined,
+      estado: this.filtros.estado || undefined
+    };
+    
+    // ✅ USAR EL NUEVO ENDPOINT PARA ADMIN
+    const result = await clientesService.getClientesAdmin(params);
+    
+    if (result.success) {
+      this.clientes = result.clientes;
+      this.pagination = result.pagination;
+      console.log('✅ Clientes cargados:', this.clientes.length);
+    } else {
+      this.showNotification(result.message || 'Error cargando clientes', 'error');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error cargando clientes:', error);
+    this.showNotification('Error de conexión al cargar clientes', 'error');
+  }
+},
+
+   async cargarEstadisticas() {
+     try {
+       console.log('📊 Cargando estadísticas...');
+       
+       const result = await clientesService.getEstadisticas();
+       
+       if (result.success) {
+         this.estadisticas = result.estadisticas;
+         console.log('✅ Estadísticas cargadas:', this.estadisticas);
+       } else {
+         console.error('❌ Error cargando estadísticas:', result.message);
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cargando estadísticas:', error);
+     }
+   },
+
+   // ✅ NUEVO: Cargar usuarios disponibles para manager
+   async cargarUsuariosDisponibles() {
+     try {
+       console.log('👥 Cargando usuarios disponibles para manager...');
+       
+       const result = await usuariosService.getUsuariosParaManager();
+       
+       if (result.success) {
+         this.usuariosDisponibles = result.usuarios;
+         console.log('✅ Usuarios cargados:', this.usuariosDisponibles.length);
+       } else {
+         console.error('❌ Error cargando usuarios:', result.message);
+         this.showNotification('Error cargando usuarios disponibles', 'error');
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cargando usuarios:', error);
+       this.showNotification('Error de conexión al cargar usuarios', 'error');
+     }
+   },
+
+   // ==================== BÚSQUEDA Y FILTROS ====================
+   buscarClientes() {
+     // Debounce para evitar muchas llamadas
+     clearTimeout(this.busquedaTimeout);
+     this.busquedaTimeout = setTimeout(() => {
+       this.aplicarFiltros();
+     }, 500);
+   },
+
+   async aplicarFiltros() {
+     console.log('🔍 Aplicando filtros:', this.filtros);
+     
+     // Resetear a la primera página
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     
+     await this.cargarClientes();
+   },
+
+   limpiarFiltros() {
+     this.filtros = {
+       busqueda: '',
+       estado: ''
+     };
+     
+     this.aplicarFiltros();
+   },
+
+   // ==================== PAGINACIÓN ====================
+   async cambiarItemsPorPagina() {
+     if (this.pagination) {
+       this.pagination.currentPage = 1;
+     }
+     this.paginaSalto = 1;
+     await this.cargarClientes();
+   },
+
+   async irAPrimera() {
+     if (this.pagination && this.pagination.currentPage !== 1) {
+       this.pagination.currentPage = 1;
+       await this.cargarClientes();
+     }
+   },
+
+   async irAUltima() {
+     if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
+       this.pagination.currentPage = this.pagination.totalPages;
+       await this.cargarClientes();
+     }
+   },
+
+   async paginaAnterior() {
+     if (this.pagination && this.pagination.hasPrevPage) {
+       this.pagination.currentPage--;
+       await this.cargarClientes();
+     }
+   },
+
+   async paginaSiguiente() {
+     if (this.pagination && this.pagination.hasNextPage) {
+       this.pagination.currentPage++;
+       await this.cargarClientes();
+     }
+   },
+
+   async irAPagina(pagina = null) {
+     const targetPage = pagina || this.paginaSalto;
+     
+     if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
+       this.pagination.currentPage = targetPage;
+       await this.cargarClientes();
+     } else {
+       this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
+       this.paginaSalto = this.pagination?.currentPage || 1;
+     }
+   },
+
+   // ==================== GESTIÓN DE CLIENTES ====================
+   nuevoCliente() {
+     this.clienteEditando = null;
+     this.limpiarFormulario();
+     this.modalFormulario = true;
+   },
+
+   verCliente(cliente) {
+     this.modalCliente = cliente;
+   },
+
+   editarCliente(cliente) {
+     this.clienteEditando = cliente;
+     this.llenarFormulario(cliente);
+     this.modalFormulario = true;
+     this.modalCliente = null;
+   },
+
+ async guardarCliente() {
+  if (this.guardandoCliente) return;
+  
+  this.erroresFormulario = [];
+  
+  // Validaciones básicas
+  if (!this.validarFormulario()) {
+    return;
+  }
+  
+  this.guardandoCliente = true;
+  this.loadingMessage = this.clienteEditando ? 'Actualizando cliente...' : 'Creando cliente...';
+  
+  try {
+    let result;
+    
+    if (this.clienteEditando) {
+      // Actualizar cliente existente (usar endpoint normal)
+      result = await clientesService.updateCliente(this.clienteEditando.clientes_id, this.formulario);
+    } else {
+      // ✅ NUEVO: Crear cliente desde admin (usar endpoint específico)
+      result = await clientesService.createClienteAdmin(this.formulario);
+    }
+    
+    if (result.success) {
+      this.showNotification(
+        result.message || (this.clienteEditando ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente'), 
+        'success'
+      );
+      
+      this.cerrarModalFormulario();
+      
+      // Recargar datos
+      await Promise.all([
+        this.cargarClientes(),
+        this.cargarEstadisticas()
+      ]);
+      
+    } else {
+      // Manejar errores de validación
+      if (result.errors) {
+        this.erroresFormulario = result.errors;
+      } else {
+        this.showNotification(result.message || 'Error al guardar cliente', 'error');
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error guardando cliente:', error);
+    this.showNotification('Error de conexión al guardar cliente', 'error');
+  } finally {
+    this.guardandoCliente = false;
+  }
+},
+
+   validarFormulario() {
+     const errores = [];
+     
+     if (!this.formulario.nombre_empresa?.trim()) {
+       errores.push({ field: 'nombre_empresa', message: 'El nombre de la empresa es requerido' });
+     }
+     
+     if (!this.formulario.documento_fiscal?.trim()) {
+       errores.push({ field: 'documento_fiscal', message: 'El RTN es requerido' });
+     }
+     
+     if (!this.formulario.nombre_encargado?.trim()) {
+       errores.push({ field: 'nombre_encargado', message: 'El nombre del encargado es requerido' });
+     }
+     
+     if (!this.formulario.telefono_personal?.trim()) {
+       errores.push({ field: 'telefono_personal', message: 'El teléfono personal es requerido' });
+     }
+
+     // ✅ NUEVA VALIDACIÓN: Manager requerido
+     if (!this.formulario.usuarios_id) {
+       errores.push({ field: 'usuarios_id', message: 'Debe seleccionar un manager' });
+     }
+     
+     if (this.formulario.correo_personal && !this.isValidEmail(this.formulario.correo_personal)) {
+       errores.push({ field: 'correo_personal', message: 'Ingrese un correo personal válido' });
+     }
+     
+     if (this.formulario.correo_empresa && !this.isValidEmail(this.formulario.correo_empresa)) {
+       errores.push({ field: 'correo_empresa', message: 'Ingrese un correo de empresa válido' });
+     }
+     
+     this.erroresFormulario = errores;
+     
+     if (errores.length > 0) {
+       this.showNotification('Por favor corrige los errores en el formulario', 'warning');
+       return false;
+     }
+     
+     return true;
+   },
+
+   isValidEmail(email) {
+     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+     return emailRegex.test(email);
+   },
+
+   // ✅ MODIFICADO: Incluir usuarios_id
+   llenarFormulario(cliente) {
+     this.formulario = {
+       nombre_empresa: cliente.nombre_empresa,
+       documento_fiscal: cliente.documento_fiscal,
+       telefono_empresa: cliente.telefono_empresa || '',
+       correo_empresa: cliente.correo_empresa || '',
+       nombre_encargado: cliente.nombre_encargado,
+       telefono_personal: cliente.telefono_personal || '',
+       correo_personal: cliente.correo_personal || '',
+       usuarios_id: cliente.usuarios_id, // ✅ NUEVO - Manager actual
+       estado: cliente.estado
+     };
+   },
+
+   // ✅ MODIFICADO: Incluir usuarios_id
+   limpiarFormulario() {
+     this.formulario = {
+       nombre_empresa: '',
+       documento_fiscal: '',
+       telefono_empresa: '',
+       correo_empresa: '',
+       nombre_encargado: '',
+       telefono_personal: '',
+       correo_personal: '',
+       usuarios_id: '', // ✅ NUEVO - Manager
+       estado: 'activo'
+     };
+     this.erroresFormulario = [];
+   },
+
+   // ==================== CAMBIO DE ESTADO ====================
+   mostrarModalCambiarEstado(cliente) {
+     this.clienteParaCambiarEstado = cliente;
+     this.modalCambiarEstado = true;
+   },
+
+   async confirmarCambiarEstado() {
+     if (this.cambiandoEstado || !this.clienteParaCambiarEstado) return;
+     
+     this.cambiandoEstado = true;
+     
+     try {
+       const nuevoEstado = this.clienteParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
+       
+       let result;
+       if (nuevoEstado === 'activo') {
+         result = await clientesService.restoreCliente(this.clienteParaCambiarEstado.clientes_id);
+       } else {
+         result = await clientesService.deleteCliente(this.clienteParaCambiarEstado.clientes_id);
+       }
+       
+       if (result.success) {
+         const accion = nuevoEstado === 'activo' ? 'activado' : 'desactivado';
+         this.showNotification(`Cliente ${accion} exitosamente`, 'success');
+         
+         // Actualizar el estado local
+         this.clienteParaCambiarEstado.estado = nuevoEstado;
+         
+         // Recargar datos
+         await Promise.all([
+           this.cargarClientes(),
+           this.cargarEstadisticas()
+         ]);
+         
+       } else {
+         this.showNotification(result.message || 'Error al cambiar estado del cliente', 'error');
+       }
+       
+     } catch (error) {
+       console.error('❌ Error cambiando estado:', error);
+       this.showNotification('Error de conexión al cambiar estado', 'error');
+     } finally {
+       this.cambiandoEstado = false;
+       this.cerrarModalCambiarEstado();
+     }
+   },
+
+   cerrarModalCambiarEstado() {
+     this.modalCambiarEstado = false;
+     this.clienteParaCambiarEstado = null;
+   },
+
+   // ==================== MODALES ====================
+   cerrarModal() {
+     this.modalCliente = null;
+   },
+
+   cerrarModalFormulario() {
+     this.modalFormulario = false;
+     this.clienteEditando = null;
+     this.limpiarFormulario();
+   },
+
+   // ==================== HELPERS ====================
+   formatearFecha(fecha) {
+     if (!fecha) return 'No disponible';
+     
+     try {
+       return new Date(fecha).toLocaleDateString('es-HN', {
+         year: 'numeric',
+         month: 'short',
+         day: 'numeric',
+         hour: '2-digit',
+         minute: '2-digit'
+       });
+     } catch (error) {
+       return fecha;
+     }
+   },
+
+   getEstadoTexto(estado) {
+     const estados = {
+       activo: 'Activo',
+       inactivo: 'Inactivo'
+     };
+     return estados[estado] || estado;
+   },
+
+   // ==================== NOTIFICACIONES ====================
+   showNotification(message, type = 'success') {
+     const icons = {
+       success: 'fa-check-circle',
+       error: 'fa-exclamation-circle',
+       warning: 'fa-exclamation-triangle',
+       info: 'fa-info-circle'
+     };
+     
+     this.notification = {
+       show: true,
+       type,
+       message,
+       icon: icons[type] || icons.info
+     };
+     
+     // Auto-close después de 5 segundos
+     setTimeout(() => {
+       this.closeNotification();
+     }, 5000);
+   },
+
+   closeNotification() {
+     this.notification.show = false;
+   }
+ },
+
+ // Limpiar timeouts al destruir el componente
+ beforeUnmount() {
+   if (this.busquedaTimeout) {
+     clearTimeout(this.busquedaTimeout);
+   }
  }
-},
-
-cerrarModalCambiarEstado() {
- this.modalCambiarEstado = false;
- this.clienteParaCambiarEstado = null;
-},
-
-// ==================== MODALES ====================
-cerrarModal() {
- this.modalCliente = null;
-},
-
-cerrarModalFormulario() {
- this.modalFormulario = false;
- this.clienteEditando = null;
- this.limpiarFormulario();
-},
-
-// ==================== HELPERS ====================
-formatearFecha(fecha) {
- if (!fecha) return 'No disponible';
- 
- try {
-   return new Date(fecha).toLocaleDateString('es-HN', {
-     year: 'numeric',
-     month: 'short',
-     day: 'numeric',
-     hour: '2-digit',
-     minute: '2-digit'
-   });
- } catch (error) {
-   return fecha;
- }
-},
-
-getEstadoTexto(estado) {
- const estados = {
-   activo: 'Activo',
-   inactivo: 'Inactivo'
- };
- return estados[estado] || estado;
-},
-
-// ==================== NOTIFICACIONES ====================
-showNotification(message, type = 'success') {
- const icons = {
-   success: 'fa-check-circle',
-   error: 'fa-exclamation-circle',
-   warning: 'fa-exclamation-triangle',
-   info: 'fa-info-circle'
- };
- 
- this.notification = {
-   show: true,
-   type,
-   message,
-   icon: icons[type] || icons.info
- };
- 
- // Auto-close después de 5 segundos
- setTimeout(() => {
-   this.closeNotification();
- }, 5000);
-},
-
-closeNotification() {
- this.notification.show = false;
-}
-},
-
-// Limpiar timeouts al destruir el componente
-beforeUnmount() {
-if (this.busquedaTimeout) {
- clearTimeout(this.busquedaTimeout);
-}
-}
 }
 </script>
 
@@ -2142,6 +2208,15 @@ if (this.busquedaTimeout) {
  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
+/* ✅ NUEVO: Estilo para form-help */
+.form-help {
+ color: #6c757d;
+ font-size: 0.8rem;
+ margin-top: 0.25rem;
+ display: block;
+ font-style: italic;
+}
+
 /* Errores de formulario */
 .form-errors {
  background: #fff5f5;
@@ -2382,78 +2457,78 @@ if (this.busquedaTimeout) {
 
 /* Animaciones */
 @keyframes slideInRight {
-from {
-  opacity: 0;
-  transform: translateX(100%);
-}
-to {
-  opacity: 1;
-  transform: translateX(0);
-}
+ from {
+   opacity: 0;
+   transform: translateX(100%);
+ }
+ to {
+   opacity: 1;
+   transform: translateX(0);
+ }
 }
 
 @keyframes slideOutRight {
-from {
-  opacity: 1;
-  transform: translateX(0);
-}
-to {
-  opacity: 0;
-  transform: translateX(100%);
-}
+ from {
+   opacity: 1;
+   transform: translateX(0);
+ }
+ to {
+   opacity: 0;
+   transform: translateX(100%);
+ }
 }
 
 @keyframes fadeIn {
-from {
-  opacity: 0;
-  transform: translateY(20px);
-}
-to {
-  opacity: 1;
-  transform: translateY(0);
-}
+ from {
+   opacity: 0;
+   transform: translateY(20px);
+ }
+ to {
+   opacity: 1;
+   transform: translateY(0);
+ }
 }
 
 @keyframes modalSlideIn {
-from {
-  opacity: 0;
-  transform: scale(0.9) translateY(-20px);
-}
-to {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-}
+ from {
+   opacity: 0;
+   transform: scale(0.9) translateY(-20px);
+ }
+ to {
+   opacity: 1;
+   transform: scale(1) translateY(0);
+ }
 }
 
 @keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
 }
 
 .admin-clientes-container {
-animation: fadeIn 0.5s ease-out;
+ animation: fadeIn 0.5s ease-out;
 }
 
 .cliente-card,
 .stat-card {
-animation: fadeIn 0.3s ease-out;
+ animation: fadeIn 0.3s ease-out;
 }
 
 /* Estados de hover mejorados */
 .btn:hover:not(:disabled) {
-transform: translateY(-1px);
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .clientes-tabla tbody tr:hover {
-background-color: #f8f9fa;
-transform: scale(1.01);
-transition: all 0.2s ease;
+ background-color: #f8f9fa;
+ transform: scale(1.01);
+ transition: all 0.2s ease;
 }
 
 .btn-accion:hover {
-transform: translateY(-2px);
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+ transform: translateY(-2px);
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Mejoras de accesibilidad */
@@ -2462,55 +2537,55 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 .form-select:focus,
 .btn-accion:focus,
 .view-btn:focus {
-outline: 2px solid #3498db;
-outline-offset: 2px;
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
 }
 
 /* Estados de carga específicos */
 .btn.loading {
-pointer-events: none;
-opacity: 0.7;
+ pointer-events: none;
+ opacity: 0.7;
 }
 
 .btn.loading i {
-animation: spin 1s linear infinite;
+ animation: spin 1s linear infinite;
 }
 
 /* Transiciones suaves */
 * {
-transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+ transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Mejoras visuales para la paginación */
 .btn-pag:focus {
-outline: 2px solid #3498db;
-outline-offset: 2px;
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
 }
 
 .page-input:invalid {
-border-color: #e74c3c;
-box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+ border-color: #e74c3c;
+ box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
 }
 
 /* Mejoras para el formulario */
 .form-input:invalid,
 .form-select:invalid {
-border-color: #e74c3c;
+ border-color: #e74c3c;
 }
 
 .form-input:valid,
 .form-select:valid {
-border-color: #27ae60;
+ border-color: #27ae60;
 }
 
 /* Mejoras para la búsqueda */
 .search-input:focus + .search-icon {
-color: #3498db;
+ color: #3498db;
 }
 
 /* Estados específicos para notificaciones */
 .notification.hide {
-animation: slideOutRight 0.3s ease-in forwards;
+ animation: slideOutRight 0.3s ease-in forwards;
 }
 
 /* Sombras mejoradas */
@@ -2518,395 +2593,100 @@ animation: slideOutRight 0.3s ease-in forwards;
 .modal-content,
 .clientes-section,
 .filtros-section {
-box-shadow: 
-  0 1px 3px rgba(0, 0, 0, 0.12),
-  0 1px 2px rgba(0, 0, 0, 0.24);
+ box-shadow: 
+   0 1px 3px rgba(0, 0, 0, 0.12),
+   0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
 .card:hover,
 .cliente-card:hover {
-box-shadow: 
-  0 14px 28px rgba(0, 0, 0, 0.25),
-  0 10px 10px rgba(0, 0, 0, 0.22);
+ box-shadow: 
+   0 14px 28px rgba(0, 0, 0, 0.25),
+   0 10px 10px rgba(0, 0, 0, 0.22);
 }
 
 /* Scroll personalizado para la tabla */
 .tabla-wrapper::-webkit-scrollbar {
-height: 8px;
+ height: 8px;
 }
 
 .tabla-wrapper::-webkit-scrollbar-track {
-background: #f1f1f1;
-border-radius: 4px;
+ background: #f1f1f1;
+ border-radius: 4px;
 }
 
 .tabla-wrapper::-webkit-scrollbar-thumb {
-background: #c1c1c1;
-border-radius: 4px;
+ background: #c1c1c1;
+ border-radius: 4px;
 }
 
 .tabla-wrapper::-webkit-scrollbar-thumb:hover {
-background: #a8a8a8;
+ background: #a8a8a8;
 }
 
 /* Estados de éxito y error para formularios */
 .form-group.success .form-input,
 .form-group.success .form-select {
-border-color: #27ae60;
-box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+ border-color: #27ae60;
+ box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
 }
 
 .form-group.error .form-input,
 .form-group.error .form-select {
-border-color: #e74c3c;
-box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-.estadisticas-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.confirmacion-content {
-  gap: 1.5rem;
-}
-
-.cambio-estado-visual {
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.flecha-cambio {
-  transform: rotate(90deg);
-}
-}
-
-@media (max-width: 768px) {
-.admin-clientes-container {
-  padding: 1rem;
-}
-
-.page-header {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1rem;
-}
-
-.header-actions {
-  flex-direction: column;
-}
-
-.header-content h1 {
-  font-size: 2rem;
-}
-
-.estadisticas-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.filtros-grid {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.filter-select {
-  min-width: auto;
-}
-
-.section-header {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.paginacion-info {
-  flex-direction: column;
-  align-items: stretch;
-  text-align: center;
-}
-
-.tabla-wrapper {
-  overflow-x: scroll;
-}
-
-.clientes-tabla {
-  min-width: 900px;
-}
-
-.tarjetas-grid {
-  grid-template-columns: 1fr;
-}
-
-.card-actions {
-  justify-content: stretch;
-}
-
-.card-actions .btn {
-  flex: 1;
-  justify-content: center;
-}
-
-.detalle-item {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.form-grid {
-  grid-template-columns: 1fr;
-}
-
-.modal-footer {
-  flex-direction: column;
-}
-
-.modal-confirmacion {
-  max-width: 95%;
-  margin: 1rem;
-}
-
-.cliente-info-resumen {
-  flex-direction: column;
-  text-align: center;
-  gap: 0.75rem;
-}
-
-.icono-estado {
-  width: 60px;
-  height: 60px;
-  font-size: 1.5rem;
-}
-
-.cambio-estado-visual {
-  padding: 1rem;
-}
-
-.notification {
-  right: 1rem;
-  left: 1rem;
-  min-width: auto;
-}
-
-/* Botones de acción en móvil - mantener horizontal */
-.acciones {
-  gap: 0.25rem;
-}
-
-.btn-accion {
-  width: 28px;
-  height: 28px;
-  font-size: 0.8rem;
-}
-}
-
-@media (max-width: 480px) {
-.estadisticas-grid {
-  grid-template-columns: 1fr;
-}
-
-.filtros-section,
-.clientes-section {
-  padding: 1rem;
-}
-
-.stat-card {
-  padding: 1rem;
-}
-
-.cliente-card {
-  padding: 1rem;
-}
-
-.modal-content {
-  margin: 0.5rem;
-}
-
-.btn-pag {
-  min-width: 35px;
-  padding: 0.375rem 0.5rem;
-}
-
-.card-actions {
-  flex-direction: column;
-}
-
-.card-actions .btn {
-  width: 100%;
-}
-
-.modal-confirmacion {
-  max-width: 100%;
-  margin: 0.5rem;
-}
-
-.cliente-avatar {
-  width: 50px;
-  height: 50px;
-  font-size: 1.2rem;
-}
-
-.pregunta-principal {
-  font-size: 1rem;
-}
-
-.advertencia-estado,
-.info-estado {
-  padding: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.notification {
-  top: 1rem;
-  right: 0.5rem;
-  left: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-}
-
-.loading-spinner {
-  font-size: 1rem;
-}
-
-.loading-spinner i {
-  font-size: 2rem;
-}
-
-/* Mantener botones horizontales incluso en pantallas muy pequeñas */
-.acciones {
-  min-width: 90px;
-  overflow-x: auto;
-}
-
-.btn-accion {
-  width: 26px;
-  height: 26px;
-  font-size: 0.75rem;
-  flex-shrink: 0;
-}
-}
-
-/* Mejoras para dispositivos táctiles */
-@media (hover: none) and (pointer: coarse) {
-.btn-accion {
-  width: 40px;
-  height: 40px;
-}
-
-.btn {
-  padding: 1rem 1.5rem;
-}
-
-.clientes-tabla td {
-  padding: 1.5rem 1rem;
-}
-
-/* Asegurar que los botones de acción permanezcan en fila */
-.acciones {
-  gap: 0.75rem;
-}
-}
-
-/* Estados específicos de badges y indicadores */
-.tipo-badge,
-.estado-badge {
-position: relative;
-overflow: hidden;
-}
-
-.tipo-badge::before,
-.estado-badge::before {
-content: '';
-position: absolute;
-top: 0;
-left: -100%;
-width: 100%;
-height: 100%;
-background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-transition: left 0.5s;
-}
-
-.tipo-badge:hover::before,
-.estado-badge:hover::before {
-left: 100%;
-}
-
-/* Indicadores de loading específicos */
-.btn[disabled] i.fa-spinner {
-animation: spin 1s linear infinite;
-}
-
-/* Mejoras de contraste y legibilidad */
-.stat-card:focus-within {
-outline: 2px solid #3498db;
-outline-offset: 2px;
-}
-
-.cliente-card:focus-within {
-outline: 2px solid #3498db;
-outline-offset: 2px;
-}
-
-/* Estados de error y éxito más visuales */
-.form-input.error {
-border-color: #e74c3c;
-background-color: rgba(231, 76, 60, 0.05);
-}
-
-.form-input.success {
-border-color: #27ae60;
-background-color: rgba(39, 174, 96, 0.05);
+ border-color: #e74c3c;
+ box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
 }
 
 /* Mejoras en la presentación de datos */
 .stat-number {
-background: linear-gradient(135deg, #2c3e50, #34495e);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-background-clip: text;
+ background: linear-gradient(135deg, #2c3e50, #34495e);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+ background-clip: text;
 }
 
 /* Efectos especiales para estados importantes */
 .btn-danger:hover {
-box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+ box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
 }
 
 .btn-success:hover {
-box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+ box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
 }
 
 /* Mejoras finales de UX */
 .modal-overlay {
-animation: fadeIn 0.3s ease-out;
+ animation: fadeIn 0.3s ease-out;
 }
 
 .empty-state {
-animation: fadeIn 0.5s ease-out;
+ animation: fadeIn 0.5s ease-out;
 }
 
 .cliente-card {
-transform-origin: center;
+ transform-origin: center;
 }
 
 .stat-card {
-transform-origin: center;
+ transform-origin: center;
 }
 
 /* Personalización de scrollbars para todo el modal */
 .modal-content::-webkit-scrollbar {
-width: 6px;
+ width: 6px;
 }
 
 .modal-content::-webkit-scrollbar-track {
-background: #f1f1f1;
+ background: #f1f1f1;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
-background: #c1c1c1;
-border-radius: 3px;
+ background: #c1c1c1;
+ border-radius: 3px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
-background: #a8a8a8;
+ background: #a8a8a8;
 }
 
 /* CORRECCIÓN ESPECÍFICA PARA BOTONES DE ACCIONES */
@@ -2940,5 +2720,300 @@ background: #a8a8a8;
  width: 140px;
  min-width: 140px;
  text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+ .estadisticas-grid {
+   grid-template-columns: repeat(3, 1fr);
+ }
+
+ .confirmacion-content {
+   gap: 1.5rem;
+ }
+
+ .cambio-estado-visual {
+   flex-direction: column;
+   gap: 1rem;
+ }
+
+ .flecha-cambio {
+   transform: rotate(90deg);
+ }
+}
+
+@media (max-width: 768px) {
+ .admin-clientes-container {
+   padding: 1rem;
+ }
+
+ .page-header {
+   flex-direction: column;
+   align-items: stretch;
+   gap: 1rem;
+ }
+
+ .header-actions {
+   flex-direction: column;
+ }
+
+ .header-content h1 {
+   font-size: 2rem;
+ }
+
+ .estadisticas-grid {
+   grid-template-columns: repeat(2, 1fr);
+ }
+
+ .filtros-grid {
+   flex-direction: column;
+   align-items: stretch;
+ }
+
+ .filter-select {
+   min-width: auto;
+ }
+
+ .section-header {
+   flex-direction: column;
+   align-items: stretch;
+ }
+
+ .paginacion-info {
+   flex-direction: column;
+   align-items: stretch;
+   text-align: center;
+ }
+
+ .tabla-wrapper {
+   overflow-x: scroll;
+ }
+
+ .clientes-tabla {
+   min-width: 900px;
+ }
+
+ .tarjetas-grid {
+   grid-template-columns: 1fr;
+ }
+
+ .card-actions {
+   justify-content: stretch;
+ }
+
+ .card-actions .btn {
+   flex: 1;
+   justify-content: center;
+ }
+
+ .detalle-item {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 0.5rem;
+ }
+
+ .form-grid {
+   grid-template-columns: 1fr;
+ }
+
+ .modal-footer {
+   flex-direction: column;
+ }
+
+ .modal-confirmacion {
+   max-width: 95%;
+   margin: 1rem;
+ }
+
+ .cliente-info-resumen {
+   flex-direction: column;
+   text-align: center;
+   gap: 0.75rem;
+ }
+
+ .icono-estado {
+   width: 60px;
+   height: 60px;
+   font-size: 1.5rem;
+ }
+
+ .cambio-estado-visual {
+   padding: 1rem;
+ }
+
+ .notification {
+   right: 1rem;
+   left: 1rem;
+   min-width: auto;
+ }
+
+ /* Botones de acción en móvil - mantener horizontal */
+ .acciones {
+   gap: 0.25rem;
+ }
+
+ .btn-accion {
+   width: 28px;
+   height: 28px;
+   font-size: 0.8rem;
+ }
+}
+
+@media (max-width: 480px) {
+ .estadisticas-grid {
+   grid-template-columns: 1fr;
+ }
+
+ .filtros-section,
+ .clientes-section {
+   padding: 1rem;
+ }
+
+ .stat-card {
+   padding: 1rem;
+ }
+
+ .cliente-card {
+   padding: 1rem;
+ }
+
+ .modal-content {
+   margin: 0.5rem;
+ }
+
+ .btn-pag {
+   min-width: 35px;
+   padding: 0.375rem 0.5rem;
+ }
+
+ .card-actions {
+   flex-direction: column;
+ }
+
+ .card-actions .btn {
+   width: 100%;
+ }
+
+ .modal-confirmacion {
+   max-width: 100%;
+   margin: 0.5rem;
+ }
+
+ .cliente-avatar {
+   width: 50px;
+   height: 50px;
+   font-size: 1.2rem;
+ }
+
+ .pregunta-principal {
+   font-size: 1rem;
+ }
+
+ .advertencia-estado,
+ .info-estado {
+   padding: 0.75rem;
+   font-size: 0.85rem;
+ }
+
+.notification {
+   top: 1rem;
+   right: 0.5rem;
+   left: 0.5rem;
+   padding: 0.75rem 1rem;
+   font-size: 0.9rem;
+ }
+
+ .loading-spinner {
+   font-size: 1rem;
+ }
+
+ .loading-spinner i {
+   font-size: 2rem;
+ }
+
+ /* Mantener botones horizontales incluso en pantallas muy pequeñas */
+ .acciones {
+   min-width: 90px;
+   overflow-x: auto;
+ }
+
+ .btn-accion {
+   width: 26px;
+   height: 26px;
+   font-size: 0.75rem;
+   flex-shrink: 0;
+ }
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+ .btn-accion {
+   width: 40px;
+   height: 40px;
+ }
+
+ .btn {
+   padding: 1rem 1.5rem;
+ }
+
+ .clientes-tabla td {
+   padding: 1.5rem 1rem;
+ }
+
+ /* Asegurar que los botones de acción permanezcan en fila */
+ .acciones {
+   gap: 0.75rem;
+ }
+}
+
+/* Estados específicos de badges y indicadores */
+.tipo-badge,
+.estado-badge {
+ position: relative;
+ overflow: hidden;
+}
+
+.tipo-badge::before,
+.estado-badge::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: -100%;
+ width: 100%;
+ height: 100%;
+ background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+ transition: left 0.5s;
+}
+
+.tipo-badge:hover::before,
+.estado-badge:hover::before {
+ left: 100%;
+}
+
+/* Indicadores de loading específicos */
+.btn[disabled] i.fa-spinner {
+ animation: spin 1s linear infinite;
+}
+
+/* Mejoras de contraste y legibilidad */
+.stat-card:focus-within {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+.cliente-card:focus-within {
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
+}
+
+/* Estados de error y éxito más visuales */
+.form-input.error {
+ border-color: #e74c3c;
+ background-color: rgba(231, 76, 60, 0.05);
+}
+
+.form-input.success {
+ border-color: #27ae60;
+ background-color: rgba(39, 174, 96, 0.05);
 }
 </style>

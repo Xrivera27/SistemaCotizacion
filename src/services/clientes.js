@@ -752,6 +752,78 @@ class ClientesService {
   formatCurrency(precio) {
     return this.formatPrice(precio);
   }
+
+
+  // ✅ NUEVO: Obtener TODOS los clientes para administración
+async getClientesAdmin(params = {}) {
+  try {
+    console.log('📋 Obteniendo TODOS los clientes (admin) con parámetros:', params);
+    
+    const response = await api.get('/clientes/admin/todos', { params });
+    
+    if (response.data.success) {
+      console.log('✅ Clientes admin obtenidos:', response.data.data);
+      return {
+        success: true,
+        clientes: response.data.data.clientes,
+        pagination: response.data.data.pagination
+      };
+    }
+    
+    return {
+      success: false,
+      message: response.data.message || 'Error obteniendo clientes'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo clientes admin:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Error de conexión'
+    };
+  }
+}
+
+// ✅ NUEVO: Crear cliente desde administración
+async createClienteAdmin(clienteData) {
+  try {
+    console.log('➕ Creando cliente (admin):', clienteData);
+    
+    const response = await api.post('/clientes/admin/crear', clienteData);
+    
+    if (response.data.success) {
+      console.log('✅ Cliente creado exitosamente (admin):', response.data.data.cliente);
+      return {
+        success: true,
+        cliente: response.data.data.cliente,
+        message: response.data.message
+      };
+    }
+    
+    return {
+      success: false,
+      message: response.data.message || 'Error creando cliente'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error creando cliente (admin):', error);
+    
+    if (error.response?.data?.errors) {
+      return {
+        success: false,
+        message: error.response.data.message,
+        errors: error.response.data.errors
+      };
+    }
+    
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Error de conexión'
+    };
+  }
+}
+
+
 }
 
 // Exportar instancia única
