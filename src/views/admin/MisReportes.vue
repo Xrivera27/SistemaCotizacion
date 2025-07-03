@@ -35,7 +35,7 @@
       <div v-if="tipoSeleccionado" class="filtros-comunes">
         <div class="filtro-grupo">
           <label>Período:</label>
-          <select v-model="filtros.periodo" class="filter-select">
+          <select v-model="filtros.periodo" class="filter-select" :disabled="isLoading">
             <option value="7">Últimos 7 días</option>
             <option value="30">Últimos 30 días</option>
             <option value="90">Últimos 3 meses</option>
@@ -46,51 +46,81 @@
         <div v-if="filtros.periodo === 'custom'" class="fechas-custom">
           <div class="filtro-grupo">
             <label>Desde:</label>
-            <input v-model="filtros.fechaInicio" type="date" class="form-input">
+            <input v-model="filtros.fechaInicio" type="date" class="form-input" :disabled="isLoading">
           </div>
           <div class="filtro-grupo">
             <label>Hasta:</label>
-            <input v-model="filtros.fechaFin" type="date" class="form-input">
+            <input v-model="filtros.fechaFin" type="date" class="form-input" :disabled="isLoading">
           </div>
         </div>
 
         <!-- Filtros específicos por tipo -->
-        <div v-if="tipoSeleccionado === 'vendedores'" class="filtro-grupo">
+        <div v-if="['vendedores', 'clientes'].includes(tipoSeleccionado)" class="filtro-grupo">
           <label>Vendedor:</label>
-          <select v-model="filtros.vendedor" class="filter-select">
+          <select v-model="filtros.vendedor" class="filter-select" :disabled="isLoading">
             <option value="">Todos los vendedores</option>
-            <option v-for="vendedor in vendedoresDisponibles" :key="vendedor" :value="vendedor">
-              {{ vendedor }}
+            <option v-for="vendedor in vendedoresDisponibles" :key="vendedor.id" :value="vendedor.id">
+              {{ vendedor.nombre }} ({{ vendedor.tipo }})
             </option>
           </select>
         </div>
 
         <div v-if="tipoSeleccionado === 'servicios'" class="filtro-grupo">
           <label>Servicio:</label>
-          <select v-model="filtros.servicio" class="filter-select">
+          <select v-model="filtros.servicio" class="filter-select" :disabled="isLoading">
             <option value="">Todos los servicios</option>
-            <option v-for="servicio in serviciosDisponibles" :key="servicio" :value="servicio">
-              {{ servicio }}
+            <option v-for="servicio in serviciosDisponibles" :key="servicio.id" :value="servicio.id">
+              {{ servicio.nombre }} - {{ servicio.categoria }}
+            </option>
+          </select>
+        </div>
+
+        <div v-if="tipoSeleccionado === 'servicios'" class="filtro-grupo">
+          <label>Categoría:</label>
+          <select v-model="filtros.categoria" class="filter-select" :disabled="isLoading">
+            <option value="">Todas las categorías</option>
+            <option v-for="categoria in categoriasDisponibles" :key="categoria.id" :value="categoria.id">
+              {{ categoria.nombre }}
             </option>
           </select>
         </div>
 
         <div v-if="tipoSeleccionado === 'clientes'" class="filtro-grupo">
           <label>Cliente:</label>
-          <select v-model="filtros.cliente" class="filter-select">
+          <select v-model="filtros.cliente" class="filter-select" :disabled="isLoading">
             <option value="">Todos los clientes</option>
-            <option v-for="cliente in clientesDisponibles" :key="cliente" :value="cliente">
-              {{ cliente }}
+            <option v-for="cliente in clientesDisponibles" :key="cliente.id" :value="cliente.id">
+              {{ cliente.empresa }} ({{ cliente.encargado }})
             </option>
           </select>
         </div>
 
+        <div v-if="tipoSeleccionado === 'cotizaciones'" class="filtro-grupo">
+          <label>Estado:</label>
+          <select v-model="filtros.estado" class="filter-select" :disabled="isLoading">
+            <option value="">Todos los estados</option>
+            <option value="efectiva">Efectiva</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="pendiente_aprobacion">Esperando Aprobación</option>
+            <option value="rechazada">Cancelada</option>
+          </select>
+        </div>
+
+        <div v-if="tipoSeleccionado === 'financiero'" class="filtro-grupo">
+          <label>Agrupación:</label>
+          <select v-model="filtros.agrupacion" class="filter-select" :disabled="isLoading">
+            <option value="mensual">Mensual</option>
+            <option value="semanal">Semanal</option>
+            <option value="diario">Diario</option>
+          </select>
+        </div>
+
         <div class="filtro-acciones">
-          <button class="btn btn-primary" @click="generarReporte">
-            <i class="fas fa-chart-bar"></i>
-            Generar Reporte
+          <button class="btn btn-primary" @click="generarReporte" :disabled="isLoading">
+            <i class="fas fa-chart-bar" :class="{ 'fa-spin': isLoading }"></i>
+            {{ isLoading ? 'Generando...' : 'Generar Reporte' }}
           </button>
-          <button v-if="reporteGenerado" class="btn btn-success" @click="exportarPDF">
+          <button v-if="reporteGenerado" class="btn btn-success" @click="exportarPDF" :disabled="isLoading">
             <i class="fas fa-file-pdf"></i>
             Exportar PDF
           </button>
@@ -118,19 +148,19 @@
           <div class="resumen-grid">
             <div class="resumen-item">
               <span class="resumen-label">Total Cotizaciones:</span>
-              <span class="resumen-valor">{{ datosReporte.totalCotizaciones }}</span>
+              <span class="resumen-valor">{{ datosReporte.totalCotizaciones || 0 }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Cotizaciones Efectivas:</span>
-              <span class="resumen-valor efectivas">{{ datosReporte.cotizacionesEfectivas }}</span>
+              <span class="resumen-valor efectivas">{{ datosReporte.cotizacionesEfectivas || 0 }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Cotizaciones Pendientes:</span>
-              <span class="resumen-valor pendientes">{{ datosReporte.cotizacionesPendientes }}</span>
+              <span class="resumen-valor pendientes">{{ datosReporte.cotizacionesPendientes || 0 }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Cotizaciones Canceladas:</span>
-              <span class="resumen-valor canceladas">{{ datosReporte.cotizacionesCanceladas }}</span>
+              <span class="resumen-valor canceladas">{{ datosReporte.cotizacionesCanceladas || 0 }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Ingresos Totales:</span>
@@ -138,14 +168,17 @@
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Tasa de Conversión:</span>
-              <span class="resumen-valor">{{ datosReporte.tasaConversion }}%</span>
+              <span class="resumen-valor">{{ datosReporte.tasaConversion || 0 }}%</span>
             </div>
           </div>
         </div>
 
         <div class="tabla-reporte">
           <h4>Detalle de Cotizaciones</h4>
-          <table class="reporte-tabla">
+          <div v-if="!datosReporte.detalleCotizaciones || datosReporte.detalleCotizaciones.length === 0" class="no-data">
+            <p>No hay cotizaciones para mostrar con los filtros seleccionados</p>
+          </div>
+          <table v-else class="reporte-tabla">
             <thead>
               <tr>
                 <th>CT#</th>
@@ -178,7 +211,10 @@
       <div v-if="tipoSeleccionado === 'vendedores'" class="reporte-vendedores">
         <div class="tabla-reporte">
           <h4>Rendimiento por Vendedor</h4>
-          <table class="reporte-tabla">
+          <div v-if="!datosReporte.rendimientoVendedores || datosReporte.rendimientoVendedores.length === 0" class="no-data">
+            <p>No hay datos de vendedores para mostrar</p>
+          </div>
+          <table v-else class="reporte-tabla">
             <thead>
               <tr>
                 <th>Vendedor</th>
@@ -204,7 +240,7 @@
                 <td>{{ formatearMoneda(vendedor.ticketPromedio) }}</td>
               </tr>
             </tbody>
-            <tfoot>
+            <tfoot v-if="datosReporte.totales">
               <tr class="total-row">
                 <td><strong>TOTALES</strong></td>
                 <td><strong>{{ datosReporte.totales.cotizaciones }}</strong></td>
@@ -222,10 +258,14 @@
       <div v-if="tipoSeleccionado === 'servicios'" class="reporte-servicios">
         <div class="tabla-reporte">
           <h4>Rendimiento por Servicio</h4>
-          <table class="reporte-tabla">
+          <div v-if="!datosReporte.rendimientoServicios || datosReporte.rendimientoServicios.length === 0" class="no-data">
+            <p>No hay datos de servicios para mostrar</p>
+          </div>
+          <table v-else class="reporte-tabla">
             <thead>
               <tr>
                 <th>Servicio</th>
+                <th>Categoría</th>
                 <th>Cotizaciones</th>
                 <th>Efectivas</th>
                 <th>Conversión</th>
@@ -236,6 +276,7 @@
             <tbody>
               <tr v-for="servicio in datosReporte.rendimientoServicios" :key="servicio.nombre">
                 <td>{{ servicio.nombre }}</td>
+                <td>{{ servicio.categoria || 'Sin categoría' }}</td>
                 <td>{{ servicio.cotizaciones }}</td>
                 <td>{{ servicio.efectivas }}</td>
                 <td>{{ servicio.conversion }}%</td>
@@ -251,7 +292,10 @@
       <div v-if="tipoSeleccionado === 'clientes'" class="reporte-clientes">
         <div class="tabla-reporte">
           <h4>Actividad por Cliente</h4>
-          <table class="reporte-tabla">
+          <div v-if="!datosReporte.actividadClientes || datosReporte.actividadClientes.length === 0" class="no-data">
+            <p>No hay datos de clientes para mostrar</p>
+          </div>
+          <table v-else class="reporte-tabla">
             <thead>
               <tr>
                 <th>Cliente</th>
@@ -282,20 +326,20 @@
           <div class="resumen-grid">
             <div class="resumen-item">
               <span class="resumen-label">Ingresos Brutos:</span>
-              <span class="resumen-valor ingresos">{{ formatearMoneda(datosReporte.financiero.ingresosBrutos) }}</span>
+              <span class="resumen-valor ingresos">{{ formatearMoneda(datosReporte.financiero?.ingresosBrutos) }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Promedio Mensual:</span>
-              <span class="resumen-valor">{{ formatearMoneda(datosReporte.financiero.promedioMensual) }}</span>
+              <span class="resumen-valor">{{ formatearMoneda(datosReporte.financiero?.promedioMensual) }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Mejor Mes:</span>
-              <span class="resumen-valor">{{ datosReporte.financiero.mejorMes }}</span>
+              <span class="resumen-valor">{{ datosReporte.financiero?.mejorMes || 'Sin datos' }}</span>
             </div>
             <div class="resumen-item">
               <span class="resumen-label">Crecimiento:</span>
-              <span class="resumen-valor" :class="datosReporte.financiero.crecimiento > 0 ? 'positivo' : 'negativo'">
-                {{ datosReporte.financiero.crecimiento > 0 ? '+' : '' }}{{ datosReporte.financiero.crecimiento }}%
+              <span class="resumen-valor" :class="(datosReporte.financiero?.crecimiento || 0) > 0 ? 'positivo' : 'negativo'">
+                {{ (datosReporte.financiero?.crecimiento || 0) > 0 ? '+' : '' }}{{ datosReporte.financiero?.crecimiento || 0 }}%
               </span>
             </div>
           </div>
@@ -303,7 +347,10 @@
 
         <div class="tabla-reporte">
           <h4>Ingresos por Mes</h4>
-          <table class="reporte-tabla">
+          <div v-if="!datosReporte.financiero?.detallesMensuales || datosReporte.financiero.detallesMensuales.length === 0" class="no-data">
+            <p>No hay datos financieros para mostrar</p>
+          </div>
+          <table v-else class="reporte-tabla">
             <thead>
               <tr>
                 <th>Mes</th>
@@ -330,16 +377,37 @@
         </div>
       </div>
     </div>
+
+    <!-- Loading Overlay -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-content">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>{{ loadingMessage }}</p>
+      </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div v-if="showError" class="error-toast">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ errorMessage }}
+      <button @click="showError = false" class="close-btn">×</button>
+    </div>
   </div>
 </template>
 
 <script>
+import ReportesService from '@/services/reportes';
+
 export default {
   name: 'AdminReportes',
   data() {
     return {
       tipoSeleccionado: null,
       reporteGenerado: false,
+      isLoading: false,
+      loadingMessage: '',
+      showError: false,
+      errorMessage: '',
 
       filtros: {
         periodo: '30',
@@ -347,45 +415,17 @@ export default {
         fechaFin: '',
         vendedor: '',
         servicio: '',
-        cliente: ''
+        cliente: '',
+        categoria: '',
+        estado: '',
+        agrupacion: 'mensual'
       },
 
-      tiposReporte: [
-        {
-          id: 'cotizaciones',
-          nombre: 'Reporte de Cotizaciones',
-          descripcion: 'Estado y resumen de todas las cotizaciones',
-          icono: 'fas fa-file-alt'
-        },
-        {
-          id: 'vendedores',
-          nombre: 'Reporte de Vendedores',
-          descripcion: 'Rendimiento y métricas por vendedor',
-          icono: 'fas fa-users'
-        },
-        {
-          id: 'servicios',
-          nombre: 'Reporte de Servicios',
-          descripcion: 'Análisis de servicios más solicitados',
-          icono: 'fas fa-cogs'
-        },
-        {
-          id: 'clientes',
-          nombre: 'Reporte de Clientes',
-          descripcion: 'Actividad y facturación por cliente',
-          icono: 'fas fa-building'
-        },
-        {
-          id: 'financiero',
-          nombre: 'Reporte Financiero',
-          descripcion: 'Ingresos, tendencias y análisis financiero',
-          icono: 'fas fa-chart-line'
-        }
-      ],
-
-      vendedoresDisponibles: ['Carlos Mendoza', 'Ana García', 'Luis Rodríguez', 'María López', 'Pedro Sánchez'],
-      serviciosDisponibles: ['Desarrollo Web', 'Marketing Digital', 'Consultoría TI', 'Diseño Gráfico', 'E-commerce'],
-      clientesDisponibles: ['Constructora ABC', 'Comercial XYZ', 'Tecnología DEF', 'Servicios GHI'],
+      tiposReporte: [],
+      vendedoresDisponibles: [],
+      serviciosDisponibles: [],
+      clientesDisponibles: [],
+      categoriasDisponibles: [],
 
       datosReporte: {}
     }
@@ -402,13 +442,59 @@ export default {
 
     textoPeríodo() {
       if (this.filtros.periodo === 'custom') {
-        return `${this.filtros.fechaInicio} al ${this.filtros.fechaFin}`;
+        const inicio = this.formatearFecha(this.filtros.fechaInicio);
+        const fin = this.formatearFecha(this.filtros.fechaFin);
+        return `${inicio} al ${fin}`;
       }
       return `Últimos ${this.filtros.periodo} días`;
     }
   },
 
+  async created() {
+    await this.cargarDatosIniciales();
+  },
+
   methods: {
+    // ===== CARGA DE DATOS INICIALES =====
+    
+    async cargarDatosIniciales() {
+      this.isLoading = true;
+      this.loadingMessage = 'Cargando configuración de reportes...';
+      
+      try {
+        const [tiposResult, opcionesResult] = await Promise.all([
+          ReportesService.getTiposReporte(),
+          ReportesService.getOpcionesReporte()
+        ]);
+
+        if (tiposResult.success) {
+          this.tiposReporte = tiposResult.tipos;
+        } else {
+          this.mostrarError(tiposResult.message || 'Error cargando tipos de reporte');
+        }
+
+        if (opcionesResult.success) {
+          const opciones = opcionesResult.opciones;
+          this.vendedoresDisponibles = opciones.vendedores || [];
+          this.serviciosDisponibles = opciones.servicios || [];
+          this.clientesDisponibles = opciones.clientes || [];
+          this.categoriasDisponibles = opciones.categorias || [];
+        } else {
+          this.mostrarError(opcionesResult.message || 'Error cargando opciones de reporte');
+        }
+
+        console.log('✅ Datos iniciales cargados correctamente');
+
+      } catch (error) {
+        console.error('❌ Error cargando datos iniciales:', error);
+        this.mostrarError('Error de conexión al cargar configuración');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // ===== MÉTODOS DE REPORTES =====
+
     seleccionarTipo(tipo) {
       this.tipoSeleccionado = tipo;
       this.reporteGenerado = false;
@@ -422,140 +508,97 @@ export default {
         fechaFin: '',
         vendedor: '',
         servicio: '',
-        cliente: ''
+        cliente: '',
+        categoria: '',
+        estado: '',
+        agrupacion: 'mensual'
       };
     },
 
-    generarReporte() {
-      // Simular generación de datos según el tipo
-      switch (this.tipoSeleccionado) {
-        case 'cotizaciones':
-          this.generarReporteCotizaciones();
-          break;
-        case 'vendedores':
-          this.generarReporteVendedores();
-          break;
-        case 'servicios':
-          this.generarReporteServicios();
-          break;
-        case 'clientes':
-          this.generarReporteClientes();
-          break;
-        case 'financiero':
-          this.generarReporteFinanciero();
-          break;
+    async generarReporte() {
+      if (!this.tipoSeleccionado) {
+        this.mostrarError('Selecciona un tipo de reporte');
+        return;
       }
-      this.reporteGenerado = true;
-    },
 
-    generarReporteCotizaciones() {
-      this.datosReporte = {
-        totalCotizaciones: 47,
-        cotizacionesEfectivas: 32,
-        cotizacionesPendientes: 8,
-        cotizacionesCanceladas: 7,
-        ingresosTotales: 285750.00,
-        tasaConversion: 68.1,
-        detalleCotizaciones: [
-          { id: 1, cliente: 'Constructora ABC', vendedor: 'Carlos Mendoza', fecha: '2024-06-01', total: 25000, estado: 'efectiva' },
-          { id: 2, cliente: 'Comercial XYZ', vendedor: 'Ana García', fecha: '2024-06-02', total: 18500, estado: 'pendiente' },
-          { id: 3, cliente: 'Tecnología DEF', vendedor: 'Luis Rodríguez', fecha: '2024-06-03', total: 32000, estado: 'efectiva' },
-          { id: 4, cliente: 'Servicios GHI', vendedor: 'María López', fecha: '2024-06-04', total: 15000, estado: 'cancelada' },
-          { id: 5, cliente: 'Industrias JKL', vendedor: 'Pedro Sánchez', fecha: '2024-06-05', total: 45000, estado: 'efectiva' }
-        ]
-      };
-    },
-
-    generarReporteVendedores() {
-      this.datosReporte = {
-        rendimientoVendedores: [
-          { nombre: 'Carlos Mendoza', rol: 'Vendedor Senior', cotizaciones: 15, efectivas: 12, conversion: 80, ingresos: 125000, ticketPromedio: 25000 },
-          { nombre: 'Ana García', rol: 'Vendedor', cotizaciones: 12, efectivas: 8, conversion: 67, ingresos: 98000, ticketPromedio: 22000 },
-          { nombre: 'Luis Rodríguez', rol: 'Vendedor', cotizaciones: 10, efectivas: 6, conversion: 60, ingresos: 75000, ticketPromedio: 18500 },
-          { nombre: 'María López', rol: 'Vendedor Senior', cotizaciones: 8, efectivas: 5, conversion: 63, ingresos: 65000, ticketPromedio: 20000 },
-          { nombre: 'Pedro Sánchez', rol: 'Vendedor', cotizaciones: 6, efectivas: 3, conversion: 50, ingresos: 35000, ticketPromedio: 15000 }
-        ],
-        totales: {
-          cotizaciones: 51,
-          efectivas: 34,
-          conversionPromedio: 64,
-          ingresos: 398000,
-          ticketPromedio: 20100
-        }
-      };
-    },
-
-    generarReporteServicios() {
-      this.datosReporte = {
-        rendimientoServicios: [
-          { nombre: 'Desarrollo Web', cotizaciones: 18, efectivas: 13, conversion: 72, ingresos: 125000, precioPromedio: 22500 },
-          { nombre: 'Marketing Digital', cotizaciones: 12, efectivas: 8, conversion: 67, ingresos: 85000, precioPromedio: 18750 },
-          { nombre: 'Consultoría TI', cotizaciones: 8, efectivas: 6, conversion: 75, ingresos: 45000, precioPromedio: 15000 },
-          { nombre: 'Diseño Gráfico', cotizaciones: 6, efectivas: 4, conversion: 67, ingresos: 25000, precioPromedio: 8500 },
-          { nombre: 'E-commerce', cotizaciones: 4, efectivas: 3, conversion: 75, ingresos: 95000, precioPromedio: 32500 }
-        ]
-      };
-    },
-
-    generarReporteClientes() {
-      this.datosReporte = {
-        actividadClientes: [
-          { id: 1, nombreEncargado: 'Juan Pérez', empresa: 'Constructora ABC', vendedorAsignado: 'Carlos Mendoza', totalCotizaciones: 5, ultimaCotizacion: '2024-06-10', totalFacturado: 125000 },
-          { id: 2, nombreEncargado: 'María López', empresa: 'Comercial XYZ', vendedorAsignado: 'Ana García', totalCotizaciones: 3, ultimaCotizacion: '2024-06-08', totalFacturado: 85000 },
-          { id: 3, nombreEncargado: 'Roberto Martínez', empresa: 'Tecnología DEF', vendedorAsignado: 'Luis Rodríguez', totalCotizaciones: 2, ultimaCotizacion: '2024-06-05', totalFacturado: 65000 },
-          { id: 4, nombreEncargado: 'Ana Rodríguez', empresa: 'Servicios GHI', vendedorAsignado: 'María López', totalCotizaciones: 4, ultimaCotizacion: '2024-06-12', totalFacturado: 95000 }
-        ]
-      };
-    },
-
-    generarReporteFinanciero() {
-      this.datosReporte = {
-        financiero: {
-          ingresosBrutos: 285750.00,
-          promedioMensual: 95250.00,
-          mejorMes: 'Marzo 2024',
-          crecimiento: 12.5,
-          detallesMensuales: [
-            { mes: 'Enero 2024', cotizaciones: 15, efectivas: 10, ingresos: 85000, crecimiento: 5.2 },
-            { mes: 'Febrero 2024', cotizaciones: 18, efectivas: 12, ingresos: 95000, crecimiento: 11.8 },
-            { mes: 'Marzo 2024', cotizaciones: 22, efectivas: 16, ingresos: 125000, crecimiento: 31.6 },
-            { mes: 'Abril 2024', cotizaciones: 20, efectivas: 14, ingresos: 110000, crecimiento: -12.0 },
-            { mes: 'Mayo 2024', cotizaciones: 19, efectivas: 13, ingresos: 105000, crecimiento: -4.5 }
-          ]
-        }
-      };
-    },
-
-    async exportarPDF() {
+      // Validar filtros
       try {
-        // Importar jsPDF dinámicamente
-        const { jsPDF } = await import('jspdf');
-        await import('jspdf-autotable');
-
-        const pdf = new jsPDF();
-
-        // Configuración del PDF
-        pdf.setFontSize(16);
-        pdf.text('Sistema de Cotizaciones', 20, 20);
-        
-        pdf.setFontSize(12);
-        pdf.text(`Reporte de ${this.tiposReporte.find(t => t.id === this.tipoSeleccionado)?.nombre}`, 20, 30);
-        pdf.text(`Fecha: ${this.fechaActual}`, 20, 40);
-        pdf.text(`Período: ${this.textoPeríodo}`, 20, 50);
-
-        // Generar contenido específico según el tipo
-        this.generarContenidoPDF(pdf);
-
-        // Descargar el PDF
-        const nombreArchivo = `reporte-${this.tipoSeleccionado}-${new Date().toISOString().split('T')[0]}.pdf`;
-        pdf.save(nombreArchivo);
-
-        alert('PDF generado exitosamente');
+        ReportesService.validarFiltros(this.filtros);
       } catch (error) {
-        console.error('Error al generar PDF:', error);
-        alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+        this.mostrarError(error.message);
+        return;
+      }
+
+      this.isLoading = true;
+      this.loadingMessage = `Generando reporte de ${this.tiposReporte.find(t => t.id === this.tipoSeleccionado)?.nombre}...`;
+
+      try {
+        let resultado;
+
+        // Llamar al método específico según el tipo
+        switch (this.tipoSeleccionado) {
+          case 'cotizaciones':
+            resultado = await ReportesService.getReporteCotizaciones(this.filtros);
+            break;
+          case 'vendedores':
+            resultado = await ReportesService.getReporteVendedores(this.filtros);
+            break;
+          case 'servicios':
+            resultado = await ReportesService.getReporteServicios(this.filtros);
+            break;
+          case 'clientes':
+            resultado = await ReportesService.getReporteClientes(this.filtros);
+            break;
+          case 'financiero':
+            resultado = await ReportesService.getReporteFinanciero(this.filtros);
+            break;
+          default:
+            throw new Error('Tipo de reporte no válido');
+        }
+
+        if (resultado.success) {
+          this.datosReporte = resultado.reporte;
+          this.reporteGenerado = true;
+          console.log('✅ Reporte generado exitosamente:', this.datosReporte);
+          
+          // Verificar si hay datos
+          if (!ReportesService.tienedatos(this.datosReporte)) {
+            this.mostrarError('No se encontraron datos para los filtros seleccionados');
+          }
+        } else {
+          this.mostrarError(resultado.message || 'Error generando reporte');
+        }
+
+      } catch (error) {
+        console.error('❌ Error generando reporte:', error);
+        this.mostrarError('Error de conexión al generar reporte');
+      } finally {
+        this.isLoading = false;
       }
     },
+
+    
+
+async exportarPDF() {
+  try {
+    this.isLoading = true;
+    this.loadingMessage = 'Generando PDF...';
+
+    const resultado = await ReportesService.generarPDF(this.tipoSeleccionado, this.filtros);
+    
+    if (resultado.success) {
+      console.log('✅ PDF generado exitosamente');
+    } else {
+      this.mostrarError(resultado.message || 'Error generando PDF');
+    }
+
+  } catch (error) {
+    console.error('❌ Error al generar PDF:', error);
+    this.mostrarError('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+  } finally {
+    this.isLoading = false;
+  }
+},
 
     generarContenidoPDF(pdf) {
       let yPos = 70;
@@ -586,90 +629,99 @@ export default {
       yPos += 15;
 
       pdf.setFontSize(10);
-      pdf.text(`Total de Cotizaciones: ${this.datosReporte.totalCotizaciones}`, 20, yPos);
-      pdf.text(`Efectivas: ${this.datosReporte.cotizacionesEfectivas}`, 20, yPos + 10);
-      pdf.text(`Pendientes: ${this.datosReporte.cotizacionesPendientes}`, 20, yPos + 20);
-      pdf.text(`Canceladas: ${this.datosReporte.cotizacionesCanceladas}`, 20, yPos + 30);
+      pdf.text(`Total de Cotizaciones: ${this.datosReporte.totalCotizaciones || 0}`, 20, yPos);
+      pdf.text(`Efectivas: ${this.datosReporte.cotizacionesEfectivas || 0}`, 20, yPos + 10);
+      pdf.text(`Pendientes: ${this.datosReporte.cotizacionesPendientes || 0}`, 20, yPos + 20);
+      pdf.text(`Canceladas: ${this.datosReporte.cotizacionesCanceladas || 0}`, 20, yPos + 30);
       pdf.text(`Ingresos Totales: ${this.formatearMoneda(this.datosReporte.ingresosTotales)}`, 20, yPos + 40);
 
       // Tabla de detalles
-      const columnas = ['CT#', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado'];
-      const filas = this.datosReporte.detalleCotizaciones.map(c => [
-        `CT${String(c.id).padStart(6, '0')}`,
-        c.cliente,
-        c.vendedor,
-        this.formatearFecha(c.fecha),
-        this.formatearMoneda(c.total),
-        this.getEstadoTexto(c.estado)
-      ]);
+      if (this.datosReporte.detalleCotizaciones && this.datosReporte.detalleCotizaciones.length > 0) {
+        const columnas = ['CT#', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado'];
+        const filas = this.datosReporte.detalleCotizaciones.map(c => [
+          `CT${String(c.id).padStart(6, '0')}`,
+          c.cliente,
+          c.vendedor,
+          this.formatearFecha(c.fecha),
+          this.formatearMoneda(c.total),
+          this.getEstadoTexto(c.estado)
+        ]);
 
-      pdf.autoTable({
-        head: [columnas],
-        body: filas,
-        startY: yPos + 60,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [52, 152, 219] }
-      });
+        pdf.autoTable({
+          head: [columnas],
+          body: filas,
+          startY: yPos + 60,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [52, 152, 219] }
+        });
+      }
     },
 
     generarPDFVendedores(pdf, yPos) {
-      const columnas = ['Vendedor', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Ticket Promedio'];
-      const filas = this.datosReporte.rendimientoVendedores.map(v => [
-        v.nombre,
-        v.cotizaciones.toString(),
-        v.efectivas.toString(),
-        `${v.conversion}%`,
-        this.formatearMoneda(v.ingresos),
-        this.formatearMoneda(v.ticketPromedio)
-      ]);
+      if (this.datosReporte.rendimientoVendedores && this.datosReporte.rendimientoVendedores.length > 0) {
+        const columnas = ['Vendedor', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Ticket Promedio'];
+        const filas = this.datosReporte.rendimientoVendedores.map(v => [
+          v.nombre,
+          v.cotizaciones.toString(),
+          v.efectivas.toString(),
+          `${v.conversion}%`,
+          this.formatearMoneda(v.ingresos),
+          this.formatearMoneda(v.ticketPromedio)
+        ]);
 
-      pdf.autoTable({
-        head: [columnas],
-        body: filas,
-        startY: yPos,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [52, 152, 219] }
-      });
+        pdf.autoTable({
+          head: [columnas],
+          body: filas,
+          startY: yPos,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [52, 152, 219] }
+        });
+      }
     },
 
     generarPDFServicios(pdf, yPos) {
-      const columnas = ['Servicio', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Precio Promedio'];
-      const filas = this.datosReporte.rendimientoServicios.map(s => [
-        s.nombre,
-        s.cotizaciones.toString(),
-        s.efectivas.toString(),
-        `${s.conversion}%`,
-        this.formatearMoneda(s.ingresos),
-        this.formatearMoneda(s.precioPromedio)
-      ]);
+     if (this.datosReporte.rendimientoServicios && this.datosReporte.rendimientoServicios.length > 0) {
+       const columnas = ['Servicio', 'Categoría', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Precio Promedio'];
+       const filas = this.datosReporte.rendimientoServicios.map(s => [
+         s.nombre,
+         s.categoria || 'Sin categoría',
+         s.cotizaciones.toString(),
+         s.efectivas.toString(),
+         `${s.conversion}%`,
+         this.formatearMoneda(s.ingresos),
+         this.formatearMoneda(s.precioPromedio)
+       ]);
 
-      pdf.autoTable({
-        head: [columnas],
-        body: filas,
-       startY: yPos,
-       styles: { fontSize: 9 },
-       headStyles: { fillColor: [52, 152, 219] }
-     });
+       pdf.autoTable({
+         head: [columnas],
+         body: filas,
+         startY: yPos,
+         styles: { fontSize: 8 },
+         headStyles: { fillColor: [52, 152, 219] }
+       });
+     }
    },
 
    generarPDFClientes(pdf, yPos) {
-     const columnas = ['Cliente', 'Empresa', 'Vendedor', 'Cotizaciones', 'Última Cotización', 'Total Facturado'];
-     const filas = this.datosReporte.actividadClientes.map(c => [
-       c.nombreEncargado,
-       c.empresa,
-       c.vendedorAsignado,
-       c.totalCotizaciones.toString(),
-       this.formatearFecha(c.ultimaCotizacion),
-       this.formatearMoneda(c.totalFacturado)
-     ]);
+     if (this.datosReporte.actividadClientes && this.datosReporte.actividadClientes.length > 0) {
+       const columnas = ['Cliente', 'Empresa', 'Vendedor', 'Cotizaciones', 'Última Cotización', 'Total Facturado'];
+       const filas = this.datosReporte.actividadClientes.map(c => [
+         c.nombreEncargado,
+         c.empresa,
+         c.vendedorAsignado,
+         c.totalCotizaciones.toString(),
+         this.formatearFecha(c.ultimaCotizacion),
+         this.formatearMoneda(c.totalFacturado)
+       ]);
 
-     pdf.autoTable({
-       head: [columnas],
-       body: filas,
-       startY: yPos,
-       styles: { fontSize: 8 },
-       headStyles: { fillColor: [52, 152, 219] }
-     });
+       pdf.autoTable({
+         head: [columnas],
+         body: filas,
+         startY: yPos,
+         styles: { fontSize: 8 },
+         headStyles: { fillColor: [52, 152, 219] }
+       });
+     }
    },
 
    generarPDFFinanciero(pdf, yPos) {
@@ -679,29 +731,33 @@ export default {
      yPos += 15;
 
      pdf.setFontSize(10);
-     pdf.text(`Ingresos Brutos: ${this.formatearMoneda(this.datosReporte.financiero.ingresosBrutos)}`, 20, yPos);
-     pdf.text(`Promedio Mensual: ${this.formatearMoneda(this.datosReporte.financiero.promedioMensual)}`, 20, yPos + 10);
-     pdf.text(`Mejor Mes: ${this.datosReporte.financiero.mejorMes}`, 20, yPos + 20);
-     pdf.text(`Crecimiento: ${this.datosReporte.financiero.crecimiento}%`, 20, yPos + 30);
+     pdf.text(`Ingresos Brutos: ${this.formatearMoneda(this.datosReporte.financiero?.ingresosBrutos)}`, 20, yPos);
+     pdf.text(`Promedio Mensual: ${this.formatearMoneda(this.datosReporte.financiero?.promedioMensual)}`, 20, yPos + 10);
+     pdf.text(`Mejor Mes: ${this.datosReporte.financiero?.mejorMes || 'Sin datos'}`, 20, yPos + 20);
+     pdf.text(`Crecimiento: ${this.datosReporte.financiero?.crecimiento || 0}%`, 20, yPos + 30);
 
      // Tabla de detalles mensuales
-     const columnas = ['Mes', 'Cotizaciones', 'Efectivas', 'Ingresos', 'Crecimiento'];
-     const filas = this.datosReporte.financiero.detallesMensuales.map(m => [
-       m.mes,
-       m.cotizaciones.toString(),
-       m.efectivas.toString(),
-       this.formatearMoneda(m.ingresos),
-       `${m.crecimiento}%`
-     ]);
+     if (this.datosReporte.financiero?.detallesMensuales && this.datosReporte.financiero.detallesMensuales.length > 0) {
+       const columnas = ['Mes', 'Cotizaciones', 'Efectivas', 'Ingresos', 'Crecimiento'];
+       const filas = this.datosReporte.financiero.detallesMensuales.map(m => [
+         m.mes,
+         m.cotizaciones.toString(),
+         m.efectivas.toString(),
+         this.formatearMoneda(m.ingresos),
+         `${m.crecimiento}%`
+       ]);
 
-     pdf.autoTable({
-       head: [columnas],
-       body: filas,
-       startY: yPos + 50,
-       styles: { fontSize: 9 },
-       headStyles: { fillColor: [52, 152, 219] }
-     });
+       pdf.autoTable({
+         head: [columnas],
+         body: filas,
+         startY: yPos + 50,
+         styles: { fontSize: 9 },
+         headStyles: { fillColor: [52, 152, 219] }
+       });
+     }
    },
+
+   // ===== MÉTODOS AUXILIARES =====
 
    formatearMoneda(valor) {
      if (!valor && valor !== 0) return 'L. 0.00';
@@ -714,31 +770,47 @@ export default {
 
    formatearFecha(fecha) {
      if (!fecha) return '';
-     return new Date(fecha).toLocaleDateString('es-HN', {
-       year: 'numeric',
-       month: '2-digit',
-       day: '2-digit'
-     });
+     try {
+       return new Date(fecha).toLocaleDateString('es-HN', {
+         year: 'numeric',
+         month: '2-digit',
+         day: '2-digit'
+       });
+     } catch (error) {
+       return fecha;
+     }
    },
 
    getEstadoTexto(estado) {
      const estados = {
        'efectiva': 'Efectiva',
        'pendiente': 'Pendiente',
-       'cancelada': 'Cancelada',
-       'rechazada': 'Rechazada'
+       'pendiente_aprobacion': 'Esperando Aprobación',
+       'rechazada': 'Cancelada'
      };
      return estados[estado] || estado;
+   },
+
+   mostrarError(mensaje) {
+     this.errorMessage = mensaje;
+     this.showError = true;
+     
+     // Auto-ocultar después de 5 segundos
+     setTimeout(() => {
+       this.showError = false;
+     }, 5000);
    }
  }
 }
 </script>
 
 <style scoped>
+/* Mantener todos los estilos existentes... */
 .admin-reportes-container {
  padding: 20px;
  background: #f8f9fa;
  min-height: 100vh;
+ position: relative;
 }
 
 .page-header {
@@ -881,6 +953,12 @@ export default {
  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
+.filter-select:disabled,
+.form-input:disabled {
+ background: #f5f5f5;
+ cursor: not-allowed;
+}
+
 .filtro-acciones {
  display: flex;
  gap: 10px;
@@ -900,12 +978,18 @@ export default {
  font-size: 0.95rem;
 }
 
+.btn:disabled {
+ opacity: 0.6;
+ cursor: not-allowed;
+ transform: none !important;
+}
+
 .btn-primary {
  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
  color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
  transform: translateY(-2px);
  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
@@ -915,7 +999,7 @@ export default {
  color: white;
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
  transform: translateY(-2px);
  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
 }
@@ -1079,7 +1163,13 @@ export default {
  color: #856404;
 }
 
-.estado-badge.cancelada {
+.estado-badge.pendiente_aprobacion {
+ background: #d1ecf1;
+ color: #0c5460;
+}
+
+.estado-badge.cancelada,
+.estado-badge.rechazada {
  background: #f8d7da;
  color: #721c24;
 }
@@ -1110,6 +1200,104 @@ export default {
  font-weight: 600;
 }
 
+.no-data {
+ text-align: center;
+ padding: 3rem;
+ color: #7f8c8d;
+ background: #f8f9fa;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
+}
+
+.no-data p {
+ margin: 0;
+ font-size: 1.1rem;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+ position: fixed;
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 100%;
+ background: rgba(0, 0, 0, 0.5);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ z-index: 9999;
+}
+
+.loading-content {
+ background: white;
+ padding: 2rem;
+ border-radius: 8px;
+ text-align: center;
+ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.loading-content i {
+ font-size: 2rem;
+ color: #3498db;
+ margin-bottom: 1rem;
+}
+
+.loading-content p {
+ margin: 0;
+ color: #2c3e50;
+ font-weight: 600;
+}
+
+/* Error Toast */
+.error-toast {
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ background: #e74c3c;
+ color: white;
+ padding: 1rem 1.5rem;
+ border-radius: 0.5rem;
+ box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ max-width: 400px;
+ z-index: 1000;
+ animation: slideInRight 0.3s ease;
+}
+
+.error-toast i {
+ font-size: 1.2rem;
+}
+
+.close-btn {
+ background: none;
+ border: none;
+ color: white;
+ font-size: 1.5rem;
+ cursor: pointer;
+ padding: 0;
+ margin-left: auto;
+ opacity: 0.8;
+ transition: opacity 0.3s ease;
+}
+
+.close-btn:hover {
+ opacity: 1;
+}
+
+@keyframes slideInRight {
+ from {
+   transform: translateX(100%);
+   opacity: 0;
+ }
+ to {
+   transform: translateX(0);
+   opacity: 1;
+ }
+}
+
+/* Responsive */
 @media (max-width: 768px) {
  .admin-reportes-container {
    padding: 15px;
@@ -1152,6 +1340,13 @@ export default {
  .reporte-tabla td {
    padding: 8px 6px;
  }
+
+ .error-toast {
+   top: 1rem;
+   right: 1rem;
+   left: 1rem;
+   max-width: none;
+ }
 }
 
 @media print {
@@ -1167,6 +1362,11 @@ export default {
  .reporte-contenido {
    box-shadow: none;
    padding: 20px;
+ }
+
+ .loading-overlay,
+ .error-toast {
+   display: none;
  }
 }
 </style>
