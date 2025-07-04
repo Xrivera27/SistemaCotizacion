@@ -432,13 +432,13 @@
          <div class="cotizacion-detalle">
            <div class="detalle-grid">
              <div class="detalle-item">
-               <strong>Cliente:</strong> {{ modalCotizacion.cliente_info?.nombre_completo || 'Sin cliente' }}
+               <strong>Cliente:</strong> {{ modalCotizacion.cliente?.nombre || 'Sin cliente' }}
              </div>
              <div class="detalle-item">
-               <strong>Email:</strong> {{ modalCotizacion.cliente_info?.email_principal || 'Sin email' }}
+               <strong>Email:</strong> {{ modalCotizacion.cliente?.email || 'Sin email' }}
              </div>
              <div class="detalle-item">
-               <strong>Vendedor:</strong> {{ modalCotizacion.vendedor_info?.nombre_completo || 'Sin vendedor' }}
+               <strong>Vendedor:</strong> {{ modalCotizacion.vendedor?.nombre || 'Sin vendedor' }}
              </div>
              <div class="detalle-item">
                <strong>Fecha de Creación:</strong> {{ formatearFecha(modalCotizacion.fechaCreacion) }}
@@ -449,7 +449,7 @@
              <div class="detalle-item">
                <strong>Estado:</strong> 
                <span class="estado-badge" :class="modalCotizacion.estado">
-                 {{ modalCotizacion.estado_label || getEstadoTexto(modalCotizacion.estado) }}
+                 {{ getEstadoTexto(modalCotizacion.estado) }}
                </span>
              </div>
              <div class="detalle-item">
@@ -459,6 +459,34 @@
                  {{ modalCotizacion.pdfGenerado ? ' Disponible' : ' No generado' }}
                </span>
              </div>
+             
+             <!-- INFORMACIÓN DE AUDITORÍA -->
+             <div v-if="modalCotizacion.estado === 'efectiva' && modalCotizacion.auditoria?.aprobadoPorNombre" class="detalle-item">
+               <strong>Aprobado por:</strong> 
+               <span class="auditoria-info aprobado">
+                 <i class="fas fa-user-check"></i>
+                 {{ modalCotizacion.auditoria.aprobadoPorNombre }}
+                 <span class="fecha-auditoria">
+                   ({{ formatearFechaAuditoria(modalCotizacion.auditoria.fechaAprobacion) }})
+                 </span>
+               </span>
+             </div>
+
+             <div v-if="modalCotizacion.estado === 'rechazada' && modalCotizacion.auditoria?.rechazadoPorNombre" class="detalle-item">
+               <strong>Rechazado por:</strong> 
+               <span class="auditoria-info rechazado">
+                 <i class="fas fa-user-times"></i>
+                 {{ modalCotizacion.auditoria.rechazadoPorNombre }}
+                 <span class="fecha-auditoria">
+                   ({{ formatearFechaAuditoria(modalCotizacion.auditoria.fechaRechazo) }})
+                 </span>
+               </span>
+             </div>
+             
+             <div v-if="modalCotizacion.comentario" class="detalle-item">
+               <strong>Comentario:</strong> 
+               <span class="motivo-rechazo">{{ modalCotizacion.comentario }}</span>
+             </div>
            </div>
            
            <div class="servicios-detalle">
@@ -467,7 +495,7 @@
                <span v-for="(servicio, index) in (modalCotizacion.servicios || [])" 
                      :key="index" 
                      class="servicio-modal-tag">
-                 {{ servicio }}
+                 {{ servicio.nombre || servicio }}
                </span>
              </div>
            </div>
@@ -541,14 +569,14 @@
                <div class="pdf-info-grid">
                  <div class="info-section">
                    <h4>Cliente:</h4>
-                   <p>{{ cotizacionPDF.cliente_info?.nombre_completo || 'Sin cliente' }}</p>
-                   <p>{{ cotizacionPDF.cliente_info?.email_principal || 'Sin email' }}</p>
+                   <p>{{ cotizacionPDF.cliente?.nombre || 'Sin cliente' }}</p>
+                   <p>{{ cotizacionPDF.cliente?.email || 'Sin email' }}</p>
                  </div>
                  
                  <div class="info-section">
                    <h4>Vendedor:</h4>
-                   <p>{{ cotizacionPDF.vendedor_info?.nombre_completo || 'Sin vendedor' }}</p>
-                   <p>{{ cotizacionPDF.vendedor_info?.rol_formateado || 'Sin rol' }}</p>
+                   <p>{{ cotizacionPDF.vendedor?.nombre || 'Sin vendedor' }}</p>
+                   <p>{{ cotizacionPDF.vendedor?.rol || 'Sin rol' }}</p>
                  </div>
                  
                  <div class="info-section">
@@ -561,7 +589,7 @@
                  <h4>Servicios:</h4>
                  <ul>
                    <li v-for="(servicio, index) in (cotizacionPDF.servicios || [])" :key="index">
-                     {{ servicio }}
+                     {{ servicio.nombre || servicio }}
                    </li>
                  </ul>
                </div>
@@ -703,283 +731,488 @@ export default {
        // Cargar cotizaciones, vendedores y estadísticas
        this.loadingMessage = 'Cargando cotizaciones...';
        await this.cargarCotizaciones();
-       
-       this.loadingMessage = 'Cargando vendedores...';
-       await this.cargarVendedores();
-       
-       this.loadingMessage = 'Cargando estadísticas...';
-       await this.cargarEstadisticas();
-       
-     } catch (error) {
-       this.showNotification('Error cargando datos del sistema', 'error');
-     } finally {
-       this.loading = false;
-     }
-   },
+      
+      this.loadingMessage = 'Cargando vendedores...';
+      await this.cargarVendedores();
+      
+      this.loadingMessage = 'Cargando estadísticas...';
+      await this.cargarEstadisticas();
+      
+    } catch (error) {
+      this.showNotification('Error cargando datos del sistema', 'error');
+    } finally {
+      this.loading = false;
+    }
+  },
 
-   async cargarCotizaciones() {
-     try {
-       const params = {
-         page: this.pagination?.currentPage || 1,
-         limit: this.itemsPorPagina,
-         search: this.filtros.busqueda || undefined,
-         estado: this.filtros.estado || undefined,
-         vendedor: this.filtros.vendedor || undefined,
-         periodo: this.filtros.periodo || undefined
-       };
-       
-       const result = await cotizacionesService.getCotizaciones(params);
-       
-       if (result.success) {
-         // Formatear cada cotización usando el helper del servicio
-         this.cotizaciones = result.cotizaciones.map(cotizacion => 
-           cotizacionesService.formatCotizacionDisplay(cotizacion)
-         );
-         this.pagination = result.pagination;
-       } else {
-         this.showNotification(result.message || 'Error cargando cotizaciones', 'error');
-       }
-       
-     } catch (error) {
-       this.showNotification('Error de conexión al cargar cotizaciones', 'error');
-     }
-   },
+  async cargarCotizaciones() {
+    try {
+      const params = {
+        page: this.pagination?.currentPage || 1,
+        limit: this.itemsPorPagina,
+        search: this.filtros.busqueda || undefined,
+        estado: this.filtros.estado || undefined,
+        vendedor: this.filtros.vendedor || undefined,
+        periodo: this.filtros.periodo || undefined
+      };
+      
+      const result = await cotizacionesService.getCotizaciones(params);
+      
+      if (result.success) {
+        // Formatear cada cotización usando el helper del servicio
+        this.cotizaciones = result.cotizaciones.map(cotizacion => 
+          cotizacionesService.formatCotizacionDisplay(cotizacion)
+        );
+        this.pagination = result.pagination;
+      } else {
+        this.showNotification(result.message || 'Error cargando cotizaciones', 'error');
+      }
+      
+    } catch (error) {
+      this.showNotification('Error de conexión al cargar cotizaciones', 'error');
+    }
+  },
 
-   async cargarVendedores() {
-     try {
-       const result = await cotizacionesService.getVendedores();
-       if (result.success) {
-         this.vendedoresUnicos = result.vendedores || [];
-       } else {
-         this.vendedoresUnicos = [];
-       }
-       
-     } catch (error) {
-       this.vendedoresUnicos = [];
-     }
-   },
+  async cargarVendedores() {
+    try {
+      const result = await cotizacionesService.getVendedores();
+      if (result.success) {
+        this.vendedoresUnicos = result.vendedores || [];
+      } else {
+        this.vendedoresUnicos = [];
+      }
+      
+    } catch (error) {
+      this.vendedoresUnicos = [];
+    }
+  },
 
-   async cargarEstadisticas() {
-     try {
-       const result = await cotizacionesService.getEstadisticas();
-       
-       if (result.success) {
-         this.estadisticas = result.estadisticas;
-       }
-       
-     } catch (error) {
-       // Error silencioso para estadísticas
-     }
-   },
+  async cargarEstadisticas() {
+    try {
+      const result = await cotizacionesService.getEstadisticas();
+      
+      if (result.success) {
+        this.estadisticas = result.estadisticas;
+      }
+      
+    } catch (error) {
+      // Error silencioso para estadísticas
+    }
+  },
 
-   // ==================== BÚSQUEDA Y FILTROS ====================
-   buscarCotizaciones() {
-     // Debounce para evitar muchas llamadas
-     clearTimeout(this.busquedaTimeout);
-     this.busquedaTimeout = setTimeout(() => {
-       this.aplicarFiltros();
-     }, 500);
-   },
+  // ==================== BÚSQUEDA Y FILTROS ====================
+  buscarCotizaciones() {
+    // Debounce para evitar muchas llamadas
+    clearTimeout(this.busquedaTimeout);
+    this.busquedaTimeout = setTimeout(() => {
+      this.aplicarFiltros();
+    }, 500);
+  },
 
-   async aplicarFiltros() {
-     // Resetear a la primera página
-     if (this.pagination) {
-       this.pagination.currentPage = 1;
-     }
-     
-     await this.cargarCotizaciones();
-   },
+  async aplicarFiltros() {
+    // Resetear a la primera página
+    if (this.pagination) {
+      this.pagination.currentPage = 1;
+    }
+    
+    await this.cargarCotizaciones();
+  },
 
-   limpiarFiltros() {
-     this.filtros = {
-       busqueda: '',
-       estado: '',
-       vendedor: '',
-       periodo: ''
-     };
-     
-     this.aplicarFiltros();
-   },
+  limpiarFiltros() {
+    this.filtros = {
+      busqueda: '',
+      estado: '',
+      vendedor: '',
+      periodo: ''
+    };
+    
+    this.aplicarFiltros();
+  },
 
-   // ==================== PAGINACIÓN ====================
-   async cambiarItemsPorPagina() {
-     if (this.pagination) {
-       this.pagination.currentPage = 1;
-     }
-     this.paginaSalto = 1;
-     await this.cargarCotizaciones();
-   },
+  // ==================== PAGINACIÓN ====================
+  async cambiarItemsPorPagina() {
+    if (this.pagination) {
+      this.pagination.currentPage = 1;
+    }
+    this.paginaSalto = 1;
+    await this.cargarCotizaciones();
+  },
 
-   async irAPrimera() {
-     if (this.pagination && this.pagination.currentPage !== 1) {
-       this.pagination.currentPage = 1;
-       await this.cargarCotizaciones();
-     }
-   },
+  async irAPrimera() {
+    if (this.pagination && this.pagination.currentPage !== 1) {
+      this.pagination.currentPage = 1;
+      await this.cargarCotizaciones();
+    }
+  },
 
-   async irAUltima() {
-     if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
-       this.pagination.currentPage = this.pagination.totalPages;
-       await this.cargarCotizaciones();
-     }
-   },
+  async irAUltima() {
+    if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
+      this.pagination.currentPage = this.pagination.totalPages;
+      await this.cargarCotizaciones();
+    }
+  },
 
-   async paginaAnterior() {
-     if (this.pagination && this.pagination.hasPrevPage) {
-       this.pagination.currentPage--;
-       await this.cargarCotizaciones();
-     }
-   },
+  async paginaAnterior() {
+    if (this.pagination && this.pagination.hasPrevPage) {
+      this.pagination.currentPage--;
+      await this.cargarCotizaciones();
+    }
+  },
 
-   async paginaSiguiente() {
-     if (this.pagination && this.pagination.hasNextPage) {
-       this.pagination.currentPage++;
-       await this.cargarCotizaciones();
-     }
-   },
+  async paginaSiguiente() {
+    if (this.pagination && this.pagination.hasNextPage) {
+      this.pagination.currentPage++;
+      await this.cargarCotizaciones();
+    }
+  },
 
-   async irAPagina(pagina = null) {
-     const targetPage = pagina || this.paginaSalto;
-     
-     if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
-       this.pagination.currentPage = targetPage;
-       await this.cargarCotizaciones();
-     } else {
-       this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
-       this.paginaSalto = this.pagination?.currentPage || 1;
-     }
-   },
+  async irAPagina(pagina = null) {
+    const targetPage = pagina || this.paginaSalto;
+    
+    if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
+      this.pagination.currentPage = targetPage;
+      await this.cargarCotizaciones();
+    } else {
+      this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
+      this.paginaSalto = this.pagination?.currentPage || 1;
+    }
+  },
 
-   // ==================== GESTIÓN DE COTIZACIONES ====================
-   nuevaCotizacion() {
-     this.$router.push('/shared/cotizacion');
-   },
-  
-   verCotizacion(cotizacion) {
-     this.modalCotizacion = cotizacion;
-   },
-  
-   // ==================== PDF ====================
-   mostrarModalPDF(cotizacion) {
-     this.cotizacionPDF = cotizacion;
-     this.tipoDocumento = 'copia';
-     this.modalPDF = true;
-   },
-  
-   cambiarTipoDocumento(tipo) {
-     this.tipoDocumento = tipo;
-   },
-  
-   async descargarPDF() {
-     if (this.descargandoPDF || !this.cotizacionPDF) return;
-     
-     this.descargandoPDF = true;
-     
-     try {
-       const result = await cotizacionesService.generarPDF(this.cotizacionPDF.id, this.tipoDocumento);
-       
-       if (result.success) {
-         this.showNotification(result.message || 'PDF descargado exitosamente', 'success');
-         this.cerrarModalPDF();
-       } else {
-         this.showNotification(result.message || 'Error al generar PDF', 'error');
-       }
-       
-     } catch (error) {
-       this.showNotification('Error de conexión al generar PDF', 'error');
-     } finally {
-       this.descargandoPDF = false;
-     }
-   },
-  
-   cerrarModalPDF() {
-     this.modalPDF = false;
-     this.cotizacionPDF = null;
-     this.tipoDocumento = 'copia';
-   },
+  // ==================== GESTIÓN DE COTIZACIONES ====================
+  nuevaCotizacion() {
+    this.$router.push('/shared/cotizacion');
+  },
+ 
+  // 🔧 MÉTODO CORREGIDO - Hacer llamada a getCotizacionById para obtener datos completos
+  async verCotizacion(cotizacion) {
+    try {
+      this.loading = true;
+      this.loadingMessage = 'Cargando detalles de la cotización...';
+      
+      const response = await cotizacionesService.getCotizacionById(cotizacion.id);
+      
+      if (response.success) {
+        console.log('✅ Datos completos de la cotización:', response.cotizacion);
+        console.log('📋 Estado:', response.cotizacion.estado);
+        console.log('📝 Comentario:', response.cotizacion.comentario);
+        console.log('👤 Auditoría:', response.cotizacion.auditoria);
+        
+        this.modalCotizacion = response.cotizacion;
+      } else {
+        this.showNotification('Error cargando detalles de la cotización', 'error');
+      }
+    } catch (error) {
+      this.showNotification('Error de conexión', 'error');
+      console.error('Error:', error);
+    } finally {
+      this.loading = false;
+    }
+  },
+ 
+  // ==================== PDF ====================
+  mostrarModalPDF(cotizacion) {
+    this.cotizacionPDF = cotizacion;
+    this.tipoDocumento = 'copia';
+    this.modalPDF = true;
+  },
+ 
+  cambiarTipoDocumento(tipo) {
+    this.tipoDocumento = tipo;
+  },
+ 
+  async descargarPDF() {
+    if (this.descargandoPDF || !this.cotizacionPDF) return;
+    
+    this.descargandoPDF = true;
+    
+    try {
+      const result = await cotizacionesService.generarPDF(this.cotizacionPDF.id, this.tipoDocumento);
+      
+      if (result.success) {
+        this.showNotification(result.message || 'PDF descargado exitosamente', 'success');
+        this.cerrarModalPDF();
+      } else {
+        this.showNotification(result.message || 'Error al generar PDF', 'error');
+      }
+      
+    } catch (error) {
+      this.showNotification('Error de conexión al generar PDF', 'error');
+    } finally {
+      this.descargandoPDF = false;
+    }
+  },
+ 
+  cerrarModalPDF() {
+    this.modalPDF = false;
+    this.cotizacionPDF = null;
+    this.tipoDocumento = 'copia';
+  },
 
-   // ==================== ORDENAMIENTO ====================
-   ordenarPor(campo) {
-     if (this.ordenActual.campo === campo) {
-       this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
-     } else {
-       this.ordenActual = { campo, direccion: 'asc' };
-     }
-     
-     // Aplicar ordenamiento localmente ya que el servicio tiene helper para esto
-     this.cotizaciones = cotizacionesService.sortCotizaciones(
-       this.cotizaciones, 
-       this.ordenActual.campo, 
-       this.ordenActual.direccion
-     );
-   },
-  
-   getSortIcon(campo) {
-     if (this.ordenActual.campo !== campo) return '↕';
-     return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
-   },
+  // ==================== ORDENAMIENTO ====================
+  ordenarPor(campo) {
+    if (this.ordenActual.campo === campo) {
+      this.ordenActual.direccion = this.ordenActual.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.ordenActual = { campo, direccion: 'asc' };
+    }
+    
+    // Aplicar ordenamiento localmente ya que el servicio tiene helper para esto
+    this.cotizaciones = cotizacionesService.sortCotizaciones(
+      this.cotizaciones, 
+      this.ordenActual.campo, 
+      this.ordenActual.direccion
+    );
+  },
+ 
+  getSortIcon(campo) {
+    if (this.ordenActual.campo !== campo) return '↕';
+    return this.ordenActual.direccion === 'asc' ? '↑' : '↓';
+  },
 
-   // ==================== MODALES ====================
-   cerrarModal() {
-     this.modalCotizacion = null;
-   },
+  // ==================== MODALES ====================
+  cerrarModal() {
+    this.modalCotizacion = null;
+  },
 
-   // ==================== HELPERS ====================
-   formatearNumeroCotizacion(id) {
-     return cotizacionesService.formatNumeroCotizacion(id);
-   },
+  // ==================== HELPERS ====================
+  formatearNumeroCotizacion(id) {
+    return cotizacionesService.formatNumeroCotizacion(id);
+  },
 
-   formatearFecha(fecha) {
-     return cotizacionesService.formatDate(fecha);
-   },
-  
-   formatearMoneda(monto) {
-     return cotizacionesService.formatPrice(monto);
-   },
+  formatearFecha(fecha) {
+    return cotizacionesService.formatDate(fecha);
+  },
+ 
+  formatearMoneda(monto) {
+    return cotizacionesService.formatPrice(monto);
+  },
 
-   getEstadoTexto(estado) {
-     const estados = cotizacionesService.getEstados();
-     const estadoObj = estados.find(e => e.value === estado);
-     return estadoObj?.label || estado;
-   },
+  formatearFechaAuditoria(fecha) {
+    if (!fecha) return '';
 
-   // ==================== NOTIFICACIONES ====================
-   showNotification(message, type = 'success') {
-     const icons = {
-       success: 'fa-check-circle',
-       error: 'fa-exclamation-circle',
-       warning: 'fa-exclamation-triangle',
-       info: 'fa-info-circle'
-     };
-     
-     this.notification = {
-       show: true,
-       type,
-       message,
-       icon: icons[type] || icons.info
-     };
-     
-     // Auto-close después de 5 segundos
-     setTimeout(() => {
-       this.closeNotification();
-     }, 5000);
-   },
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleString('es-HN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return fecha;
+    }
+  },
 
-   closeNotification() {
-     this.notification.show = false;
-   }
- },
+  getEstadoTexto(estado) {
+    const estados = cotizacionesService.getEstados();
+    const estadoObj = estados.find(e => e.value === estado);
+    return estadoObj?.label || estado;
+  },
 
- // Limpiar timeouts al destruir el componente
- beforeUnmount() {
-   if (this.busquedaTimeout) {
-     clearTimeout(this.busquedaTimeout);
-   }
- }
+  // ==================== NOTIFICACIONES ====================
+  showNotification(message, type = 'success') {
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-exclamation-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    
+    this.notification = {
+      show: true,
+      type,
+      message,
+      icon: icons[type] || icons.info
+    };
+    
+    // Auto-close después de 5 segundos
+    setTimeout(() => {
+      this.closeNotification();
+    }, 5000);
+  },
+
+  closeNotification() {
+    this.notification.show = false;
+  }
+},
+
+// Limpiar timeouts al destruir el componente
+beforeUnmount() {
+  if (this.busquedaTimeout) {
+    clearTimeout(this.busquedaTimeout);
+  }
+}
 }
 </script>
 
 <style scoped>
+/* Estilos existentes... */
+.admin-cotizaciones-container {
+padding: 2rem;
+max-width: 1400px;
+margin: 0 auto;
+}
+
+.loading-overlay {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(255, 255, 255, 0.9);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 9999;
+}
+
+.loading-spinner {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 1rem;
+padding: 2rem;
+background: white;
+border-radius: 12px;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.loading-spinner i {
+font-size: 2rem;
+color: #3498db;
+}
+
+.loading-spinner span {
+color: #2c3e50;
+font-weight: 500;
+}
+
+.page-header {
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+margin-bottom: 2rem;
+gap: 2rem;
+}
+
+.header-content h1 {
+font-size: 2.5rem;
+font-weight: 700;
+color: #2c3e50;
+margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+color: #7f8c8d;
+font-size: 1.1rem;
+margin: 0;
+}
+
+.header-actions {
+flex-shrink: 0;
+display: flex;
+gap: 1rem;
+}
+
+.btn {
+padding: 0.875rem 1.5rem;
+border: none;
+border-radius: 8px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s ease;
+display: inline-flex;
+align-items: center;
+gap: 0.5rem;
+text-decoration: none;
+font-size: 0.9rem;
+}
+
+.btn-primary {
+background: linear-gradient(135deg, #3498db, #2980b9);
+color: white;
+}
+
+.btn-primary:hover {
+transform: translateY(-2px);
+box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.btn-primary:disabled {
+background: #bdc3c7;
+cursor: not-allowed;
+transform: none;
+box-shadow: none;
+}
+
+.btn-secondary {
+background: #95a5a6;
+color: white;
+}
+
+.btn-secondary:hover {
+background: #7f8c8d;
+}
+
+.btn-outline {
+background: transparent;
+color: #3498db;
+border: 2px solid #3498db;
+}
+
+.btn-outline:hover {
+background: #3498db;
+color: white;
+}
+
+.btn-sm {
+padding: 0.5rem 1rem;
+font-size: 0.85rem;
+}
+
+/* Resto de estilos CSS completos... (continúan todos los estilos que ya tenías) */
+
+/* INFORMACIÓN DE AUDITORÍA */
+.auditoria-info {
+display: flex;
+align-items: center;
+gap: 0.5rem;
+font-weight: 500;
+}
+
+.auditoria-info.aprobado {
+color: #27ae60;
+}
+
+.auditoria-info.aprobado i {
+color: #27ae60;
+}
+
+.auditoria-info.rechazado {
+color: #e74c3c;
+}
+
+.auditoria-info.rechazado i {
+color: #e74c3c;
+}
+
+.fecha-auditoria {
+font-size: 0.85em;
+color: #6c757d;
+font-weight: 400;
+font-style: italic;
+}
+
+.motivo-rechazo {
+color: #e74c3c;
+font-style: italic;
+background: #ffeaea;
+padding: 0.5rem;
+border-radius: 4px;
+border-left: 3px solid #e74c3c;
+}
+
 /* Estilos existentes... */
 .admin-cotizaciones-container {
  padding: 2rem;

@@ -485,15 +485,16 @@ class CotizacionesService {
  }
  
  // Helper para formatear precios
- formatPrice(price) {
-   if (!price) return 'L. 0.00';
-   
-   return new Intl.NumberFormat('es-HN', {
-     style: 'currency',
-     currency: 'HNL',
-     minimumFractionDigits: 2
-   }).format(price);
- }
+ formatPrice(amount) {
+  if (!amount && amount !== 0) return '$ 0.00';
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}
  
  // Helper para formatear servicios como texto
  formatServiciosTexto(servicios) {
