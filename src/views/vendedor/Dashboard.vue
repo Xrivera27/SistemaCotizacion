@@ -67,8 +67,8 @@
           <h3>
             Ventas Efectivas vs Rechazadas (Últimos 7 días)
           </h3>
-          <button @click="actualizarGraficoVentas" class="refresh-btn">
-            <i class="fas fa-sync-alt"></i>
+          <button @click="actualizarGraficoVentas" class="refresh-btn" :disabled="isLoading">
+            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
           </button>
         </div>
         <div class="chart-wrapper">
@@ -81,8 +81,8 @@
           <h3>
             Distribución de Estados
           </h3>
-          <button @click="actualizarGraficoEstados" class="refresh-btn">
-            <i class="fas fa-sync-alt"></i>
+          <button @click="actualizarGraficoEstados" class="refresh-btn" :disabled="isLoading">
+            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
           </button>
         </div>
         <div class="chart-wrapper">
@@ -98,7 +98,7 @@
           Resumen de Ventas Aprobadas
         </h3>
         <div class="period-selector">
-          <select v-model="periodoVentas" @change="actualizarResumenVentas" class="period-select">
+          <select v-model="periodoVentas" @change="actualizarResumenVentas" class="period-select" :disabled="isLoading">
             <option value="semana">Esta Semana</option>
             <option value="quincena">Esta Quincena</option>
             <option value="mes">Este Mes</option>
@@ -131,7 +131,6 @@
       </div>
     </div>
 
-   
     <!-- Últimas cotizaciones creadas -->
     <div class="recent-quotes">
       <div class="quotes-header">
@@ -139,12 +138,12 @@
           <i class="fas fa-file-invoice-dollar"></i>
           Últimas Cotizaciones Creadas
         </h3>
-        <button @click="actualizarCotizaciones" class="refresh-btn">
-          <i class="fas fa-sync-alt"></i>
+        <button @click="actualizarCotizaciones" class="refresh-btn" :disabled="isLoading">
+          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
           Actualizar
         </button>
       </div>
-      <div class="quotes-list">
+      <div class="quotes-list" v-if="ultimasCotizaciones.length > 0">
         <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
           <div class="quote-icon" :class="cotizacion.estado">
             <i class="fas fa-file-alt"></i>
@@ -162,6 +161,9 @@
           </div>
         </div>
       </div>
+      <div v-else class="no-data">
+        <p>No hay cotizaciones disponibles</p>
+      </div>
     </div>
 
     <!-- Loading Modal -->
@@ -170,6 +172,13 @@
       :message="loadingMessage"
       :cancellable="false"
     />
+
+    <!-- Error Toast -->
+    <div v-if="showError" class="error-toast">
+      <i class="fas fa-exclamation-triangle"></i>
+      {{ errorMessage }}
+      <button @click="showError = false" class="close-btn">×</button>
+    </div>
   </div>
 </template>
 
@@ -190,6 +199,7 @@ import {
 } from 'chart.js'
 
 import { useLoading } from '@/utils/useLoading'
+import DashboardService from '@/services/dashboard'
 
 Chart.register(
   CategoryScale,
@@ -224,106 +234,30 @@ export default {
   },
   data() {
     return {
-      nombreVendedor: 'Carlos Mendoza',
+      nombreVendedor: 'Vendedor', // Se actualizará con datos del usuario
       ventasChart: null,
       estadosChart: null,
       periodoVentas: 'mes',
+      diasGrafico: 7,
+      
+      // Datos de la API
       estadisticas: {
-        pendientes: 8,
-        esperandoAprobacion: 3,
-        efectivas: 15,
-        canceladas: 5
-      },
-      metricas: {
-        ingresosMes: 125000,
-        cambioMes: 12.5,
-        tasaConversion: 65,
-        tiempoRespuesta: 2.3
+        pendientes: 0,
+        esperandoAprobacion: 0,
+        efectivas: 0,
+        canceladas: 0
       },
       resumenVentas: {
-        totalVentas: 1250000,
-        cotizacionesAprobadas: 15,
-        promedioVenta: 83333,
-        tasaConversion: 68,
-        cambioVentas: 12.5,
-        cambioCotizaciones: 8.3,
-        cambioPromedio: 15.2,
-        cambioConversion: 5.1
+        totalVentas: 0,
+        cotizacionesAprobadas: 0
       },
-      datosVentasPorPeriodo: {
-        semana: {
-          totalVentas: 285000,
-          cotizacionesAprobadas: 4,
-          promedioVenta: 71250,
-          tasaConversion: 72,
-          cambioVentas: 18.2,
-          cambioCotizaciones: 12.5,
-          cambioPromedio: 22.3,
-          cambioConversion: 8.7
-        },
-        quincena: {
-          totalVentas: 620000,
-          cotizacionesAprobadas: 8,
-          promedioVenta: 77500,
-          tasaConversion: 70,
-          cambioVentas: 15.8,
-          cambioCotizaciones: 10.2,
-          cambioPromedio: 18.5,
-          cambioConversion: 6.9
-        },
-        mes: {
-          totalVentas: 1250000,
-          cotizacionesAprobadas: 15,
-          promedioVenta: 83333,
-          tasaConversion: 68,
-          cambioVentas: 12.5,
-          cambioCotizaciones: 8.3,
-          cambioPromedio: 15.2,
-          cambioConversion: 5.1
-        }
-      },
-      ultimasCotizaciones: [
-        {
-          id: 1,
-          codigo: 'COT-2025-018',
-          cliente: 'Empresa ABC S.A.',
-          monto: 125000,
-          fechaCreacion: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          estado: 'pendiente'
-        },
-        {
-          id: 2,
-          codigo: 'COT-2025-017',
-          cliente: 'TechCorp Solutions',
-          monto: 45000,
-          fechaCreacion: new Date(Date.now() - 4 * 60 * 60 * 1000),
-          estado: 'esperando'
-        },
-        {
-          id: 3,
-          codigo: 'COT-2025-016',
-          cliente: 'Innovaciones del Norte',
-          monto: 78500,
-          fechaCreacion: new Date(Date.now() - 6 * 60 * 60 * 1000),
-          estado: 'efectiva'
-        },
-        {
-          id: 4,
-          codigo: 'COT-2025-015',
-          cliente: 'Comercial Sur Ltda.',
-          monto: 32000,
-          fechaCreacion: new Date(Date.now() - 8 * 60 * 60 * 1000),
-          estado: 'cancelada'
-        },
-        {
-          id: 5,
-          codigo: 'COT-2025-014',
-          cliente: 'Grupo Empresarial XYZ',
-          monto: 156000,
-          fechaCreacion: new Date(Date.now() - 12 * 60 * 60 * 1000),
-          estado: 'efectiva'
-        }
-      ]
+      ultimasCotizaciones: [],
+      ventasChartData: null,
+      estadosChartData: null,
+      
+      // Control de errores
+      showError: false,
+      errorMessage: ''
     }
   },
   computed: {
@@ -337,7 +271,7 @@ export default {
     }
   },
   async mounted() {
-    // Cargar datos iniciales con loading
+    // Cargar todos los datos iniciales
     await this.withLoading(async () => {
       await this.cargarDatosIniciales()
       await this.$nextTick()
@@ -345,60 +279,138 @@ export default {
     }, 'Cargando dashboard vendedor...')
   },
   beforeUnmount() {
-    if (this.ventasChart) {
-      this.ventasChart.destroy()
-    }
-    if (this.estadosChart) {
-      this.estadosChart.destroy()
-    }
+    this.destroyCharts()
   },
   methods: {
-    // Simular carga de datos iniciales
+    // ===== MÉTODOS DE CARGA DE DATOS =====
+    
     async cargarDatosIniciales() {
-      await new Promise(resolve => setTimeout(resolve, 1300))
-      console.log('Datos iniciales del vendedor cargados')
+      try {
+        console.log('🚀 Cargando datos iniciales del dashboard vendedor...')
+        
+        // Obtener nombre del usuario del localStorage
+        const userData = JSON.parse(localStorage.getItem('user') || '{}')
+        this.nombreVendedor = userData.nombre_completo || 'Vendedor'
+        
+        // Usar el endpoint optimizado que trae todos los datos de una vez
+        const result = await DashboardService.getVendedorAllDashboardData(this.periodoVentas, this.diasGrafico)
+        
+        if (result.success) {
+          const { data } = result
+          
+          // Actualizar todas las secciones
+          this.estadisticas = data.stats || this.estadisticas
+          this.ventasChartData = data.ventasChart
+          this.estadosChartData = data.estadosChart
+          this.resumenVentas = data.resumenVentas || this.resumenVentas
+          this.ultimasCotizaciones = data.cotizacionesRecientes || []
+          
+          console.log('✅ Todos los datos del vendedor cargados exitosamente')
+        } else {
+          this.mostrarError(result.message || 'Error cargando datos del dashboard')
+          // Cargar datos individuales como fallback
+          await this.cargarDatosIndividuales()
+        }
+      } catch (error) {
+        console.error('❌ Error cargando datos iniciales vendedor:', error)
+        this.mostrarError('Error de conexión al cargar dashboard')
+        // Cargar datos individuales como fallback
+        await this.cargarDatosIndividuales()
+      }
+    },
+    
+    async cargarDatosIndividuales() {
+      try {
+        console.log('🔄 Cargando datos del vendedor individualmente...')
+        
+        // Cargar cada sección por separado
+        const [statsResult, ventasResult, estadosResult, resumenResult, cotizacionesResult] = 
+          await Promise.allSettled([
+            DashboardService.getVendedorStats(),
+            DashboardService.getVendedorVentasChart(this.diasGrafico),
+            DashboardService.getVendedorEstadosChart(),
+            DashboardService.getVendedorResumenVentas(this.periodoVentas),
+            DashboardService.getVendedorCotizacionesRecientes(5)
+          ])
+        
+        // Procesar resultados
+        if (statsResult.status === 'fulfilled' && statsResult.value.success) {
+          this.estadisticas = statsResult.value.stats
+        }
+        
+        if (ventasResult.status === 'fulfilled' && ventasResult.value.success) {
+          this.ventasChartData = ventasResult.value.chartData
+        }
+        
+        if (estadosResult.status === 'fulfilled' && estadosResult.value.success) {
+          this.estadosChartData = estadosResult.value.chartData
+        }
+        
+        if (resumenResult.status === 'fulfilled' && resumenResult.value.success) {
+          this.resumenVentas = resumenResult.value.resumen
+        }
+        
+        if (cotizacionesResult.status === 'fulfilled' && cotizacionesResult.value.success) {
+          this.ultimasCotizaciones = cotizacionesResult.value.cotizaciones
+        }
+        
+        console.log('✅ Datos individuales del vendedor cargados')
+      } catch (error) {
+        console.error('❌ Error cargando datos individuales vendedor:', error)
+        this.mostrarError('Error cargando algunos datos del dashboard')
+      }
     },
 
+    // ===== MÉTODOS DE GRÁFICOS =====
+    
     initCharts() {
       try {
+        this.destroyCharts() // Limpiar gráficos existentes
         this.createVentasChart()
         this.createEstadosChart()
       } catch (error) {
         console.error('Error al inicializar gráficos:', error)
+        this.mostrarError('Error inicializando gráficos')
       }
     },
     
     createVentasChart() {
       const ctx = this.$refs.ventasChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas')
+        console.error('No se pudo obtener el contexto del canvas de ventas')
         return
       }
       
-      const labels = this.generateDateLabels()
-      const ventasEfectivas = [12, 8, 15, 10, 18, 14, 20]
-      const ventasNegativas = [3, 5, 2, 7, 4, 6, 3]
+      // Usar datos de la API o datos por defecto
+      const chartData = this.ventasChartData || {
+        labels: this.generateDateLabels(),
+        datasets: [
+          {
+            label: 'Ventas Efectivas',
+            data: [0, 0, 0, 0, 0, 0, 0],
+            borderColor: '#27ae60',
+            backgroundColor: 'rgba(39, 174, 96, 0.1)'
+          },
+          {
+            label: 'Ventas Rechazadas',
+            data: [0, 0, 0, 0, 0, 0, 0],
+            borderColor: '#e74c3c',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)'
+          }
+        ]
+      }
       
       this.ventasChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Ventas Efectivas',
-              data: ventasEfectivas,
-              borderColor: '#27ae60',
-              backgroundColor: 'rgba(39, 174, 96, 0.1)',
-              tension: 0.4
-            },
-            {
-              label: 'Ventas Rechazadas',
-              data: ventasNegativas,
-              borderColor: '#e74c3c',
-              backgroundColor: 'rgba(231, 76, 60, 0.1)',
-              tension: 0.4
-            }
-          ]
+          labels: chartData.labels,
+          datasets: chartData.datasets.map(dataset => ({
+            ...dataset,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: false
+          }))
         },
         options: {
           responsive: true,
@@ -409,6 +421,13 @@ export default {
             },
             title: {
               display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y}`
+                }
+              }
             }
           },
           scales: {
@@ -416,6 +435,9 @@ export default {
               beginAtZero: true,
               grid: {
                 color: 'rgba(0, 0, 0, 0.1)'
+              },
+              ticks: {
+                stepSize: 1
               }
             },
             x: {
@@ -431,27 +453,38 @@ export default {
     createEstadosChart() {
       const ctx = this.$refs.estadosChart?.getContext('2d')
       if (!ctx) {
-        console.error('No se pudo obtener el contexto del canvas')
+        console.error('No se pudo obtener el contexto del canvas de estados')
         return
       }
       
-      this.estadosChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Pendientes', 'Esperando Aprobación', 'Efectivas', 'Canceladas'],
-          datasets: [{
+      // Usar datos de la API o datos por defecto
+      const chartData = this.estadosChartData || {
+        labels: ['Sin datos'],
+        data: [1],
+        colors: ['#95a5a6']
+      }
+      
+      // Si no hay datos reales, mostrar estados con 0
+      const finalData = chartData.data.length > 0 && chartData.data.some(d => d > 0) 
+        ? chartData 
+        : {
+            labels: ['Pendientes', 'Esperando Aprobación', 'Efectivas', 'Canceladas'],
             data: [
               this.estadisticas.pendientes,
               this.estadisticas.esperandoAprobacion,
               this.estadisticas.efectivas,
               this.estadisticas.canceladas
             ],
-            backgroundColor: [
-              '#f39c12',
-              '#e67e22',
-              '#27ae60',
-              '#e74c3c'
-            ],
+            colors: ['#f39c12', '#e67e22', '#27ae60', '#e74c3c']
+          }
+      
+      this.estadosChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: finalData.labels,
+          datasets: [{
+            data: finalData.data,
+            backgroundColor: finalData.colors,
             borderWidth: 2,
             borderColor: '#fff'
           }]
@@ -464,62 +497,119 @@ export default {
               position: 'bottom',
               labels: {
                 padding: 20,
-                usePointStyle: true
+                usePointStyle: true,
+                font: {
+                  size: 11
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0)
+                  const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0'
+                  return `${context.label}: ${context.parsed} (${percentage}%)`
+                }
               }
             }
           }
         }
       })
     },
+    
+    destroyCharts() {
+      if (this.ventasChart) {
+        this.ventasChart.destroy()
+        this.ventasChart = null
+      }
+      if (this.estadosChart) {
+        this.estadosChart.destroy()
+        this.estadosChart = null
+      }
+    },
 
-    // Métodos con loading para actualizar datos
+    // ===== MÉTODOS DE ACTUALIZACIÓN =====
+    
     async actualizarGraficoVentas() {
       await this.withLoadingKey('grafico-ventas', async () => {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Gráfico de ventas actualizado')
+        try {
+          const result = await DashboardService.getVendedorVentasChart(this.diasGrafico)
+          
+          if (result.success) {
+            this.ventasChartData = result.chartData
+            this.createVentasChart()
+            console.log('✅ Gráfico de ventas actualizado')
+          } else {
+            this.mostrarError(result.message || 'Error actualizando gráfico de ventas')
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando gráfico de ventas:', error)
+          this.mostrarError('Error de conexión al actualizar gráfico')
+        }
       }, 'Actualizando gráfico de ventas...')
     },
 
     async actualizarGraficoEstados() {
       await this.withLoadingKey('grafico-estados', async () => {
-        await new Promise(resolve => setTimeout(resolve, 800))
-        console.log('Gráfico de estados actualizado')
+        try {
+          const result = await DashboardService.getVendedorEstadosChart()
+          
+          if (result.success) {
+            this.estadosChartData = result.chartData
+            this.createEstadosChart()
+            console.log('✅ Gráfico de estados actualizado')
+          } else {
+            this.mostrarError(result.message || 'Error actualizando gráfico de estados')
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando gráfico de estados:', error)
+          this.mostrarError('Error de conexión al actualizar gráfico')
+        }
       }, 'Actualizando distribución de estados...')
     },
 
     async actualizarCotizaciones() {
       await this.withLoadingKey('cotizaciones', async () => {
-        await new Promise(resolve => setTimeout(resolve, 1200))
-        console.log('Lista de cotizaciones actualizada')
+        try {
+          const result = await DashboardService.getVendedorCotizacionesRecientes(5)
+          
+          if (result.success) {
+            this.ultimasCotizaciones = result.cotizaciones
+            console.log('✅ Cotizaciones actualizadas')
+          } else {
+            this.mostrarError(result.message || 'Error actualizando cotizaciones')
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando cotizaciones:', error)
+          this.mostrarError('Error de conexión al actualizar cotizaciones')
+        }
       }, 'Actualizando cotizaciones...')
     },
-
-    // Acciones rápidas con loading
-    async nuevaCotizacion() {
+    
+    async actualizarResumenVentas() {
       await this.withLoading(async () => {
-        await new Promise(resolve => setTimeout(resolve, 800))
-        alert('Redirigiendo a crear nueva cotización...')
-      }, 'Preparando formulario...')
+        try {
+          const result = await DashboardService.getVendedorResumenVentas(this.periodoVentas)
+          
+          if (result.success) {
+            this.resumenVentas = result.resumen
+            console.log('✅ Resumen de ventas actualizado')
+          } else {
+            this.mostrarError(result.message || 'Error actualizando resumen de ventas')
+          }
+        } catch (error) {
+          console.error('❌ Error actualizando resumen:', error)
+          this.mostrarError('Error de conexión al actualizar resumen')
+        }
+      }, 'Actualizando resumen de ventas...')
     },
 
-    async verCotizaciones() {
-      await this.withLoading(async () => {
-        await new Promise(resolve => setTimeout(resolve, 600))
-        alert('Cargando lista de cotizaciones...')
-      }, 'Cargando cotizaciones...')
-    },
-
-    async generarReporte() {
-      await this.withLoading(async () => {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        alert('Reporte generado exitosamente')
-      }, 'Generando reporte de ventas...')
-    },
+    // ===== MÉTODOS AUXILIARES =====
     
     generateDateLabels() {
       const labels = []
       
-      // Fijo en 7 días
+      // Generar etiquetas para los últimos 7 días
       for (let i = 6; i >= 0; i--) {
         const date = new Date()
         date.setDate(date.getDate() - i)
@@ -527,13 +617,6 @@ export default {
       }
       
       return labels
-    },
-    
-    async actualizarResumenVentas() {
-      await this.withLoading(async () => {
-        await new Promise(resolve => setTimeout(resolve, 700))
-        this.resumenVentas = { ...this.datosVentasPorPeriodo[this.periodoVentas] }
-      }, 'Actualizando resumen de ventas...')
     },
     
     getDescripcionPeriodo() {
@@ -546,12 +629,16 @@ export default {
     },
     
     formatearMoneda(cantidad) {
+      if (!cantidad && cantidad !== 0) return '0'
       return cantidad.toLocaleString('es-ES')
     },
     
     formatearTiempo(fecha) {
+      if (!fecha) return ''
+      
       const ahora = new Date()
-      const diferencia = ahora - fecha
+      const fechaObj = new Date(fecha)
+      const diferencia = ahora - fechaObj
       const horas = Math.floor(diferencia / (1000 * 60 * 60))
       
       if (horas < 1) {
@@ -574,12 +661,122 @@ export default {
         cancelada: 'Cancelada'
       }
       return estados[estado] || estado
+    },
+    
+    mostrarError(mensaje) {
+      this.errorMessage = mensaje
+      this.showError = true
+      
+      // Auto-ocultar después de 5 segundos
+      setTimeout(() => {
+        this.showError = false
+      }, 5000)
     }
   }
 }
 </script>
 
 <style scoped>
+
+/* No Data State */
+.no-data {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  padding: 3rem;
+  text-align: center;
+}
+
+.no-data p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Error Toast */
+.error-toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  background: #e74c3c;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 400px;
+  z-index: 1000;
+  animation: slideInRight 0.3s ease;
+}
+
+.error-toast i {
+  font-size: 1.2rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Loading states */
+.fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+.refresh-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.period-select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+@keyframes fa-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments para error toast */
+@media (max-width: 768px) {
+  .error-toast {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+}
 .dashboard-vendedor {
   padding: 2rem;
   max-width: 1400px;

@@ -185,7 +185,7 @@ class DashboardService {
     }
   }
   
-  // ===== DASHBOARD VENDEDOR (Para futuro) =====
+  // ===== DASHBOARD VENDEDOR =====
   
   async getVendedorStats() {
     try {
@@ -194,6 +194,7 @@ class DashboardService {
       const response = await api.get('/dashboard/vendedor/stats');
       
       if (response.data.success) {
+        console.log('✅ Estadísticas vendedor obtenidas:', response.data.data);
         return {
           success: true,
           stats: response.data.data
@@ -213,8 +214,157 @@ class DashboardService {
       };
     }
   }
+
+  async getVendedorVentasChart(dias = 7) {
+    try {
+      console.log('📈 Obteniendo gráfico de ventas del vendedor, días:', dias);
+      
+      const response = await api.get('/dashboard/vendedor/ventas-chart', {
+        params: { dias }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Datos del gráfico de ventas obtenidos:', response.data.data);
+        return {
+          success: true,
+          chartData: response.data.data
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo datos del gráfico'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo gráfico de ventas vendedor:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  async getVendedorEstadosChart() {
+    try {
+      console.log('📊 Obteniendo gráfico de estados del vendedor...');
+      
+      const response = await api.get('/dashboard/vendedor/estados-chart');
+      
+      if (response.data.success) {
+        console.log('✅ Datos del gráfico de estados obtenidos:', response.data.data);
+        return {
+          success: true,
+          chartData: response.data.data
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo datos del gráfico'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo gráfico de estados vendedor:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  async getVendedorResumenVentas(periodo = 'mes') {
+    try {
+      console.log('📅 Obteniendo resumen de ventas del vendedor, período:', periodo);
+      
+      const response = await api.get('/dashboard/vendedor/resumen-ventas', {
+        params: { periodo }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Resumen de ventas vendedor obtenido:', response.data.data);
+        return {
+          success: true,
+          resumen: response.data.data
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo resumen de ventas'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo resumen de ventas vendedor:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  async getVendedorCotizacionesRecientes(limit = 5) {
+    try {
+      console.log('📋 Obteniendo cotizaciones recientes del vendedor, limit:', limit);
+      
+      const response = await api.get('/dashboard/vendedor/cotizaciones-recientes', {
+        params: { limit }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Cotizaciones recientes vendedor obtenidas:', response.data.data);
+        return {
+          success: true,
+          cotizaciones: response.data.data
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo cotizaciones'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo cotizaciones recientes vendedor:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
+
+  // Obtener todos los datos del dashboard vendedor de una vez (optimizado)
+  async getVendedorAllDashboardData(periodo = 'mes', dias = 7) {
+    try {
+      console.log('🚀 Obteniendo todos los datos del dashboard vendedor...');
+      
+      const response = await api.get('/dashboard/vendedor/all-data', {
+        params: { periodo, dias }
+      });
+      
+      if (response.data.success) {
+        console.log('✅ Todos los datos del dashboard vendedor obtenidos:', response.data.data);
+        return {
+          success: true,
+          data: response.data.data
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data.message || 'Error obteniendo datos del dashboard'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo datos del dashboard vendedor:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
+      };
+    }
+  }
   
-  // ===== DASHBOARD SUPER USUARIO (Para futuro) =====
+  // ===== DASHBOARD SUPER USUARIO =====
   
   async getSuperUsuarioStats() {
     try {
@@ -276,6 +426,47 @@ class DashboardService {
         data: data.data,
         backgroundColor: colors.backgrounds,
         borderColor: colors.borders,
+        borderWidth: 2
+      }]
+    };
+  }
+
+  // Formatear datos específicos para gráfico de ventas del vendedor (líneas)
+  formatVendedorVentasChart(data) {
+    if (!data || !data.labels || !data.datasets) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+
+    return {
+      labels: data.labels,
+      datasets: data.datasets.map(dataset => ({
+        ...dataset,
+        tension: 0.4,
+        fill: false,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }))
+    };
+  }
+
+  // Formatear datos para gráfico de estados del vendedor (doughnut)
+  formatVendedorEstadosChart(data) {
+    if (!data || !data.labels || !data.data) {
+      return {
+        labels: [],
+        datasets: []
+      };
+    }
+
+    return {
+      labels: data.labels,
+      datasets: [{
+        data: data.data,
+        backgroundColor: data.colors || this.getChartColors(data.labels.length).backgrounds,
+        borderColor: '#fff',
         borderWidth: 2
       }]
     };
@@ -362,6 +553,34 @@ class DashboardService {
       'hace2': 'hace 2 meses'
     };
     return descripciones[mes] || mes;
+  }
+
+  // Obtener descripción del período para vendedor
+  getDescripcionPeriodo(periodo) {
+    const descripciones = {
+      'semana': 'en esta semana',
+      'quincena': 'en esta quincena',
+      'mes': 'en este mes'
+    };
+    return descripciones[periodo] || periodo;
+  }
+
+  // Validar si es vendedor para mostrar datos específicos
+  isVendedorDashboard() {
+    const userRole = localStorage.getItem('userRole');
+    return userRole === 'vendedor';
+  }
+
+  // Validar si es admin para mostrar datos específicos
+  isAdminDashboard() {
+    const userRole = localStorage.getItem('userRole');
+    return userRole === 'admin';
+  }
+
+  // Validar si es super usuario para mostrar datos específicos
+  isSuperUsuarioDashboard() {
+    const userRole = localStorage.getItem('userRole');
+    return userRole === 'super_usuario';
   }
 }
 

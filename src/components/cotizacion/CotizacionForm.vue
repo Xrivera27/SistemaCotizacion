@@ -271,6 +271,7 @@
 
 <script>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import ServicioItem from './ServicioItem.vue'
 import ResultadoCotizacion from './ResultadoCotizacion.vue'
 import serviciosService from '@/services/serviciosService'
@@ -282,6 +283,8 @@ export default {
     ResultadoCotizacion
   },
   setup() {
+    const route = useRoute()
+    
     // Estados reactivos
     const servicios = ref([])
     const serviciosOriginales = ref([])
@@ -296,6 +299,10 @@ export default {
     
     const serviciosSeleccionados = ref([])
     const añosContrato = ref(1)
+    
+    // Estados para duplicación
+    const esDuplicacion = ref(false)
+    const cotizacionOrigen = ref(null)
     
     // Filtros
     const filtros = reactive({
@@ -313,17 +320,138 @@ export default {
     const cacheResultados = reactive({})
     const timeoutBusqueda = ref(null)
 
+    // ===== VERIFICACIÓN DE DUPLICACIÓN CORREGIDA =====
+    const verificarDuplicacion = async () => {
+      console.log('🔍 Verificando si es duplicación...', route.query)
+      
+      if (route.query.duplicar === 'true') {
+        console.log('📋 Es una duplicación, cargando datos...')
+        esDuplicacion.value = true
+        cotizacionOrigen.value = route.query.origen
+        await cargarDatosParaDuplicar()
+      } else {
+        console.log('📄 Creación normal de cotización')
+        esDuplicacion.value = false
+        await cargarServicios()
+      }
+    }
+
+    const cargarDatosParaDuplicar = async () => {
+      try {
+        loading.value = true
+        loadingMessage.value = 'Cargando datos para duplicar...'
+        
+        // Obtener datos del sessionStorage
+        const datosGuardados = sessionStorage.getItem('datosParaDuplicar')
+        
+        if (datosGuardados) {
+          const datos = JSON.parse(datosGuardados)
+          
+          console.log('✅ Datos para duplicar encontrados:', datos)
+          
+          // Cargar servicios primero
+          await cargarServicios()
+          
+          // Luego precargar el formulario con la lógica corregida
+          await precargarFormulario(datos)
+          
+          // Limpiar sessionStorage
+          sessionStorage.removeItem('datosParaDuplicar')
+          
+          // Mostrar mensaje de éxito
+          console.log(`🎉 Cotización duplicada desde ${cotizacionOrigen.value}`)
+          
+        } else {
+          console.warn('⚠️ No se encontraron datos para duplicar, cargando normalmente')
+          await cargarServicios()
+        }
+        
+      } catch (error) {
+        console.error('❌ Error cargando datos para duplicar:', error)
+        // En caso de error, cargar servicios normalmente
+        await cargarServicios()
+      } finally {
+        loading.value = false
+        loadingMessage.value = ''
+      }
+    }
+
+    // ===== PRECARGA CORREGIDA USANDO precioPorEquipo DEL BACKEND =====
+    const precargarFormulario = async (datos) => {
+      console.log('🔄 Precargando formulario con datos:', datos)
+      
+      try {
+        // PASO 1: Configurar años del contrato
+        if (datos.servicios && datos.servicios.length > 0) {
+          añosContrato.value = datos.servicios[0].cantidadAnos || 1
+        }
+        
+        // PASO 2: Precargar servicios seleccionados usando precioPorEquipo del backend
+        if (datos.servicios && datos.servicios.length > 0) {
+          for (const servicioData of datos.servicios) {
+            const servicioId = servicioData.id
+            
+            // Buscar el servicio en la lista cargada
+            const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+            
+            if (servicioExistente) {
+              console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
+              console.log('💰 Datos originales del servicio:', servicioData)
+              
+              // Configurar cantidades ORIGINALES
+              cantidades[servicioId] = servicioData.cantidadServicios || 0
+              cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
+              
+              // ✅ CORRECCIÓN: Usar directamente precioPorEquipo que ya viene calculado del backend
+              const precioPorEquipo = servicioData.precioPorEquipo || servicioData.precioUnitarioOriginal || 0
+              
+              preciosVenta[servicioId] = precioPorEquipo
+              
+              console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
+                cantidadServicios: cantidades[servicioId],
+                cantidadEquipos: cantidadesEquipos[servicioId],
+                precioUnitarioOriginal: servicioData.precioUnitarioOriginal,
+                subtotalOriginal: servicioData.subtotalOriginal,
+                precioPorEquipo: precioPorEquipo,
+                info: 'Usando precioPorEquipo calculado en el backend'
+              })
+            } else {
+              console.warn(`⚠️ Servicio con ID ${servicioId} no encontrado en la lista actual`)
+            }
+          }
+        }
+        
+        // PASO 3: Recalcular si es necesario
+        await nextTick()
+        console.log('✅ Formulario precargado exitosamente')
+        
+        // Mostrar un mensaje de confirmación
+        if (typeof window !== 'undefined' && window.alert) {
+          setTimeout(() => {
+            alert(`✅ Cotización duplicada exitosamente desde ${cotizacionOrigen.value}`)
+          }, 500)
+        }
+        
+      } catch (error) {
+        console.error('❌ Error precargando formulario:', error)
+        throw error
+      }
+    }
+
     // Función para resetear paginación
     const resetearPaginacion = () => {
       paginaActual.value = 1
       paginaInput.value = 1
     }
 
-    // Función para cargar servicios desde el backend
+    // ===== FUNCIÓN CARGAR SERVICIOS SIN CAMBIOS =====
     const cargarServicios = async (params = {}) => {
       try {
-        loading.value = true
-        loadingMessage.value = 'Cargando servicios...'
+        // Solo mostrar loading si no estamos en proceso de duplicación
+        if (!loading.value) {
+          loading.value = true
+          loadingMessage.value = 'Cargando servicios...'
+        }
         error.value = ''
 
         console.log('🔄 Iniciando carga de servicios...')
@@ -355,8 +483,11 @@ export default {
         error.value = err.message || 'Error al cargar los servicios. Verifique su conexión.'
         servicios.value = []
       } finally {
-        loading.value = false
-        loadingMessage.value = ''
+        // Solo ocultar loading si no es duplicación
+        if (!esDuplicacion.value || loading.value) {
+          loading.value = false
+          loadingMessage.value = ''
+        }
       }
     }
 
@@ -436,7 +567,7 @@ export default {
       cargarServicios()
     }
 
-    // Computed properties
+    // Computed properties (sin cambios)
     const categoriasDisponibles = computed(() => {
       const categorias = [...new Set(servicios.value.map(s => s.categoria?.nombre || 'Sin categoría'))]
       return categorias.map(cat => ({
@@ -515,7 +646,7 @@ export default {
              Object.values(cantidadesEquipos).some(cantidad => cantidad > 0)
     })
 
-    // Métodos
+    // Métodos (sin cambios)
     const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
       cantidadesEquipos[servicioId] = nuevaCantidad || 0
     }
@@ -618,17 +749,22 @@ export default {
       
       serviciosSeleccionados.value = []
       añosContrato.value = 1
+      esDuplicacion.value = false
+      cotizacionOrigen.value = null
       
       console.log('🧹 Formulario limpiado')
     }
 
-    // Cargar servicios al montar el componente
-    onMounted(() => {
-      console.log('🚀 Componente montado, cargando servicios...')
-      cargarServicios()
+    // ===== CICLO DE VIDA CORREGIDO =====
+    onMounted(async () => {
+      console.log('🚀 Componente montado')
+      console.log('🔍 Query params:', route.query)
+      
+      // Verificar duplicación - ahora maneja ambos casos correctamente
+      await verificarDuplicacion()
     })
 
-    // Watchers
+    // Watchers (sin cambios)
     watch([() => filtros.categoria, () => filtros.rangoPrecio], () => {
       if (filtros.busqueda) {
         const terminoBusqueda = filtros.busqueda
@@ -662,6 +798,10 @@ export default {
       serviciosPorPagina,
       paginaInput,
       
+      // Estados de duplicación
+      esDuplicacion,
+      cotizacionOrigen,
+      
       // Computed
       categoriasDisponibles,
       serviciosFiltrados,
@@ -690,12 +830,16 @@ export default {
       cambiarPagina,
       irAPagina,
       calcularCotizacion,
-      limpiarFormulario
+      limpiarFormulario,
+      
+      // Funciones de duplicación
+      verificarDuplicacion,
+      cargarDatosParaDuplicar,
+      precargarFormulario
     }
   }
 }
 </script>
-
 
 <style scoped>
 .cotizacion-form-container {
