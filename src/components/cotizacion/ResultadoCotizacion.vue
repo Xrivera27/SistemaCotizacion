@@ -186,26 +186,7 @@
       </div>
     </div>
 
-    <!-- Error message -->
-    <div v-if="error" class="error-message">
-      <i class="fas fa-exclamation-triangle"></i>
-      {{ error }}
-      <button @click="limpiarError" class="btn-cerrar-error">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <!-- Success message -->
-    <div v-if="successMessage" class="success-message">
-      <i class="fas fa-check-circle"></i>
-      {{ successMessage }}
-      <button @click="limpiarSuccess" class="btn-cerrar-success">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
     <div class="acciones">
-      
       <button 
         @click="exportarPDF" 
         class="btn-exportar" 
@@ -233,11 +214,18 @@
       @guardar-cotizacion="onGuardarCotizacion"
       @limpiar-formulario="onLimpiarFormulario"
     />
+
+    <!-- ✅ TOAST DE NOTIFICACIONES -->
+    <div v-if="showToast" class="toast-notification" :class="toastType">
+      <i :class="toastIcon"></i>
+      <span>{{ toastMessage }}</span>
+      <button @click="hideToast" class="toast-close">×</button>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, } from 'vue'
 import ConfirmacionPDFModal from './ConfirmacionPDFModal.vue'
 import crearcotizacionService from '@/services/crearcotizacion'
 
@@ -263,8 +251,11 @@ export default {
     const mostrarModalConfirmacion = ref(false)
     const loading = ref(false)
     const loadingMessage = ref('')
-    const error = ref('')
-    const successMessage = ref('')
+    
+    // ✅ TOAST SYSTEM - Estados
+    const showToast = ref(false)
+    const toastMessage = ref('')
+    const toastType = ref('success') // success, error, warning, info
 
     // ✅ MÉTODOS HELPER PRIMERO (antes de los computed)
     const esServicioBackup = (servicio) => {
@@ -290,6 +281,33 @@ export default {
 
     const formatCurrency = (amount) => {
       return crearcotizacionService.formatCurrency(amount || 0)
+    }
+
+    // ✅ COMPUTED PARA TOAST
+    const toastIcon = computed(() => {
+      const iconos = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+      };
+      return iconos[toastType.value] || 'fas fa-info-circle';
+    })
+
+    // ✅ MÉTODOS DE TOAST
+    const mostrarToast = (mensaje, tipo = 'info') => {
+      toastMessage.value = mensaje
+      toastType.value = tipo
+      showToast.value = true
+      
+      // Auto-ocultar después de 5 segundos
+      setTimeout(() => {
+        hideToast()
+      }, 5000)
+    }
+
+    const hideToast = () => {
+      showToast.value = false
     }
 
     // ✅ COMPUTED PROPERTIES DESPUÉS DE LOS MÉTODOS
@@ -368,19 +386,13 @@ export default {
     })
 
     // Resto de métodos
-    const limpiarError = () => {
-      error.value = ''
-    }
-
-    const limpiarSuccess = () => {
-      successMessage.value = ''
-    }
-
     const reiniciar = () => {
+      mostrarToast('Iniciando nueva cotización', 'info')
       emit('reiniciar')
     }
 
     const onLimpiarFormulario = () => {
+      mostrarToast('Formulario limpiado correctamente', 'success')
       emit('limpiar-formulario')
     }
 
@@ -388,183 +400,130 @@ export default {
       mostrarModalConfirmacion.value = false
     }
 
-    const guardarCotizacion = async () => {
+    const exportarPDF = () => {
       if (!precioSeleccionadoPDF.value) {
-        error.value = 'Por favor selecciona un tipo de precio para la cotización'
+        mostrarToast('Por favor selecciona un tipo de precio para la cotización', 'warning')
         return
       }
+      mostrarToast('Abriendo configuración para generar PDF', 'info')
+      mostrarModalConfirmacion.value = true
+    }
 
+    const onGenerarPDF = async (datosParaPDF) => {
       try {
         loading.value = true
-        loadingMessage.value = 'Guardando cotización...'
-        error.value = ''
-        successMessage.value = ''
+        loadingMessage.value = 'Generando PDF...'
+        
+        mostrarToast('Iniciando generación de PDF...', 'info')
 
         const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-          props.serviciosSeleccionados,
-          null,
+          datosParaPDF.servicios,
+          datosParaPDF.cliente,
           props.añosContrato,
-          precioSeleccionadoPDF.value,
-          {
-            incluirNombreEncargado: true,
-            incluirNombreEmpresa: true,
-            incluirDocumentoFiscal: false,
-            incluirTelefonoEmpresa: false,
-            incluirCorreoEmpresa: true
-          },
-          `Cotización ${hayPreciosPorDebajoMinimo.value ? 'con precios especiales' : 'estándar'} - ${fechaActual.value}`
+          datosParaPDF.tipoPrecio,
+          datosParaPDF.configuracionPDF,
+          datosParaPDF.comentario || ''
         )
 
-        const validacion = crearcotizacionService.validateCotizacionData(cotizacionData)
-        
-        if (!validacion.isValid) {
-          throw new Error(`Datos inválidos: ${validacion.errors.join(', ')}`)
+        console.log('💾 Creando cotización en backend:', cotizacionData)
+
+        const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+
+        if (!resultado.success) {
+          throw new Error(resultado.message || 'Error al crear la cotización')
         }
 
-        console.log('📋 Guardando cotización como borrador:', cotizacionData)
-        mostrarModalConfirmacion.value = true
+        const cotizacionCreada = resultado.cotizacion
+        console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
+
+        mostrarToast('Cotización creada, generando PDF...', 'info')
+
+        console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
+        
+        const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
+
+        if (!resultadoPDF.success) {
+          throw new Error(resultadoPDF.message || 'Error al generar el PDF')
+        }
+
+        await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
+
+        let mensajeExito = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
+        
+        if (resultado.requiere_aprobacion) {
+          mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+          mostrarToast(mensajeExito, 'warning')
+        } else {
+          mostrarToast(mensajeExito, 'success')
+        }
+
+        cerrarModalConfirmacion()
+        console.log('✅ Proceso completado exitosamente')
+
+        // Limpiar formulario después del éxito
+        setTimeout(() => {
+          onLimpiarFormulario()
+        }, 2000)
 
       } catch (err) {
-        console.error('❌ Error preparando cotización:', err)
-        error.value = err.message || 'Error al preparar la cotización'
+        console.error('❌ Error en proceso de PDF:', err)
+        mostrarToast(err.message || 'Error al generar el PDF', 'error')
       } finally {
         loading.value = false
         loadingMessage.value = ''
       }
     }
 
-    const exportarPDF = () => {
-      if (!precioSeleccionadoPDF.value) {
-        error.value = 'Por favor selecciona un tipo de precio para la cotización'
-        return
-      }
-      mostrarModalConfirmacion.value = true
-    }
-
-const onGenerarPDF = async (datosParaPDF) => {
-  try {
-    loading.value = true
-    loadingMessage.value = 'Generando PDF...'
-    error.value = ''
-
-    const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-      datosParaPDF.servicios,
-      datosParaPDF.cliente,
-      props.añosContrato,
-      datosParaPDF.tipoPrecio,
-      datosParaPDF.configuracionPDF,
-      datosParaPDF.comentario || ''
-    )
-
-    console.log('💾 Creando cotización en backend:', cotizacionData)
-
-    const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
-
-    if (!resultado.success) {
-      throw new Error(resultado.message || 'Error al crear la cotización')
-    }
-
-    const cotizacionCreada = resultado.cotizacion
-    console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
-
-    console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
-    
-    const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
-
-    if (!resultadoPDF.success) {
-      throw new Error(resultadoPDF.message || 'Error al generar el PDF')
-    }
-
-    await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
-
-    successMessage.value = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
-    
-    if (resultado.requiere_aprobacion) {
-      successMessage.value += '. La cotización requiere aprobación administrativa debido a precios especiales.'
-    }
-
-    cerrarModalConfirmacion()
-    console.log('✅ Proceso completado exitosamente')
-
-    // ✅ NUEVO: Limpiar formulario después del éxito
-    setTimeout(() => {
-      onLimpiarFormulario()
-    }, 1500) // Dar tiempo para que se vea el mensaje de éxito
-
-  } catch (err) {
-    console.error('❌ Error en proceso de PDF:', err)
-    error.value = err.message || 'Error al generar el PDF'
-  } finally {
-    loading.value = false
-    loadingMessage.value = ''
-  }
-}
-
     const onGuardarCotizacion = async (datosCotizacion) => {
-  try {
-    loading.value = true
-    loadingMessage.value = 'Guardando cotización...'
-    error.value = ''
+      try {
+        loading.value = true
+        loadingMessage.value = 'Guardando cotización...'
+        
+        mostrarToast('Guardando cotización...', 'info')
 
-    // ✅ CORREGIDO: Usar los servicios ya formateados que vienen del modal
-    const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-      datosCotizacion.servicios,  // ✅ USAR LOS YA FORMATEADOS DEL MODAL
-      datosCotizacion.cliente,
-      props.añosContrato,
-      datosCotizacion.tipoPrecio,
-      datosCotizacion.configuracionPDF,
-      datosCotizacion.comentario || ''
-    )
+        const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+          datosCotizacion.servicios,
+          datosCotizacion.cliente,
+          props.añosContrato,
+          datosCotizacion.tipoPrecio,
+          datosCotizacion.configuracionPDF,
+          datosCotizacion.comentario || ''
+        )
 
-    console.log('💾 Guardando cotización:', cotizacionData)
+        console.log('💾 Guardando cotización:', cotizacionData)
 
-    const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+        const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
-    if (!resultado.success) {
-      throw new Error(resultado.message || 'Error al guardar la cotización')
-    }
+        if (!resultado.success) {
+          throw new Error(resultado.message || 'Error al guardar la cotización')
+        }
 
-    const cotizacionCreada = resultado.cotizacion
-    console.log('✅ Cotización guardada con ID:', cotizacionCreada.cotizaciones_id)
+        const cotizacionCreada = resultado.cotizacion
+        console.log('✅ Cotización guardada con ID:', cotizacionCreada.cotizaciones_id)
 
-    let mensaje = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
-    
-    if (resultado.requiere_aprobacion) {
-      mensaje += '. La cotización requiere aprobación administrativa debido a precios especiales.'
-    }
+        let mensajeExito = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
+        
+        if (resultado.requiere_aprobacion) {
+          mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+          mostrarToast(mensajeExito, 'warning')
+        } else {
+          mostrarToast(mensajeExito, 'success')
+        }
 
-    successMessage.value = mensaje
-    cerrarModalConfirmacion()
+        cerrarModalConfirmacion()
 
-    setTimeout(() => {
-      onLimpiarFormulario()
-    }, 2000)
-
-  } catch (err) {
-    console.error('❌ Error guardando cotización:', err)
-    error.value = err.message || 'Error al guardar la cotización'
-  } finally {
-    loading.value = false
-    loadingMessage.value = ''
-  }
-}
-
-    // Watchers para auto-limpiar mensajes
-    watch(error, (newError) => {
-      if (newError) {
         setTimeout(() => {
-          error.value = ''
-        }, 5000)
-      }
-    })
+          onLimpiarFormulario()
+        }, 2000)
 
-    watch(successMessage, (newSuccess) => {
-      if (newSuccess) {
-        setTimeout(() => {
-          successMessage.value = ''
-        }, 5000)
+      } catch (err) {
+        console.error('❌ Error guardando cotización:', err)
+        mostrarToast(err.message || 'Error al guardar la cotización', 'error')
+      } finally {
+        loading.value = false
+        loadingMessage.value = ''
       }
-    })
+    }
 
     return {
       // Estados
@@ -572,8 +531,11 @@ const onGenerarPDF = async (datosParaPDF) => {
       mostrarModalConfirmacion,
       loading,
       loadingMessage,
-      error,
-      successMessage,
+      
+      // ✅ TOAST STATES
+      showToast,
+      toastMessage,
+      toastType,
       
       // Computed
       mostrarResultados,
@@ -588,6 +550,7 @@ const onGenerarPDF = async (datosParaPDF) => {
       gananciaPotencial,
       porcentajeMargenMinimo,
       hayPreciosPorDebajoMinimo,
+      toastIcon,
       
       // Métodos
       esServicioBackup,
@@ -595,15 +558,16 @@ const onGenerarPDF = async (datosParaPDF) => {
       calcularSubtotalAnual,
       calcularSubtotalTotal,
       formatCurrency,
-      limpiarError,
-      limpiarSuccess,
       reiniciar,
       onLimpiarFormulario,
       cerrarModalConfirmacion,
-      guardarCotizacion,
       exportarPDF,
       onGenerarPDF,
-      onGuardarCotizacion
+      onGuardarCotizacion,
+      
+      // ✅ TOAST METHODS
+      mostrarToast,
+      hideToast
     }
   }
 }
@@ -829,593 +793,739 @@ const onGenerarPDF = async (datosParaPDF) => {
 
 .precio-minimo,
 .precio-venta-usado {
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  font-size: clamp(0.75rem, 2vw, 0.85rem);
-  font-weight: 600;
-  border: 1px solid;
+ padding: 0.4rem 0.75rem;
+ border-radius: 6px;
+ font-size: clamp(0.75rem, 2vw, 0.85rem);
+ font-weight: 600;
+ border: 1px solid;
 }
 
 .precio-minimo {
-  background: linear-gradient(135deg, #fff5f5, #fed7d7);
-  color: #c53030;
-  border-color: #fc8181;
+ background: linear-gradient(135deg, #fff5f5, #fed7d7);
+ color: #c53030;
+ border-color: #fc8181;
 }
 
 .precio-venta-usado {
-  background: linear-gradient(135deg, #f0fff4, #c6f6d5);
-  color: #2d5016;
-  border-color: #68d391;
+ background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+ color: #2d5016;
+ border-color: #68d391;
 }
 
 .calculo-detalle {
-  background: linear-gradient(135deg, #fffbf0, #fef5e7);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  border-left: 3px solid #f6ad55;
-  border: 1px solid #fbd38d;
+ background: linear-gradient(135deg, #fffbf0, #fef5e7);
+ padding: 0.5rem 0.75rem;
+ border-radius: 6px;
+ border-left: 3px solid #f6ad55;
+ border: 1px solid #fbd38d;
 }
 
 .calculo-detalle small {
-  color: #744210;
-  font-size: clamp(0.75rem, 2vw, 0.8rem);
-  font-weight: 500;
+ color: #744210;
+ font-size: clamp(0.75rem, 2vw, 0.8rem);
+ font-weight: 500;
 }
 
 .servicio-subtotal {
-  text-align: right;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+ text-align: right;
+ flex-shrink: 0;
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+ padding: 0.5rem;
+ background: white;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
 }
 
 .subtotal-anual {
-  font-size: clamp(1rem, 2.8vw, 1.1rem);
-  color: #28a745;
-  font-weight: 700;
+ font-size: clamp(1rem, 2.8vw, 1.1rem);
+ color: #28a745;
+ font-weight: 700;
 }
 
 .subtotal-total {
-  font-size: clamp(1.1rem, 3vw, 1.3rem);
-  color: #dc3545;
-  font-weight: 700;
-  background: linear-gradient(135deg, #fff5f5, #fed7d7);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #fc8181;
+ font-size: clamp(1.1rem, 3vw, 1.3rem);
+ color: #dc3545;
+ font-weight: 700;
+ background: linear-gradient(135deg, #fff5f5, #fed7d7);
+ padding: 0.5rem 0.75rem;
+ border-radius: 6px;
+ border: 1px solid #fc8181;
 }
 
 .opciones-precio {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+ display: grid;
+ grid-template-columns: 1fr;
+ gap: 1.5rem;
+ margin-bottom: 2rem;
 }
 
 .precio-option {
-  padding: 1.5rem;
-  border-radius: 12px;
-  text-align: center;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-  border: 2px solid;
+ padding: 1.5rem;
+ border-radius: 12px;
+ text-align: center;
+ transition: all 0.3s ease;
+ box-sizing: border-box;
+ border: 2px solid;
 }
 
 .precio-option:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+ transform: translateY(-3px);
+ box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .minimo {
-  background: linear-gradient(135deg, #fff5f5, #fed7d7);
-  border-color: #fc8181;
+ background: linear-gradient(135deg, #fff5f5, #fed7d7);
+ border-color: #fc8181;
 }
 
 .venta {
-  background: linear-gradient(135deg, #f0fff4, #c6f6d5);
-  border-color: #68d391;
+ background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+ border-color: #68d391;
 }
 
 .precio-option h4 {
-  margin-bottom: 1rem;
-  font-size: clamp(1.1rem, 3vw, 1.2rem);
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: #495057;
+ margin-bottom: 1rem;
+ font-size: clamp(1.1rem, 3vw, 1.2rem);
+ line-height: 1.2;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+ font-weight: 600;
+ color: #495057;
 }
 
 .text-danger {
-  color: #dc3545;
+ color: #dc3545;
 }
 
 .text-success {
-  color: #28a745;
+ color: #28a745;
 }
 
 .precio-valor {
-  font-size: clamp(1.3rem, 4vw, 1.6rem);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  line-height: 1;
-  color: #495057;
+ font-size: clamp(1.3rem, 4vw, 1.6rem);
+ font-weight: 700;
+ margin-bottom: 0.5rem;
+ line-height: 1;
+ color: #495057;
 }
 
 .precio-total-contrato {
-  font-size: clamp(1.4rem, 4.5vw, 1.8rem);
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #495057;
+ font-size: clamp(1.4rem, 4.5vw, 1.8rem);
+ font-weight: 700;
+ margin-bottom: 0.75rem;
+ padding: 0.5rem 0.75rem;
+ background: rgba(255, 255, 255, 0.8);
+ border-radius: 6px;
+ border: 1px solid rgba(0, 0, 0, 0.1);
+ color: #495057;
 }
 
 .precio-option p {
-  margin-bottom: 0.5rem;
-  opacity: 0.8;
-  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
-  line-height: 1.3;
-  color: #6c757d;
-  font-weight: 500;
+ margin-bottom: 0.5rem;
+ opacity: 0.8;
+ font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+ line-height: 1.3;
+ color: #6c757d;
+ font-weight: 500;
 }
 
 .precio-option small {
-  font-size: clamp(0.75rem, 2vw, 0.85rem);
-  opacity: 0.7;
-  color: #6c757d;
-  font-weight: 500;
+ font-size: clamp(0.75rem, 2vw, 0.85rem);
+ opacity: 0.7;
+ color: #6c757d;
+ font-weight: 500;
 }
 
 .resumen-financiero {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  padding: 2rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  border: 1px solid #ced4da;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+ padding: 2rem;
+ border-radius: 12px;
+ margin-bottom: 2rem;
+ border: 1px solid #ced4da;
+ box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .resumen-financiero h3 {
-  color: #495057;
-  margin-bottom: 1.5rem;
-  font-size: clamp(1.2rem, 3vw, 1.4rem);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  font-weight: 600;
+ color: #495057;
+ margin-bottom: 1.5rem;
+ font-size: clamp(1.2rem, 3vw, 1.4rem);
+ text-align: center;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.75rem;
+ font-weight: 600;
 }
 
 .resumen-financiero h3 i {
-  color: #6c757d;
+ color: #6c757d;
 }
 
 .metricas {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+ display: flex;
+ flex-direction: column;
+ gap: 1rem;
 }
 
 .metrica {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
-  border-radius: 8px;
-  border-left: 4px solid #007bff;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  border: 1px solid #e9ecef;
-  transition: all 0.2s ease;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 1rem;
+ background: white;
+ border-radius: 8px;
+ border-left: 4px solid #007bff;
+ flex-wrap: wrap;
+ gap: 0.5rem;
+ border: 1px solid #e9ecef;
+ transition: all 0.2s ease;
 }
 
 .metrica:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .metrica-label {
-  font-weight: 600;
-  color: #495057;
-  font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+ font-weight: 600;
+ color: #495057;
+ font-size: clamp(0.85rem, 2.5vw, 0.95rem);
 }
 
 .metrica-valor {
-  font-weight: 700;
-  color: #495057;
-  font-size: clamp(0.9rem, 2.5vw, 1rem);
+ font-weight: 700;
+ color: #495057;
+ font-size: clamp(0.9rem, 2.5vw, 1rem);
 }
 
 .metrica-valor.ganancia {
-  color: #28a745;
+ color: #28a745;
 }
 
 .metrica-valor.destacado {
-  color: #dc3545;
-  font-size: clamp(1rem, 3vw, 1.2rem);
+ color: #dc3545;
+ font-size: clamp(1rem, 3vw, 1.2rem);
 }
 
 .metrica-valor.destacado-total {
-  color: #6f42c1;
-  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
-  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #d1b3e0;
+ color: #6f42c1;
+ font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+ background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+ padding: 0.5rem 0.75rem;
+ border-radius: 6px;
+ border: 1px solid #d1b3e0;
 }
 
 .selector-precio-pdf {
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-  padding: 2rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  border: 1px solid #ced4da;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+ padding: 2rem;
+ border-radius: 12px;
+ margin-bottom: 2rem;
+ border: 1px solid #ced4da;
+ box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .selector-precio-pdf h3 {
-  color: #495057;
-  margin-bottom: 1.5rem;
-  font-size: clamp(1.2rem, 3vw, 1.4rem);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  font-weight: 600;
+ color: #495057;
+ margin-bottom: 1.5rem;
+ font-size: clamp(1.2rem, 3vw, 1.4rem);
+ text-align: center;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.75rem;
+ font-weight: 600;
 }
 
 .selector-precio-pdf h3 i {
-  color: #007bff;
+ color: #007bff;
 }
 
 .opciones-precio-pdf {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+ display: grid;
+ grid-template-columns: 1fr;
+ gap: 1rem;
 }
 
 .precio-radio-option {
-  display: flex;
-  align-items: center;
-  padding: 1.5rem;
-  background: white;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  gap: 1rem;
+ display: flex;
+ align-items: center;
+ padding: 1.5rem;
+ background: white;
+ border: 2px solid #e9ecef;
+ border-radius: 8px;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ gap: 1rem;
 }
 
 .precio-radio-option:hover {
-  border-color: #007bff;
-  box-shadow: 0 4px 16px rgba(0, 123, 255, 0.15);
+ border-color: #007bff;
+ box-shadow: 0 4px 16px rgba(0, 123, 255, 0.15);
 }
 
 .precio-radio-option input[type="radio"] {
-  display: none;
+ display: none;
 }
 
 .radio-custom {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #ced4da;
-  border-radius: 50%;
-  position: relative;
-  flex-shrink: 0;
-  transition: all 0.3s ease;
+ width: 20px;
+ height: 20px;
+ border: 2px solid #ced4da;
+ border-radius: 50%;
+ position: relative;
+ flex-shrink: 0;
+ transition: all 0.3s ease;
 }
 
 .precio-radio-option input[type="radio"]:checked + .radio-custom {
-  border-color: #007bff;
-  background: #007bff;
+ border-color: #007bff;
+ background: #007bff;
 }
 
 .precio-radio-option input[type="radio"]:checked + .radio-custom::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
+ content: '';
+ position: absolute;
+ top: 50%;
+ left: 50%;
+ transform: translate(-50%, -50%);
+ width: 8px;
+ height: 8px;
+ background: white;
+ border-radius: 50%;
 }
 
 .precio-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+ flex: 1;
+ display: flex;
+ flex-direction: column;
 }
 
 .precio-info strong {
-  color: #495057;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+ color: #495057;
+ font-size: 1.1rem;
+ margin-bottom: 0.5rem;
+ font-weight: 600;
 }
 
 .precio-cantidad {
-  color: #007bff;
-  font-weight: 700;
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+ color: #007bff;
+ font-weight: 700;
+ font-size: 1.2rem;
+ margin-bottom: 0.5rem;
 }
 
 .precio-info small {
-  color: #6c757d;
-  font-size: 0.9rem;
-  font-weight: 500;
+ color: #6c757d;
+ font-size: 0.9rem;
+ font-weight: 500;
+}
+
+.advertencia-precios {
+ background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+ border: 1px solid #ffc107;
+ border-left: 4px solid #ffc107;
+ border-radius: 8px;
+ padding: 1rem;
+ margin-top: 1rem;
+ color: #856404;
+ display: flex;
+ align-items: flex-start;
+ gap: 0.75rem;
+ font-size: 0.9rem;
+ line-height: 1.4;
+}
+
+.advertencia-precios i {
+ color: #ffc107;
+ font-size: 1.2em;
+ flex-shrink: 0;
+ margin-top: 0.1rem;
 }
 
 .acciones {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
+ display: flex;
+ gap: 1rem;
+ justify-content: center;
+ flex-wrap: wrap;
 }
 
 .btn-exportar, .btn-reiniciar, .btn-guardar {
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex: 1;
-  min-width: 180px;
-  max-width: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+ padding: 1rem 2rem;
+ border: none;
+ border-radius: 8px;
+ font-size: 1rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ flex: 1;
+ min-width: 180px;
+ max-width: 220px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.75rem;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .btn-guardar {
-  background: linear-gradient(135deg, #28a745, #20c997);
-  color: white;
+ background: linear-gradient(135deg, #28a745, #20c997);
+ color: white;
 }
 
 .btn-guardar:hover {
-  background: linear-gradient(135deg, #1e7e34, #17a2b8);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+ background: linear-gradient(135deg, #1e7e34, #17a2b8);
+ transform: translateY(-2px);
+ box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
 }
 
 .btn-exportar {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
+ background: linear-gradient(135deg, #007bff, #0056b3);
+ color: white;
 }
 
 .btn-exportar:hover:not(:disabled) {
-  background: linear-gradient(135deg, #0056b3, #004085);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+ background: linear-gradient(135deg, #0056b3, #004085);
+ transform: translateY(-2px);
+ box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
 }
 
 .btn-exportar:disabled {
-  background: linear-gradient(135deg, #6c757d, #adb5bd);
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ background: linear-gradient(135deg, #6c757d, #adb5bd);
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-exportar:disabled i {
-  color: #e9ecef;
+ color: #e9ecef;
 }
 
 .btn-reiniciar {
-  background: linear-gradient(135deg, #6c757d, #495057);
-  color: white;
+ background: linear-gradient(135deg, #6c757d, #495057);
+ color: white;
 }
 
 .btn-reiniciar:hover {
-  background: linear-gradient(135deg, #5a6268, #343a40);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+ background: linear-gradient(135deg, #5a6268, #343a40);
+ transform: translateY(-2px);
+ box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
 }
 
 .btn-exportar i,
 .btn-reiniciar i,
 .btn-guardar i {
-  font-size: 1.1em;
+ font-size: 1.1em;
+}
+
+/* Loading overlay */
+.loading-overlay {
+ position: fixed;
+ top: 0;
+ left: 0;
+ width: 100vw;
+ height: 100vh;
+ background: rgba(0, 0, 0, 0.7);
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ z-index: 9999;
+ backdrop-filter: blur(3px);
+}
+
+.loading-spinner {
+ text-align: center;
+ color: white;
+}
+
+.loading-spinner i {
+ font-size: 3rem;
+ margin-bottom: 1rem;
+ animation: spin 1s linear infinite;
+}
+
+.loading-spinner p {
+ font-size: 1.1rem;
+ margin: 0;
+}
+
+@keyframes spin {
+ from { transform: rotate(0deg); }
+ to { transform: rotate(360deg); }
+}
+
+/* ✅ TOAST NOTIFICATIONS */
+.toast-notification {
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ padding: 1rem 1.5rem;
+ border-radius: 0.5rem;
+ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ max-width: 400px;
+ z-index: 1100;
+ font-weight: 500;
+ animation: slideInRight 0.3s ease;
+}
+
+.toast-notification.success {
+ background: #d4edda;
+ color: #155724;
+ border: 1px solid #c3e6cb;
+}
+
+.toast-notification.error {
+ background: #f8d7da;
+ color: #721c24;
+ border: 1px solid #f5c6cb;
+}
+
+.toast-notification.warning {
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
+}
+
+.toast-notification.info {
+ background: #d1ecf1;
+ color: #0c5460;
+ border: 1px solid #bee5eb;
+}
+
+.toast-close {
+ background: none;
+ border: none;
+ font-size: 1.2rem;
+ cursor: pointer;
+ padding: 0;
+ margin-left: auto;
+ opacity: 0.7;
+ transition: opacity 0.3s ease;
+}
+
+.toast-close:hover {
+ opacity: 1;
+}
+
+@keyframes slideInRight {
+ from {
+   transform: translateX(100%);
+   opacity: 0;
+ }
+ to {
+   transform: translateX(0);
+   opacity: 1;
+ }
 }
 
 /* Responsive */
 @media (min-width: 480px) {
-  .resultados-container {
-    padding: 2.5rem;
-  }
+ .resultados-container {
+   padding: 2.5rem;
+ }
 
-  .opciones-precio {
-    gap: 2rem;
-  }
+ .opciones-precio {
+   gap: 2rem;
+ }
 
-  .servicio-seleccionado {
-    padding: 2rem;
-  }
+ .servicio-seleccionado {
+   padding: 2rem;
+ }
 
-  .metricas {
-    gap: 1.25rem;
-  }
+ .metricas {
+   gap: 1.25rem;
+ }
 
-  .cantidades-info {
-    gap: 2rem;
-  }
+ .cantidades-info {
+   gap: 2rem;
+ }
 
-  .opciones-precio-pdf {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
+ .opciones-precio-pdf {
+   grid-template-columns: repeat(2, 1fr);
+   gap: 1.5rem;
+ }
 }
 
 @media (min-width: 768px) {
-  .resultados-container {
-    padding: 3rem;
-  }
+ .resultados-container {
+   padding: 3rem;
+ }
 
-  .opciones-precio {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 2rem;
-  }
+ .opciones-precio {
+   grid-template-columns: repeat(2, 1fr);
+   gap: 2rem;
+ }
 
-  .servicio-seleccionado {
-    align-items: center;
-  }
+ .servicio-seleccionado {
+   align-items: center;
+ }
 
-  .acciones {
-    gap: 1.5rem;
-  }
+ .acciones {
+   gap: 1.5rem;
+ }
 
-  .btn-exportar, .btn-reiniciar, .btn-guardar {
-    flex: none;
-    min-width: 200px;
-  }
+ .btn-exportar, .btn-reiniciar, .btn-guardar {
+   flex: none;
+   min-width: 200px;
+ }
 
-  .metricas {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-  }
+ .metricas {
+   display: grid;
+   grid-template-columns: repeat(2, 1fr);
+   gap: 1.25rem;
+ }
 
-  .metrica:last-child {
-    grid-column: 1 / -1;
-  }
+ .metrica:last-child {
+   grid-column: 1 / -1;
+ }
 }
 
 @media (min-width: 1024px) {
-  .opciones-precio {
-    gap: 2.5rem;
-  }
+ .opciones-precio {
+   gap: 2.5rem;
+ }
 
-  .precio-option {
-    padding: 2rem;
-  }
+ .precio-option {
+   padding: 2rem;
+ }
 
-  .resumen-financiero {
-    padding: 2.5rem;
-  }
+ .resumen-financiero {
+   padding: 2.5rem;
+ }
 
-  .metricas {
-    grid-template-columns: repeat(3, 1fr);
-  }
+ .metricas {
+   grid-template-columns: repeat(3, 1fr);
+ }
 
-  .metrica:last-child {
-    grid-column: 2 / 3;
-  }
+ .metrica:last-child {
+   grid-column: 2 / 3;
+ }
 }
 
 @media (max-width: 320px) {
-  .resultados-container {
-    padding: 1rem;
-    margin-top: 1rem;
-  }
+ .resultados-container {
+   padding: 1rem;
+   margin-top: 1rem;
+ }
 
-  .servicio-seleccionado {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-  }
+ .servicio-seleccionado {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 1rem;
+   padding: 1rem;
+ }
 
-  .servicio-subtotal {
-    text-align: left;
-    align-self: stretch;
-  }
+ .servicio-subtotal {
+   text-align: left;
+   align-self: stretch;
+ }
 
-  .acciones {
-    flex-direction: column;
-  }
+ .acciones {
+   flex-direction: column;
+ }
 
-  .btn-exportar, .btn-reiniciar, .btn-guardar {
-    width: 100%;
-    max-width: none;
-    min-width: auto;
-  }
+ .btn-exportar, .btn-reiniciar, .btn-guardar {
+   width: 100%;
+   max-width: none;
+   min-width: auto;
+ }
 
-  .precios-detalle {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+ .precios-detalle {
+   flex-direction: column;
+   gap: 0.5rem;
+ }
 
-  .metrica {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
-  }
+ .metrica {
+   flex-direction: column;
+   text-align: center;
+   gap: 0.5rem;
+ }
 
-  .cantidades-info {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
+ .cantidades-info {
+   flex-direction: column;
+   gap: 0.75rem;
+ }
 
-  .precio-radio-option {
-    padding: 1rem;
-  }
+ .precio-radio-option {
+   padding: 1rem;
+ }
 
-  .precio-info strong {
-    font-size: 1rem;
-  }
+ .precio-info strong {
+   font-size: 1rem;
+ }
 
-  .precio-cantidad {
-    font-size: 1.1rem;
-  }
+ .precio-cantidad {
+   font-size: 1.1rem;
+ }
 
-  .resultados-header h2 {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+ .resultados-header h2 {
+   flex-direction: column;
+   gap: 0.5rem;
+ }
 
-  .contrato-duracion {
-    font-size: 0.9rem;
-  }
+ .contrato-duracion {
+   font-size: 0.9rem;
+ }
 
-  .resumen-financiero h3,
-  .selector-precio-pdf h3 {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
+ .resumen-financiero h3,
+ .selector-precio-pdf h3 {
+   flex-direction: column;
+   gap: 0.5rem;
+ }
 
-  .resumen-financiero,
-  .selector-precio-pdf {
-    padding: 1.5rem;
-  }
+ .resumen-financiero,
+ .selector-precio-pdf {
+   padding: 1.5rem;
+ }
+
+ /* ✅ TOAST RESPONSIVE */
+ .toast-notification {
+   top: 1rem;
+   right: 1rem;
+   left: 1rem;
+   max-width: none;
+ }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
-  .resultados-header {
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-  }
+ .resultados-header {
+   margin-bottom: 1rem;
+   padding-bottom: 1rem;
+ }
 
-  .opciones-precio {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
+ .opciones-precio {
+   grid-template-columns: repeat(2, 1fr);
+   gap: 1rem;
+ }
 
-  .precio-option {
-    padding: 1rem;
-  }
+ .precio-option {
+   padding: 1rem;
+ }
 
-  .resumen-financiero {
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-  }
+ .resumen-financiero {
+   padding: 1.5rem;
+   margin-bottom: 1rem;
+ }
+}
+
+/* Estilos para impresión */
+@media print {
+ .acciones,
+ .toast-notification {
+   display: none;
+ }
+ 
+ .resultados-container {
+   box-shadow: none;
+   border: 1px solid #ddd;
+ }
 }
 </style>

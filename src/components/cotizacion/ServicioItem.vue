@@ -130,7 +130,6 @@
 
 <script>
 import { ref, computed, watch, toRefs } from 'vue'
-import serviciosService from '@/services/serviciosService'
 
 export default {
   name: 'ServicioItem',
@@ -191,6 +190,15 @@ export default {
       return (cantidadServidores.value || 0) + (cantidadEquiposLocal.value || 0)
     })
 
+    // ✅ FUNCIÓN CORREGIDA - Formatear en dólares
+    const formatCurrency = (amount) => {
+      const valor = amount || 0
+      return `$${valor.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`
+    }
+
     // ✅ MANTENER: Métodos de cálculo para el contrato
     const calcularSubtotalAnual = () => {
       const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
@@ -204,11 +212,6 @@ export default {
 
     const calcularTotalContrato = () => {
       return calcularSubtotalAnual() * añosContrato.value
-    }
-
-    // Métodos de formateo
-    const formatCurrency = (amount) => {
-      return serviciosService.formatPrice(amount || 0)
     }
 
     // Resto de métodos (sin cambios)...
@@ -598,38 +601,6 @@ export default {
   border-color: #6f42c1 !important;
 }
 
-@media (max-width: 768px) {
-  .cantidades-container:not(.gb-controls) {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .servicio-card {
-    min-height: 320px;
-    max-height: 360px;
-  }
-}
-
-@media (max-width: 480px) {
-  .servicio-card {
-    padding: 0.75rem;
-    min-height: 300px;
-    max-height: 340px;
-  }
-  
-  .precios-servicio {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-  
-  .precio-item {
-    flex-direction: row;
-    justify-content: space-between;
-    padding: 0.25rem 0.5rem;
-  }
-}
-
-
 .contrato-info {
   background: linear-gradient(135deg, #f8f9fa, #e9ecef);
   padding: 0.5rem;
@@ -681,5 +652,36 @@ export default {
   padding: 0.15rem 0.35rem;
   border-radius: 4px;
   border: 1px solid #ced4da;
+}
+
+@media (max-width: 768px) {
+  .cantidades-container:not(.gb-controls) {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .servicio-card {
+    min-height: 320px;
+    max-height: 360px;
+  }
+}
+
+@media (max-width: 480px) {
+  .servicio-card {
+    padding: 0.75rem;
+    min-height: 300px;
+    max-height: 340px;
+  }
+  
+  .precios-servicio {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .precio-item {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0.25rem 0.5rem;
+  }
 }
 </style>

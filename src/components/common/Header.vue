@@ -8,10 +8,31 @@
     </div>
     
     <div class="header-right">
-      <div class="user-menu">
+      <div class="user-menu" ref="userMenuRef">
         <button class="btn-user" @click="toggleUserMenu">
           <span class="user-avatar">{{ userInitials }}</span>
         </button>
+        
+        <!-- Menú desplegable -->
+        <div class="user-dropdown" v-if="showUserMenu">
+          <div class="user-info">
+            <div class="user-name">{{ currentUser?.nombre_completo || 'Usuario' }}</div>
+            <div class="user-role">{{ getUserRoleDisplay() }}</div>
+          </div>
+          
+          <div class="dropdown-divider"></div>
+          
+          <div class="dropdown-menu">
+            <button class="dropdown-item" @click="goToConfig">
+              <i class="dropdown-icon fas fa-cog"></i>
+              Configuración
+            </button>
+            <button class="dropdown-item logout-item" @click="logout">
+              <i class="dropdown-icon fas fa-sign-out-alt"></i>
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -24,13 +45,15 @@ export default {
   name: 'AppHeader',
   data() {
     return {
-      notificationCount: 3
+      notificationCount: 3,
+      showUserMenu: false,
+      currentUser: null
     };
   },
   
   computed: {
     userInitials() {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = this.currentUser || authService.getCurrentUser();
       
       if (currentUser && currentUser.nombre_completo) {
         const nombres = currentUser.nombre_completo.trim().split(' ');
@@ -78,15 +101,74 @@ export default {
     }
   },
   
+  mounted() {
+    this.currentUser = authService.getCurrentUser();
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside);
+  },
+  
   methods: {
     toggleSidebar() {
       this.$emit('toggle-sidebar');
     },
-    showNotifications() {
-      console.log('Mostrar notificaciones');
-    },
+    
     toggleUserMenu() {
-      console.log('Mostrar menú de usuario');
+      this.showUserMenu = !this.showUserMenu;
+    },
+    
+    handleClickOutside(event) {
+      if (this.$refs.userMenuRef && !this.$refs.userMenuRef.contains(event.target)) {
+        this.showUserMenu = false;
+      }
+    },
+    
+    getUserRoleDisplay() {
+      if (!this.currentUser) return '';
+      
+      const roleMap = {
+        'admin': 'Administrador',
+        'vendedor': 'Vendedor',
+        'super': 'Super Usuario'
+      };
+      
+      return roleMap[this.currentUser.tipo_usuario] || this.currentUser.tipo_usuario;
+    },
+    
+    goToConfig() {
+      this.showUserMenu = false;
+      
+      // Determinar la ruta de configuración según el tipo de usuario
+      const configRoutes = {
+        'admin': '/admin/configuracion',
+        'vendedor': '/vendedor/configuracion',
+        'super': '/super/configuracion'
+      };
+      
+      const userType = this.currentUser?.tipo_usuario;
+      const configRoute = configRoutes[userType] || '/vendedor/configuracion';
+      
+      this.$router.push(configRoute);
+    },
+    
+    async logout() {
+      try {
+        this.showUserMenu = false;
+        
+        // Llamar al servicio de logout
+        await authService.logout();
+        
+        // Redirigir a login
+        this.$router.push('/login');
+        
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        // Aun si hay error, redirigir al login
+        this.$router.push('/login');
+      }
     }
   }
 }
@@ -141,11 +223,21 @@ export default {
   gap: 1rem;
 }
 
+.user-menu {
+  position: relative;
+}
+
 .btn-user {
   background: none;
   border: none;
   cursor: pointer;
   padding: 0.25rem;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.btn-user:hover {
+  transform: scale(1.05);
 }
 
 .user-avatar {
@@ -161,6 +253,79 @@ export default {
   font-size: 0.9rem;
 }
 
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.user-info {
+  padding: 1rem;
+  background: #f8f9fa;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.user-role {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e9ecef;
+}
+
+.dropdown-menu {
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #2c3e50;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.dropdown-item.logout-item {
+  color: #dc3545;
+}
+
+.dropdown-item.logout-item:hover {
+  background: #fff5f5;
+}
+
+.dropdown-icon {
+  font-size: 1rem;
+  width: 16px;
+  text-align: center;
+  color: inherit;
+}
+
 @media (max-width: 768px) {
   .app-header {
     padding: 0 1rem;
@@ -172,6 +337,11 @@ export default {
   
   .page-title {
     font-size: 1.2rem;
+  }
+  
+  .user-dropdown {
+    right: -1rem;
+    min-width: 180px;
   }
 }
 </style>

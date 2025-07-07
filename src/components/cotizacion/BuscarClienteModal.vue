@@ -20,24 +20,6 @@
       </div>
 
       <div class="modal-content">
-        <!-- Error message -->
-        <div v-if="error" class="error-message">
-          <i class="fas fa-exclamation-triangle"></i>
-          {{ error }}
-          <button @click="limpiarError" class="btn-cerrar-error">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
-        <!-- Success message -->
-        <div v-if="successMessage" class="success-message">
-          <i class="fas fa-check-circle"></i>
-          {{ successMessage }}
-          <button @click="limpiarSuccess" class="btn-cerrar-success">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
         <!-- Pestañas -->
         <div class="tabs">
           <button 
@@ -310,6 +292,13 @@
         </div>
       </div>
     </div>
+
+    <!-- ✅ TOAST DE NOTIFICACIONES -->
+    <div v-if="showToast" class="toast-notification" :class="toastType">
+      <i :class="toastIcon"></i>
+      <span>{{ toastMessage }}</span>
+      <button @click="hideToast" class="toast-close">×</button>
+    </div>
   </div>
 </template>
 
@@ -339,10 +328,13 @@ export default {
     const loading = ref(false)
     const loadingBusqueda = ref(false)
     const loadingMessage = ref('')
-    const error = ref('')
-    const successMessage = ref('')
     const clientesFiltrados = ref([])
     const timeoutBusqueda = ref(null)
+    
+    // ✅ TOAST SYSTEM - Estados
+    const showToast = ref(false)
+    const toastMessage = ref('')
+    const toastType = ref('success') // success, error, warning, info
     
     // Formulario de cliente
     const clienteForm = ref({
@@ -357,6 +349,33 @@ export default {
 
     // Errores de validación
     const validationErrors = ref({})
+
+    // ✅ COMPUTED PARA TOAST
+    const toastIcon = computed(() => {
+      const iconos = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+      };
+      return iconos[toastType.value] || 'fas fa-info-circle';
+    })
+
+    // ✅ MÉTODOS DE TOAST
+    const mostrarToast = (mensaje, tipo = 'info') => {
+      toastMessage.value = mensaje
+      toastType.value = tipo
+      showToast.value = true
+      
+      // Auto-ocultar después de 5 segundos
+      setTimeout(() => {
+        hideToast()
+      }, 5000)
+    }
+
+    const hideToast = () => {
+      showToast.value = false
+    }
 
     // Computed properties
     const formularioValido = computed(() => {
@@ -409,20 +428,12 @@ export default {
     }
 
     // Métodos de gestión de estado
-    const limpiarError = () => {
-      error.value = ''
-    }
-
-    const limpiarSuccess = () => {
-      successMessage.value = ''
-    }
-
     const resetearModal = () => {
       tabActiva.value = modoEdicion.value ? 'agregar' : 'buscar'
       terminoBusqueda.value = ''
       clientesFiltrados.value = []
-      error.value = ''
-      successMessage.value = ''
+      showToast.value = false
+      toastMessage.value = ''
       validationErrors.value = {}
       
       if (!modoEdicion.value) {
@@ -447,7 +458,6 @@ export default {
     const cargarClientesIniciales = async () => {
       try {
         loadingBusqueda.value = true
-        error.value = ''
         
         console.log('📋 Cargando clientes iniciales...')
         
@@ -456,12 +466,17 @@ export default {
         if (resultado.success) {
           clientesFiltrados.value = resultado.clientes.map(clientesService.formatClienteDisplay)
           console.log(`📋 Clientes iniciales cargados: ${resultado.clientes.length}`)
+          
+          if (resultado.clientes.length > 0) {
+            mostrarToast(`${resultado.clientes.length} clientes cargados`, 'info')
+          }
         } else {
           console.log('ℹ️ No hay clientes para mostrar')
+          mostrarToast('No hay clientes registrados aún', 'info')
         }
       } catch (err) {
         console.error('❌ Error cargando clientes iniciales:', err)
-        error.value = 'Error cargando clientes'
+        mostrarToast('Error cargando clientes', 'error')
       } finally {
         loadingBusqueda.value = false
       }
@@ -486,7 +501,6 @@ export default {
       timeoutBusqueda.value = setTimeout(async () => {
         try {
           loadingBusqueda.value = true
-          error.value = ''
           
           console.log('🔍 Buscando clientes con término:', termino)
           
@@ -497,20 +511,17 @@ export default {
             clientesFiltrados.value = resultado.clientes.map(clientesService.formatClienteDisplay)
             console.log(`🔍 Búsqueda "${termino}": ${resultado.clientes.length} resultados`)
             
-            // Debug: mostrar qué clientes se encontraron
             if (resultado.clientes.length > 0) {
-              console.log('Clientes encontrados:', resultado.clientes.map(c => ({
-                id: c.clientes_id,
-                empresa: c.nombre_empresa,
-                manager: c.usuarios_id
-              })))
+              mostrarToast(`${resultado.clientes.length} cliente${resultado.clientes.length > 1 ? 's' : ''} encontrado${resultado.clientes.length > 1 ? 's' : ''}`, 'info')
+            } else {
+              mostrarToast('No se encontraron clientes con ese criterio', 'warning')
             }
           } else {
             throw new Error(resultado.message)
           }
         } catch (err) {
           console.error('❌ Error en búsqueda de clientes:', err)
-          error.value = 'Error en la búsqueda de clientes'
+          mostrarToast('Error en la búsqueda de clientes', 'error')
           clientesFiltrados.value = []
         } finally {
           loadingBusqueda.value = false
@@ -520,6 +531,7 @@ export default {
 
     const limpiarBusqueda = () => {
       terminoBusqueda.value = ''
+      mostrarToast('Búsqueda limpiada', 'info')
       cargarClientesIniciales() // ✅ Cargar clientes iniciales al limpiar
     }
 
@@ -529,7 +541,10 @@ export default {
         tabActiva.value = tab
         if (tab === 'buscar') {
           limpiarFormulario()
+          mostrarToast('Cambiando a búsqueda de clientes', 'info')
           cargarClientesIniciales() // ✅ Cargar clientes al cambiar a tab buscar
+        } else {
+          mostrarToast(modoEdicion.value ? 'Modo edición activado' : 'Creando nuevo cliente', 'info')
         }
       }
     }
@@ -543,10 +558,12 @@ export default {
 
     const cancelarFormulario = () => {
       if (modoEdicion.value) {
+        mostrarToast('Edición cancelada', 'info')
         cerrar()
       } else {
         tabActiva.value = 'buscar'
         limpiarFormulario()
+        mostrarToast('Formulario cancelado', 'info')
         cargarClientesIniciales() // ✅ Cargar clientes al cancelar formulario
       }
     }
@@ -554,6 +571,8 @@ export default {
     // Métodos de selección y edición
     const seleccionarCliente = (cliente) => {
       console.log('🏢 Cliente seleccionado:', cliente)
+      const nombreEmpresa = cliente.nombre_empresa || cliente.nombreEmpresa
+      mostrarToast(`Cliente ${nombreEmpresa} seleccionado`, 'success')
       emit('cliente-seleccionado', cliente)
       cerrar()
     }
@@ -576,85 +595,91 @@ export default {
       }
       
       validationErrors.value = {}
+      const nombreEmpresa = cliente.nombre_empresa || cliente.nombreEmpresa
+      mostrarToast(`Editando cliente ${nombreEmpresa}`, 'info')
     }
 
     const guardarCliente = async () => {
-  try {
-    loading.value = true
-    loadingMessage.value = modoEdicion.value ? 'Actualizando cliente...' : 'Creando cliente...'
-    error.value = ''
-    validationErrors.value = {}
+      try {
+        loading.value = true
+        loadingMessage.value = modoEdicion.value ? 'Actualizando cliente...' : 'Creando cliente...'
+        
+        mostrarToast(`${modoEdicion.value ? 'Actualizando' : 'Creando'} cliente...`, 'info')
 
-    // ✅ DEBUG TEMPORAL
-    console.log('🐛 DEBUG - Iniciando guardarCliente')
-    console.log('🐛 DEBUG - Modo edición:', modoEdicion.value)
-    console.log('🐛 DEBUG - Formulario válido:', formularioValido.value)
-    console.log('🐛 DEBUG - clienteForm.value:', clienteForm.value)
+        // ✅ DEBUG TEMPORAL
+        console.log('🐛 DEBUG - Iniciando guardarCliente')
+        console.log('🐛 DEBUG - Modo edición:', modoEdicion.value)
+        console.log('🐛 DEBUG - Formulario válido:', formularioValido.value)
+        console.log('🐛 DEBUG - clienteForm.value:', clienteForm.value)
 
-    // Validaciones finales
-    if (!formularioValido.value) {
-      throw new Error('Por favor completa todos los campos obligatorios correctamente')
+        // Validaciones finales
+        if (!formularioValido.value) {
+          throw new Error('Por favor completa todos los campos obligatorios correctamente')
+        }
+
+        // ✅ PREPARAR DATOS DEL CLIENTE CON ESTRUCTURA CORRECTA
+        const datosCliente = {
+          nombre_encargado: clienteForm.value.nombre_encargado.trim(),
+          telefono_personal: clienteForm.value.telefono_personal?.trim() || null,
+          telefono_empresa: clienteForm.value.telefono_empresa?.trim() || null,
+          nombre_empresa: clienteForm.value.nombre_empresa.trim(),
+          documento_fiscal: clienteForm.value.documento_fiscal.trim(),
+          correo_personal: clienteForm.value.correo_personal?.trim() || null,
+          correo_empresa: clienteForm.value.correo_empresa?.trim() || null,
+          estado: 'activo'
+        }
+
+        console.log('🐛 DEBUG - Datos preparados:', datosCliente)
+
+        let resultado
+        if (modoEdicion.value) {
+          // Actualizar cliente existente
+          console.log('🐛 DEBUG - Actualizando cliente ID:', clienteForm.value.clientes_id)
+          resultado = await clientesService.updateCliente(clienteForm.value.clientes_id, datosCliente)
+        } else {
+          // Crear nuevo cliente
+          console.log('🐛 DEBUG - Creando nuevo cliente...')
+          resultado = await clientesService.createCliente(datosCliente)
+        }
+
+        console.log('🐛 DEBUG - Resultado del service:', resultado)
+
+        if (resultado.success) {
+          const clienteCreado = clientesService.formatClienteDisplay(resultado.cliente)
+          const nombreEmpresa = clienteCreado.nombre_empresa
+          const accion = modoEdicion.value ? 'actualizado' : 'creado'
+          
+          mostrarToast(`Cliente ${nombreEmpresa} ${accion} correctamente`, 'success')
+          
+          emit(modoEdicion.value ? 'cliente-actualizado' : 'cliente-creado', clienteCreado)
+          
+          setTimeout(() => {
+            cerrar()
+          }, 2000)
+        } else {
+          console.log('🐛 DEBUG - Error del service:', resultado.message)
+          throw new Error(resultado.message || 'Error al guardar el cliente')
+        }
+
+      } catch (err) {
+        console.error('🐛 DEBUG - Error en guardarCliente:', err)
+        console.error('🐛 DEBUG - Stack trace:', err.stack)
+        
+        // Manejar errores de validación del servidor
+        if (err.response?.data?.errors) {
+          const erroresServidor = err.response.data.errors
+          Object.keys(erroresServidor).forEach(campo => {
+            validationErrors.value[campo] = erroresServidor[campo][0]
+          })
+          mostrarToast('Por favor corrige los errores en el formulario', 'error')
+        } else {
+          mostrarToast(err.message || 'Error al guardar el cliente', 'error')
+        }
+      } finally {
+        loading.value = false
+        loadingMessage.value = ''
+      }
     }
-
-    // ✅ PREPARAR DATOS DEL CLIENTE CON ESTRUCTURA CORRECTA
-    const datosCliente = {
-      nombre_encargado: clienteForm.value.nombre_encargado.trim(),
-      telefono_personal: clienteForm.value.telefono_personal?.trim() || null,
-      telefono_empresa: clienteForm.value.telefono_empresa?.trim() || null,
-      nombre_empresa: clienteForm.value.nombre_empresa.trim(),
-      documento_fiscal: clienteForm.value.documento_fiscal.trim(),
-      correo_personal: clienteForm.value.correo_personal?.trim() || null,
-      correo_empresa: clienteForm.value.correo_empresa?.trim() || null,
-      estado: 'activo'
-    }
-
-    console.log('🐛 DEBUG - Datos preparados:', datosCliente)
-
-    let resultado
-    if (modoEdicion.value) {
-      // Actualizar cliente existente
-      console.log('🐛 DEBUG - Actualizando cliente ID:', clienteForm.value.clientes_id)
-      resultado = await clientesService.updateCliente(clienteForm.value.clientes_id, datosCliente)
-    } else {
-      // Crear nuevo cliente
-      console.log('🐛 DEBUG - Creando nuevo cliente...')
-      resultado = await clientesService.createCliente(datosCliente)
-    }
-
-    console.log('🐛 DEBUG - Resultado del service:', resultado)
-
-    if (resultado.success) {
-      const clienteCreado = clientesService.formatClienteDisplay(resultado.cliente)
-      successMessage.value = `Cliente ${clienteCreado.nombre_empresa} ${modoEdicion.value ? 'actualizado' : 'creado'} correctamente`
-      emit(modoEdicion.value ? 'cliente-actualizado' : 'cliente-creado', clienteCreado)
-      
-      setTimeout(() => {
-        cerrar()
-      }, 1500)
-    } else {
-      console.log('🐛 DEBUG - Error del service:', resultado.message)
-      throw new Error(resultado.message || 'Error al guardar el cliente')
-    }
-
-  } catch (err) {
-    console.error('🐛 DEBUG - Error en guardarCliente:', err)
-    console.error('🐛 DEBUG - Stack trace:', err.stack)
-    
-    // Manejar errores de validación del servidor
-    if (err.response?.data?.errors) {
-      const erroresServidor = err.response.data.errors
-      Object.keys(erroresServidor).forEach(campo => {
-        validationErrors.value[campo] = erroresServidor[campo][0]
-      })
-      error.value = 'Por favor corrige los errores en el formulario'
-    } else {
-      error.value = err.message || 'Error al guardar el cliente'
-    }
-  } finally {
-    loading.value = false
-    loadingMessage.value = ''
-  }
-}
 
     // ✅ WATCHER CORREGIDO: Cargar clientes iniciales al abrir modal
     watch(() => props.mostrar, (mostrarModal) => {
@@ -664,6 +689,7 @@ export default {
           editarCliente(props.clienteSeleccionado)
         } else {
           modoEdicion.value = false
+          mostrarToast('Buscador de clientes abierto', 'info')
           // ✅ AGREGAR: Cargar clientes iniciales al abrir modal
           cargarClientesIniciales()
         }
@@ -687,27 +713,6 @@ export default {
       }
     })
 
-    // Auto-limpiar mensajes
-    watch(error, (newError) => {
-      if (newError) {
-        setTimeout(() => {
-          if (error.value === newError) {
-            error.value = ''
-          }
-        }, 5000)
-      }
-    })
-
-    watch(successMessage, (newSuccess) => {
-      if (newSuccess) {
-        setTimeout(() => {
-          if (successMessage.value === newSuccess) {
-            successMessage.value = ''
-          }
-        }, 4000)
-      }
-    })
-
     return {
       // Estados
       tabActiva,
@@ -716,14 +721,18 @@ export default {
       loading,
       loadingBusqueda,
       loadingMessage,
-      error,
-      successMessage,
       clientesFiltrados,
       clienteForm,
       validationErrors,
       
+      // ✅ TOAST STATES
+      showToast,
+      toastMessage,
+      toastType,
+      
       // Computed
       formularioValido,
+      toastIcon,
       
       // Métodos
       formatRTN,
@@ -732,8 +741,6 @@ export default {
       validarEmail,
       formatearRTN,
       formatearTelefono,
-      limpiarError,
-      limpiarSuccess,
       cargarClientesIniciales, // ✅ Agregar al return
       buscarClientes,
       limpiarBusqueda,
@@ -742,7 +749,11 @@ export default {
       cancelarFormulario,
       seleccionarCliente,
       editarCliente,
-      guardarCliente
+      guardarCliente,
+      
+      // ✅ TOAST METHODS
+      mostrarToast,
+      hideToast
     }
   }
 }
@@ -764,339 +775,582 @@ export default {
 }
 
 .modal-container {
-  background: white;
-  border-radius: 1rem;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+ background: white;
+ border-radius: 1rem;
+ width: 90%;
+ max-width: 800px;
+ max-height: 90vh;
+ overflow: hidden;
+ box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+ position: relative;
 }
 
 .modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ color: white;
+ padding: 1.5rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
 }
 
 .modal-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+ margin: 0;
+ font-size: 1.2rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .modal-header h3 i {
-  font-size: 1.1em;
+ font-size: 1.1em;
 }
 
 .btn-cerrar {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
+ background: none;
+ border: none;
+ color: white;
+ font-size: 1.5rem;
+ cursor: pointer;
+ width: 2rem;
+ height: 2rem;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ transition: background 0.2s;
 }
 
 .btn-cerrar:hover {
-  background: rgba(255, 255, 255, 0.2);
+ background: rgba(255, 255, 255, 0.2);
 }
 
 .btn-cerrar i {
-  font-size: 1rem;
+ font-size: 1rem;
 }
 
 .modal-content {
-  max-height: calc(90vh - 100px);
-  overflow-y: auto;
+ max-height: calc(90vh - 100px);
+ overflow-y: auto;
 }
 
 .tabs {
-  display: flex;
-  border-bottom: 1px solid #e9ecef;
+ display: flex;
+ border-bottom: 1px solid #e9ecef;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 1rem;
-  border: none;
-  background: #f8f9fa;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s;
-  border-bottom: 3px solid transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+ flex: 1;
+ padding: 1rem;
+ border: none;
+ background: #f8f9fa;
+ cursor: pointer;
+ font-weight: 500;
+ transition: all 0.2s;
+ border-bottom: 3px solid transparent;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
 }
 
 .tab-btn:hover {
-  background: #e9ecef;
+ background: #e9ecef;
 }
 
 .tab-btn.active {
-  background: white;
-  border-bottom-color: #667eea;
-  color: #667eea;
+ background: white;
+ border-bottom-color: #667eea;
+ color: #667eea;
 }
 
 .tab-btn i {
-  font-size: 1em;
+ font-size: 1em;
 }
 
 .tab-content {
-  padding: 1.5rem;
+ padding: 1.5rem;
 }
 
 .buscar-section {
-  margin-bottom: 1rem;
+ margin-bottom: 1rem;
 }
 
 .search-container {
-  position: relative;
+ position: relative;
 }
 
 .search-icon {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #6c757d;
-  font-size: 1rem;
-  z-index: 1;
+ position: absolute;
+ left: 1rem;
+ top: 50%;
+ transform: translateY(-50%);
+ color: #6c757d;
+ font-size: 1rem;
+ z-index: 1;
 }
 
 .input-buscar {
-  width: 100%;
-  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-  border: 2px solid #e9ecef;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
+ width: 100%;
+ padding: 0.75rem 3rem 0.75rem 2.5rem;
+ border: 2px solid #e9ecef;
+ border-radius: 0.5rem;
+ font-size: 1rem;
+ transition: border-color 0.2s;
+ box-sizing: border-box;
 }
 
 .input-buscar:focus {
-  outline: none;
-  border-color: #667eea;
+ outline: none;
+ border-color: #667eea;
 }
 
-.input-buscar:focus + .search-icon {
-  color: #667eea;
+.btn-limpiar-busqueda {
+ position: absolute;
+ right: 0.5rem;
+ top: 50%;
+ transform: translateY(-50%);
+ background: none;
+ border: none;
+ color: #6c757d;
+ cursor: pointer;
+ padding: 0.25rem;
+ border-radius: 4px;
+ transition: all 0.2s;
+}
+
+.btn-limpiar-busqueda:hover {
+ background: #f8f9fa;
+ color: #dc3545;
+}
+
+.busqueda-stats {
+ margin-top: 0.5rem;
+ color: #6c757d;
+ font-size: 0.9rem;
+}
+
+.loading-busqueda {
+ text-align: center;
+ padding: 2rem;
+ color: #6c757d;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.loading-busqueda i {
+ font-size: 2rem;
+ animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+ from { transform: rotate(0deg); }
+ to { transform: rotate(360deg); }
 }
 
 .clientes-lista {
-  max-height: 400px;
-  overflow-y: auto;
+ max-height: 400px;
+ overflow-y: auto;
 }
 
 .cliente-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border: 1px solid #e9ecef;
-  border-radius: 0.5rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 1rem;
+ border: 1px solid #e9ecef;
+ border-radius: 0.5rem;
+ margin-bottom: 0.5rem;
+ cursor: pointer;
+ transition: all 0.2s;
 }
 
 .cliente-item:hover {
-  border-color: #667eea;
-  background: #f8f9fa;
-  transform: translateY(-1px);
+ border-color: #667eea;
+ background: #f8f9fa;
+ transform: translateY(-1px);
+ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .cliente-info strong {
-  color: #2c3e50;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+ color: #2c3e50;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin-bottom: 0.25rem;
 }
 
 .cliente-info p {
-  color: #667eea;
-  margin: 0.25rem 0;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+ color: #667eea;
+ margin: 0.25rem 0;
+ font-weight: 500;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .cliente-info small,
 .cliente-contacto small {
-  color: #6c757d;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  margin: 0.1rem 0;
+ color: #6c757d;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-size: 0.85rem;
+ margin: 0.1rem 0;
 }
 
 .cliente-contacto {
-  text-align: right;
+ text-align: right;
 }
 
 .no-clientes {
-  text-align: center;
-  padding: 2rem;
-  color: #6c757d;
-  font-style: italic;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
+ text-align: center;
+ padding: 2rem;
+ color: #6c757d;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 1rem;
 }
 
 .no-clientes i {
-  font-size: 2rem;
-  opacity: 0.5;
+ font-size: 3rem;
+ opacity: 0.5;
+ color: #adb5bd;
 }
 
 .no-clientes p {
-  margin: 0;
+ margin: 0;
+ font-size: 1.1rem;
+ color: #495057;
+}
+
+.btn-crear-nuevo {
+ background: #17a2b8;
+ color: white;
+ border: none;
+ padding: 0.75rem 1.5rem;
+ border-radius: 0.5rem;
+ cursor: pointer;
+ font-weight: 600;
+ transition: all 0.2s;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.btn-crear-nuevo:hover {
+ background: #138496;
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
 }
 
 .form-cliente {
-  max-width: 600px;
+ max-width: 600px;
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 1rem;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+ margin-bottom: 1rem;
 }
 
 .form-group label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #2c3e50;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin-bottom: 0.5rem;
+ font-weight: 600;
+ color: #2c3e50;
 }
 
 .form-group label i {
-  color: #667eea;
-  font-size: 0.9em;
-  width: 16px;
-  text-align: center;
+ color: #667eea;
+ font-size: 0.9em;
+ width: 16px;
+ text-align: center;
 }
 
 .form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e9ecef;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
+ width: 100%;
+ padding: 0.75rem;
+ border: 2px solid #e9ecef;
+ border-radius: 0.5rem;
+ font-size: 1rem;
+ transition: all 0.2s;
+ box-sizing: border-box;
 }
 
 .form-input:focus {
-  outline: none;
-  border-color: #667eea;
+ outline: none;
+ border-color: #667eea;
+ box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-input.error {
+ border-color: #dc3545;
+ background: #fff5f5;
+}
+
+.error-text {
+ color: #dc3545;
+ font-size: 0.85rem;
+ margin-top: 0.25rem;
+ display: block;
+}
+
+.help-text {
+ color: #6c757d;
+ font-size: 0.85rem;
+ margin-top: 0.25rem;
+ display: block;
 }
 
 .form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
+ display: flex;
+ gap: 1rem;
+ justify-content: flex-end;
+ margin-top: 2rem;
 }
 
 .btn-cancelar,
 .btn-guardar {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+ padding: 0.75rem 1.5rem;
+ border: none;
+ border-radius: 0.5rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.2s;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .btn-cancelar {
-  background: linear-gradient(135deg, #dc3545, #c82333);
-  color: white;
+ background: linear-gradient(135deg, #dc3545, #c82333);
+ color: white;
 }
 
 .btn-cancelar:hover {
-  background: linear-gradient(135deg, #c82333, #a71e2a);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+ background: linear-gradient(135deg, #c82333, #a71e2a);
+ transform: translateY(-1px);
+ box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
 }
 
 .btn-guardar {
-  background: #28a745;
-  color: white;
+ background: #28a745;
+ color: white;
 }
 
-.btn-guardar:hover {
-  background: #218838;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+.btn-guardar:hover:not(:disabled) {
+ background: #218838;
+ transform: translateY(-1px);
+ box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-guardar:disabled {
+ background: #6c757d;
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: none;
+}
+
+/* Loading overlay */
+.loading-overlay {
+ position: absolute;
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 100%;
+ background: rgba(255, 255, 255, 0.9);
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ z-index: 9999;
+ backdrop-filter: blur(3px);
+ border-radius: 1rem;
+}
+
+.loading-spinner {
+ text-align: center;
+ color: #495057;
+}
+
+.loading-spinner i {
+ font-size: 3rem;
+ margin-bottom: 1rem;
+ animation: spin 1s linear infinite;
+ color: #667eea;
+}
+
+.loading-spinner p {
+ font-size: 1.1rem;
+ margin: 0;
+ font-weight: 600;
+}
+
+/* ✅ TOAST NOTIFICATIONS */
+.toast-notification {
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ padding: 1rem 1.5rem;
+ border-radius: 0.5rem;
+ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ max-width: 400px;
+ z-index: 1100;
+ font-weight: 500;
+ animation: slideInRight 0.3s ease;
+}
+
+.toast-notification.success {
+ background: #d4edda;
+ color: #155724;
+ border: 1px solid #c3e6cb;
+}
+
+.toast-notification.error {
+ background: #f8d7da;
+ color: #721c24;
+ border: 1px solid #f5c6cb;
+}
+
+.toast-notification.warning {
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
+}
+
+.toast-notification.info {
+ background: #d1ecf1;
+ color: #0c5460;
+ border: 1px solid #bee5eb;
+}
+
+.toast-close {
+ background: none;
+ border: none;
+ font-size: 1.2rem;
+ cursor: pointer;
+ padding: 0;
+ margin-left: auto;
+ opacity: 0.7;
+ transition: opacity 0.3s ease;
+}
+
+.toast-close:hover {
+ opacity: 1;
+}
+
+@keyframes slideInRight {
+ from {
+   transform: translateX(100%);
+   opacity: 0;
+ }
+ to {
+   transform: translateX(0);
+   opacity: 1;
+ }
 }
 
 @media (max-width: 768px) {
-  .modal-container {
-    width: 95%;
-    margin: 1rem;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .cliente-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .cliente-contacto {
-    text-align: left;
-    width: 100%;
-  }
+ .modal-container {
+   width: 95%;
+   margin: 1rem;
+ }
+ 
+ .form-row {
+   grid-template-columns: 1fr;
+ }
+ 
+ .cliente-item {
+   flex-direction: column;
+   align-items: flex-start;
+   gap: 0.5rem;
+ }
+ 
+ .cliente-contacto {
+   text-align: left;
+   width: 100%;
+ }
 
-  .tab-btn {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.9rem;
-  }
+ .tab-btn {
+   padding: 0.75rem 0.5rem;
+   font-size: 0.9rem;
+ }
 
-  .modal-header h3 {
-    font-size: 1rem;
-  }
+ .modal-header h3 {
+   font-size: 1rem;
+ }
 
-  .form-actions {
-    flex-direction: column;
-  }
+ .form-actions {
+   flex-direction: column;
+ }
 
-  .cliente-info strong,
-  .cliente-info p,
-  .cliente-info small,
-  .cliente-contacto small {
-    font-size: 0.9rem;
-  }
+ .cliente-info strong,
+ .cliente-info p,
+ .cliente-info small,
+ .cliente-contacto small {
+   font-size: 0.9rem;
+ }
+
+ /* ✅ TOAST RESPONSIVE */
+ .toast-notification {
+   top: 1rem;
+   right: 1rem;
+   left: 1rem;
+   max-width: none;
+ }
+}
+
+@media (max-width: 480px) {
+ .modal-container {
+   width: 98%;
+   margin: 0.5rem;
+   max-height: 95vh;
+ }
+
+ .tab-content {
+   padding: 1rem;
+ }
+
+ .btn-cancelar,
+ .btn-guardar {
+   width: 100%;
+   justify-content: center;
+   margin-bottom: 0.5rem;
+ }
+
+ .no-clientes {
+   padding: 1.5rem;
+ }
+
+ .no-clientes i {
+   font-size: 2rem;
+ }
+
+ .loading-spinner i {
+   font-size: 2rem;
+ }
+
+ .loading-spinner p {
+   font-size: 1rem;
+ }
+}
+
+/* Estilos para impresión */
+@media print {
+ .toast-notification {
+   display: none;
+ }
 }
 </style>
