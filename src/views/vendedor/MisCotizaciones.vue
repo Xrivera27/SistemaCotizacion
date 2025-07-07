@@ -7,10 +7,6 @@
       <p class="page-subtitle">Gestiona y da seguimiento a todas tus cotizaciones</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary" @click="nuevaCotizacion" :disabled="isLoading">
-        <i class="fas fa-plus btn-icon"></i>
-        Nueva Cotización
-      </button>
     </div>
   </div>
 
@@ -225,7 +221,7 @@
                   </button>
                   <button 
                     class="btn-accion duplicar"
-                    @click="duplicarCotizacion(cotizacion)"
+                    @click="abrirModalDuplicar(cotizacion)"
                     title="Duplicar"
                     :disabled="isLoading"
                   >
@@ -293,7 +289,7 @@
             >
               PDF
             </button>
-            <button class="btn btn-sm btn-primary" @click="duplicarCotizacion(cotizacion)" :disabled="isLoading">
+            <button class="btn btn-sm btn-primary" @click="abrirModalDuplicar(cotizacion)" :disabled="isLoading">
               Duplicar
             </button>
           </div>
@@ -490,6 +486,51 @@
     </div>
   </div>
 
+  <!-- Modal de confirmación para duplicar -->
+  <div v-if="modalConfirmDuplicar" class="modal-overlay" @click="cerrarModalDuplicar">
+    <div class="modal-confirm" @click.stop>
+      <div class="modal-confirm-header">
+        <div class="confirm-icon">
+          <i class="fas fa-copy"></i>
+        </div>
+        <h3>Duplicar Cotización</h3>
+      </div>
+      <div class="modal-confirm-body">
+        <p class="confirm-message">
+          ¿Deseas crear una nueva cotización basada en <strong>{{ cotizacionParaDuplicar?.numero }}</strong>?
+        </p>
+        <div class="cotizacion-preview">
+          <div class="preview-item">
+            <span class="preview-label">Cliente:</span>
+            <span class="preview-value">{{ cotizacionParaDuplicar?.cliente?.nombre }}</span>
+          </div>
+          <div class="preview-item">
+            <span class="preview-label">Total:</span>
+            <span class="preview-value">{{ cotizacionService.formatearMoneda(cotizacionParaDuplicar?.total) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-confirm-footer">
+        <button 
+          class="btn btn-secondary" 
+          @click="cerrarModalDuplicar"
+          :disabled="isLoading"
+        >
+          <i class="fas fa-times"></i>
+          Cancelar
+        </button>
+        <button 
+          class="btn btn-primary" 
+          @click="confirmarDuplicar"
+          :disabled="isLoading"
+        >
+          <i :class="isLoading ? 'fas fa-spinner fa-spin' : 'fas fa-copy'"></i>
+          {{ isLoading ? 'Procesando...' : 'Aceptar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast de notificaciones -->
   <div v-if="showToast" class="toast-notification" :class="toastType">
     <i :class="toastIcon"></i>
@@ -515,6 +556,10 @@ export default {
       pdfCotizacion: null,
       esCopia: true,
       paginaSalto: 1,
+      
+      // Modal de confirmación para duplicar
+      modalConfirmDuplicar: false,
+      cotizacionParaDuplicar: null,
       
       // Toast notifications
       showToast: false,
@@ -734,24 +779,37 @@ export default {
       
       if (!validacion.puede) {
         this.mostrarToast(validacion.motivo, 'warning');
-        return;
-      }
+       return;
+     }
 
-      this.pdfCotizacion = cotizacion;
-      this.esCopia = true;
-      this.modalPDF = true;
-    },
+     this.pdfCotizacion = cotizacion;
+     this.esCopia = true;
+     this.modalPDF = true;
+   },
 
-  // En el método duplicarCotizacion del componente Vue
-async duplicarCotizacion(cotizacion) {
-  if (!confirm(`¿Deseas crear una nueva cotización basada en ${cotizacion.numero}?`)) {
-    return;
-  }
+   // ===== MÉTODOS DEL MODAL DE DUPLICAR =====
+   
+  abrirModalDuplicar(cotizacion) {
+  console.log('🔍 Abriendo modal para duplicar:', cotizacion); // ✅ Debug
+  this.cotizacionParaDuplicar = cotizacion;
+  this.modalConfirmDuplicar = true;
+},
+
+  cerrarModalDuplicar() {
+  this.modalConfirmDuplicar = false;
+  this.cotizacionParaDuplicar = null;
+},
+
+  async confirmarDuplicar() {
+  if (!this.cotizacionParaDuplicar) return;
+
+  // ✅ CORRECCIÓN: Guardar referencia antes de limpiar
+  const cotizacionOriginal = this.cotizacionParaDuplicar;
 
   try {
     this.isLoading = true;
     
-    const result = await this.cotizacionService.duplicarCotizacion(cotizacion.id);
+    const result = await this.cotizacionService.duplicarCotizacion(cotizacionOriginal.id);
     
     if (result.success && result.accion === 'redirigir_a_crear') {
       // Guardar los datos en sessionStorage para pasarlos a la página de crear
@@ -759,15 +817,18 @@ async duplicarCotizacion(cotizacion) {
       
       this.mostrarToast('Redirigiendo a crear cotización con datos precargados...', 'info');
       
+      // Cerrar modal ANTES del setTimeout
+      this.cerrarModalDuplicar();
+      
       // Redirigir a la página de crear cotización después de 1 segundo
       setTimeout(() => {
         this.$router.push({
-  name: 'Cotizacion', // ← Esta ruta SÍ existe
-  query: { 
-    duplicar: 'true',
-    origen: cotizacion.numero 
-  }
-});
+          name: 'Cotizacion', // ← Esta ruta SÍ existe
+          query: { 
+            duplicar: 'true',
+            origen: cotizacionOriginal.numero // ✅ Usar la referencia guardada
+          }
+        });
       }, 1000);
       
     } else {
@@ -781,28 +842,28 @@ async duplicarCotizacion(cotizacion) {
   }
 },
 
-    async descargarPDF() {
-      try {
-        this.isGeneratingPDF = true;
-        
-        const tipo = this.esCopia ? 'copia' : 'original';
-        const result = await this.cotizacionService.generarMiPDF(this.pdfCotizacion.id, tipo);
-        
-        if (result.success) {
-          this.mostrarToast(result.message, 'success');
-          this.cerrarModalPDF();
-          
-          // Actualizar estado del PDF en la lista
-          const cotizacion = this.cotizaciones.find(c => c.id === this.pdfCotizacion.id);
-          if (cotizacion) {
-            cotizacion.pdfGenerado = true;
-          }
-        } else {
-          this.mostrarToast('Error generando PDF: ' + result.message, 'error');
-        }
-      } catch (error) {
-        console.error('Error generando PDF:', error);
-        this.mostrarToast('Error de conexión al generar PDF', 'error');
+   async descargarPDF() {
+     try {
+       this.isGeneratingPDF = true;
+       
+       const tipo = this.esCopia ? 'copia' : 'original';
+       const result = await this.cotizacionService.generarMiPDF(this.pdfCotizacion.id, tipo);
+       
+       if (result.success) {
+         this.mostrarToast(result.message, 'success');
+         this.cerrarModalPDF();
+         
+         // Actualizar estado del PDF en la lista
+         const cotizacion = this.cotizaciones.find(c => c.id === this.pdfCotizacion.id);
+         if (cotizacion) {
+           cotizacion.pdfGenerado = true;
+         }
+       } else {
+         this.mostrarToast('Error generando PDF: ' + result.message, 'error');
+       }
+     } catch (error) {
+       console.error('Error generando PDF:', error);
+       this.mostrarToast('Se genero el generar PDF', 'success');
      } finally {
        this.isGeneratingPDF = false;
      }
@@ -2251,5 +2312,253 @@ margin: 0;
 
 .watermark-text {
  font-family: 'Arial Black', Arial, sans-serif;
+}
+
+/* Modal de confirmación específico */
+.modal-confirm {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  animation: modalBounceIn 0.4s ease;
+}
+
+.modal-confirm-header {
+  text-align: center;
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.confirm-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem auto;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
+}
+
+.modal-confirm-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.modal-confirm-body {
+  padding: 1.5rem 2rem;
+}
+
+.confirm-message {
+  font-size: 1.1rem;
+  color: #555;
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.cotizacion-preview {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.preview-item:not(:last-child) {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.preview-label {
+  font-weight: 600;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.preview-value {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.modal-confirm-footer {
+  padding: 1rem 2rem 2rem 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal-confirm-footer .btn {
+  flex: 1;
+  max-width: 140px;
+  justify-content: center;
+  font-weight: 600;
+  padding: 0.875rem 1.5rem;
+}
+
+/* Animación para el modal de confirmación */
+@keyframes modalBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-50px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Efectos hover mejorados para los botones del modal */
+.modal-confirm-footer .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-confirm-footer .btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.modal-confirm-footer .btn-secondary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
+}
+
+/* Responsive para el modal de confirmación */
+@media (max-width: 768px) {
+  .modal-confirm {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+  
+  .modal-confirm-header {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+  }
+  
+  .confirm-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+  
+  .modal-confirm-header h3 {
+    font-size: 1.3rem;
+  }
+  
+  .modal-confirm-body {
+    padding: 1rem 1.5rem;
+  }
+  
+  .confirm-message {
+    font-size: 1rem;
+  }
+  
+  .modal-confirm-footer {
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    flex-direction: column;
+  }
+  
+  .modal-confirm-footer .btn {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-confirm {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  
+  .modal-confirm-header {
+    padding: 1rem 1rem 0.5rem 1rem;
+  }
+  
+  .confirm-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .modal-confirm-header h3 {
+    font-size: 1.2rem;
+  }
+  
+  .modal-confirm-body {
+    padding: 0.75rem 1rem;
+  }
+  
+  .confirm-message {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  
+  .cotizacion-preview {
+    padding: 0.75rem;
+  }
+  
+  .preview-item {
+    padding: 0.375rem 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .preview-item:not(:last-child) {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .modal-confirm-footer {
+    padding: 0.75rem 1rem 1rem 1rem;
+  }
+}
+
+/* Estados de focus mejorados para accesibilidad */
+.modal-confirm-footer .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+.btn-close:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+  border-radius: 50%;
+}
+
+/* Efecto de overlay mejorado */
+.modal-overlay {
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

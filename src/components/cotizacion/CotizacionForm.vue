@@ -377,66 +377,58 @@ export default {
     }
 
     // ===== PRECARGA CORREGIDA USANDO precioPorEquipo DEL BACKEND =====
-    const precargarFormulario = async (datos) => {
-      console.log('🔄 Precargando formulario con datos:', datos)
-      
-      try {
-        // PASO 1: Configurar años del contrato
-        if (datos.servicios && datos.servicios.length > 0) {
-          añosContrato.value = datos.servicios[0].cantidadAnos || 1
-        }
+ // En CotizacionForm.vue - método precargarFormulario
+const precargarFormulario = async (datos) => {
+  console.log('🔄 Precargando formulario con datos:', datos)
+  
+  try {
+    // PASO 1: Configurar años del contrato
+    if (datos.servicios && datos.servicios.length > 0) {
+      añosContrato.value = datos.servicios[0].cantidadAnos || 1
+    }
+    
+    // PASO 2: Precargar servicios usando datos directos
+    if (datos.servicios && datos.servicios.length > 0) {
+      for (const servicioData of datos.servicios) {
+        const servicioId = servicioData.id
         
-        // PASO 2: Precargar servicios seleccionados usando precioPorEquipo del backend
-        if (datos.servicios && datos.servicios.length > 0) {
-          for (const servicioData of datos.servicios) {
-            const servicioId = servicioData.id
-            
-            // Buscar el servicio en la lista cargada
-            const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
-            
-            if (servicioExistente) {
-              console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
-              console.log('💰 Datos originales del servicio:', servicioData)
-              
-              // Configurar cantidades ORIGINALES
-              cantidades[servicioId] = servicioData.cantidadServicios || 0
-              cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
-              
-              // ✅ CORRECCIÓN: Usar directamente precioPorEquipo que ya viene calculado del backend
-              const precioPorEquipo = servicioData.precioPorEquipo || servicioData.precioUnitarioOriginal || 0
-              
-              preciosVenta[servicioId] = precioPorEquipo
-              
-              console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
-                cantidadServicios: cantidades[servicioId],
-                cantidadEquipos: cantidadesEquipos[servicioId],
-                precioUnitarioOriginal: servicioData.precioUnitarioOriginal,
-                subtotalOriginal: servicioData.subtotalOriginal,
-                precioPorEquipo: precioPorEquipo,
-                info: 'Usando precioPorEquipo calculado en el backend'
-              })
-            } else {
-              console.warn(`⚠️ Servicio con ID ${servicioId} no encontrado en la lista actual`)
-            }
+        const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+        
+        if (servicioExistente) {
+          console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
+          
+          // ✅ USAR DATOS DIRECTOS SIN CÁLCULOS
+          cantidades[servicioId] = servicioData.cantidadServicios || 0
+          cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
+          
+          // ✅ Para GB, usar cantidadGB directamente en el campo apropiado
+          if (servicioData.cantidadGB > 0) {
+            // Si es un servicio basado en GB, poner la cantidad en el campo correcto
+            cantidades[servicioId] = servicioData.cantidadGB
           }
+          
+          // ✅ USAR PRECIO USADO ORIGINAL DIRECTAMENTE
+          preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
+          
+          console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
+            cantidadServicios: cantidades[servicioId],
+            cantidadEquipos: cantidadesEquipos[servicioId], 
+            cantidadGB: servicioData.cantidadGB,
+            precioUsadoOriginal: servicioData.precioUsadoOriginal,
+            subtotalOriginal: servicioData.subtotalOriginal
+          })
         }
-        
-        // PASO 3: Recalcular si es necesario
-        await nextTick()
-        console.log('✅ Formulario precargado exitosamente')
-        
-        // Mostrar un mensaje de confirmación
-        if (typeof window !== 'undefined' && window.alert) {
-          setTimeout(() => {
-            alert(`✅ Cotización duplicada exitosamente desde ${cotizacionOrigen.value}`)
-          }, 500)
-        }
-        
-      } catch (error) {
-        console.error('❌ Error precargando formulario:', error)
-        throw error
       }
     }
+    
+    await nextTick()
+    console.log('✅ Formulario precargado exitosamente')
+    
+  } catch (error) {
+    console.error('❌ Error precargando formulario:', error)
+    throw error
+  }
+}
 
     // Función para resetear paginación
     const resetearPaginacion = () => {
