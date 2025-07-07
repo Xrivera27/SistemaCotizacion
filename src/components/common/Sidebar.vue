@@ -19,7 +19,12 @@
      <div class="sidebar-header">
        <div class="logo-container">
          <div class="logo" v-if="isOpen">
-           <span class="logo-text">Perdomo y Asociados</span>
+           <img 
+             src="https://perdomoyasociados.com/wp-content/uploads/2023/09/logo_perdomo_2023_dorado-768x150.png" 
+             alt="Perdomo y Asociados"
+             class="logo-img"
+             @error="handleLogoError"
+           />
          </div>
          <span 
            class="logo-mini" 
@@ -86,8 +91,6 @@
 
      <!-- Footer del sidebar -->
      <div class="sidebar-footer">
-    
-
        <button 
          class="btn-logout"
          @click="mostrarModalCerrarSesion"
@@ -349,6 +352,16 @@ export default {
    }
  },
  methods: {
+   handleLogoError(event) {
+     console.log('Error cargando logo del sidebar');
+     // Crear un fallback visual
+     event.target.style.display = 'none';
+     const fallback = document.createElement('div');
+     fallback.innerHTML = '<span class="logo-text-fallback">Perdomo y Asociados</span>';
+     fallback.className = 'logo-fallback';
+     event.target.parentNode.appendChild(fallback);
+   },
+
    async loadUserData() {
      console.log('📊 Cargando datos del usuario...');
      
@@ -515,7 +528,6 @@ export default {
 }
 </script>
 
-
 <style scoped>
 .sidebar-container {
  position: relative;
@@ -590,16 +602,38 @@ export default {
 .logo {
  display: flex;
  align-items: center;
+ justify-content: center;
+ width: 100%;
 }
 
-.logo-text {
- font-size: 1.5rem;
+/* Imagen del logo */
+.logo-img {
+ height: 40px;
+ width: auto;
+ max-width: 200px;
+ filter: brightness(1.1);
+ transition: all 0.3s ease;
+}
+
+.logo-img:hover {
+ filter: brightness(1.2);
+ transform: scale(1.02);
+}
+
+/* Fallback para cuando no carga el logo */
+.logo-fallback {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 100%;
+}
+
+.logo-text-fallback {
+ font-size: 1.2rem;
  font-weight: bold;
- color: white;
- background: linear-gradient(135deg, #3498db, #2980b9);
- -webkit-background-clip: text;
- -webkit-text-fill-color: transparent;
- background-clip: text;
+ color: #d4af37;
+ text-align: center;
+ line-height: 1.2;
 }
 
 .logo-mini {
@@ -843,37 +877,6 @@ export default {
  padding: 1rem 0.5rem;
 }
 
-/* Indicador de conexión */
-.connection-status {
- margin-bottom: 1rem;
- padding: 0.5rem;
- border-radius: 0.5rem;
- background: rgba(255, 255, 255, 0.05);
-}
-
-.status-indicator {
- display: flex;
- align-items: center;
- gap: 0.5rem;
- font-size: 0.8rem;
-}
-
-.status-indicator.online {
- color: #27ae60;
-}
-
-.status-indicator.offline {
- color: #e74c3c;
-}
-
-.status-indicator i {
- font-size: 0.9rem;
-}
-
-.status-text {
- font-weight: 500;
-}
-
 .btn-logout {
  width: 100%;
  background: rgba(231, 76, 60, 0.2);
@@ -960,442 +963,446 @@ export default {
 }
 
 .modal-title {
-margin: 0;
-color: #2c3e50;
-font-size: 1.3rem;
-font-weight: 600;
-display: flex;
-align-items: center;
-gap: 0.75rem;
+ margin: 0;
+ color: #2c3e50;
+ font-size: 1.3rem;
+ font-weight: 600;
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
 }
 
 .modal-title i {
-color: #e74c3c;
-font-size: 1.2rem;
+ color: #e74c3c;
+ font-size: 1.2rem;
 }
 
 .btn-close {
-background: none;
-border: none;
-font-size: 1.3rem;
-cursor: pointer;
-color: #7f8c8d;
-padding: 0.5rem;
-border-radius: 50%;
-transition: all 0.3s ease;
-width: 40px;
-height: 40px;
-display: flex;
-align-items: center;
-justify-content: center;
+ background: none;
+ border: none;
+ font-size: 1.3rem;
+ cursor: pointer;
+ color: #7f8c8d;
+ padding: 0.5rem;
+ border-radius: 50%;
+ transition: all 0.3s ease;
+ width: 40px;
+ height: 40px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
 }
 
 .btn-close:hover {
-background: #e9ecef;
-color: #e74c3c;
-transform: scale(1.1);
+ background: #e9ecef;
+ color: #e74c3c;
+ transform: scale(1.1);
 }
 
 .modal-body {
-padding: 2rem;
+ padding: 2rem;
 }
 
 .logout-content {
-text-align: center;
+ text-align: center;
 }
 
 .logout-icon-large {
-font-size: 4rem;
-color: #f39c12;
-margin-bottom: 1.5rem;
+ font-size: 4rem;
+ color: #f39c12;
+ margin-bottom: 1.5rem;
 }
 
 .logout-message h4 {
-color: #2c3e50;
-margin-bottom: 0.75rem;
-font-size: 1.3rem;
-font-weight: 600;
+ color: #2c3e50;
+ margin-bottom: 0.75rem;
+ font-size: 1.3rem;
+ font-weight: 600;
 }
 
 .logout-message p {
-color: #7f8c8d;
-margin-bottom: 2rem;
-line-height: 1.5;
-font-size: 1rem;
+ color: #7f8c8d;
+ margin-bottom: 2rem;
+ line-height: 1.5;
+ font-size: 1rem;
 }
 
 .user-info-logout {
-display: flex;
-align-items: center;
-gap: 1rem;
-background: #f8f9fa;
-padding: 1.5rem;
-border-radius: 12px;
-border-left: 4px solid #3498db;
-margin-bottom: 1.5rem;
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ background: #f8f9fa;
+ padding: 1.5rem;
+ border-radius: 12px;
+ border-left: 4px solid #3498db;
+ margin-bottom: 1.5rem;
 }
 
 .user-avatar-logout {
-width: 50px;
-height: 50px;
-border-radius: 50%;
-background: linear-gradient(135deg, #3498db, #2980b9);
-display: flex;
-align-items: center;
-justify-content: center;
-font-weight: bold;
-font-size: 1.2rem;
-color: white;
-flex-shrink: 0;
+ width: 50px;
+ height: 50px;
+ border-radius: 50%;
+ background: linear-gradient(135deg, #3498db, #2980b9);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-weight: bold;
+ font-size: 1.2rem;
+ color: white;
+ flex-shrink: 0;
 }
 
 .user-details-logout {
-flex: 1;
-text-align: left;
+ flex: 1;
+ text-align: left;
 }
 
 .user-name-logout {
-margin: 0;
-font-size: 1.1rem;
-font-weight: 600;
-color: #2c3e50;
+ margin: 0;
+ font-size: 1.1rem;
+ font-weight: 600;
+ color: #2c3e50;
 }
 
 .user-role-logout {
-margin: 0;
-font-size: 0.9rem;
-color: #7f8c8d;
+ margin: 0;
+ font-size: 0.9rem;
+ color: #7f8c8d;
 }
 
 .user-email-logout {
-margin: 0;
-font-size: 0.85rem;
-color: #95a5a6;
+ margin: 0;
+ font-size: 0.85rem;
+ color: #95a5a6;
 }
 
 /* Opciones de logout */
 .logout-options {
-margin-top: 1.5rem;
-text-align: left;
+ margin-top: 1.5rem;
+ text-align: left;
 }
 
 .logout-option {
-background: #f8f9fa;
-padding: 1rem;
-border-radius: 8px;
-border: 1px solid #e9ecef;
+ background: #f8f9fa;
+ padding: 1rem;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
 }
 
 .checkbox-container {
-display: flex;
-align-items: flex-start;
-cursor: pointer;
-font-size: 0.9rem;
-color: #2c3e50;
-gap: 0.75rem;
+ display: flex;
+ align-items: flex-start;
+ cursor: pointer;
+ font-size: 0.9rem;
+ color: #2c3e50;
+ gap: 0.75rem;
 }
 
 .checkbox-input {
-display: none;
+ display: none;
 }
 
 .checkbox-mark {
-width: 20px;
-height: 20px;
-border: 2px solid #cbd5e1;
-border-radius: 4px;
-position: relative;
-transition: all 0.3s ease;
-flex-shrink: 0;
-margin-top: 2px;
+ width: 20px;
+ height: 20px;
+ border: 2px solid #cbd5e1;
+ border-radius: 4px;
+ position: relative;
+ transition: all 0.3s ease;
+ flex-shrink: 0;
+ margin-top: 2px;
 }
 
 .checkbox-input:checked + .checkbox-mark {
-background: #e74c3c;
-border-color: #e74c3c;
+ background: #e74c3c;
+ border-color: #e74c3c;
 }
 
 .checkbox-input:checked + .checkbox-mark::after {
-content: '✓';
-position: absolute;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-color: white;
-font-size: 0.8rem;
-font-weight: bold;
+ content: '✓';
+ position: absolute;
+ top: 50%;
+ left: 50%;
+ transform: translate(-50%, -50%);
+ color: white;
+ font-size: 0.8rem;
+ font-weight: bold;
 }
 
 .checkbox-text {
-font-weight: 600;
-color: #2c3e50;
+ font-weight: 600;
+ color: #2c3e50;
 }
 
 .option-description {
-margin: 0.5rem 0 0 2.75rem;
-font-size: 0.8rem;
-color: #7f8c8d;
-line-height: 1.4;
+ margin: 0.5rem 0 0 2.75rem;
+ font-size: 0.8rem;
+ color: #7f8c8d;
+ line-height: 1.4;
 }
 
 .modal-footer {
-display: flex;
-justify-content: flex-end;
-gap: 1rem;
-padding: 1.5rem 2rem;
-border-top: 1px solid #e9ecef;
-background: #f8f9fa;
-border-radius: 0 0 16px 16px;
+ display: flex;
+ justify-content: flex-end;
+ gap: 1rem;
+ padding: 1.5rem 2rem;
+ border-top: 1px solid #e9ecef;
+ background: #f8f9fa;
+ border-radius: 0 0 16px 16px;
 }
 
 .btn {
-padding: 0.75rem 1.5rem;
-border: none;
-border-radius: 8px;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.3s ease;
-display: inline-flex;
-align-items: center;
-gap: 0.5rem;
-font-size: 0.9rem;
-min-width: 120px;
-justify-content: center;
+ padding: 0.75rem 1.5rem;
+ border: none;
+ border-radius: 8px;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ display: inline-flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-size: 0.9rem;
+ min-width: 120px;
+ justify-content: center;
 }
 
 .btn:disabled {
-opacity: 0.6;
-cursor: not-allowed;
-transform: none !important;
+ opacity: 0.6;
+ cursor: not-allowed;
+ transform: none !important;
 }
 
 .btn-secondary {
-background: #95a5a6;
-color: white;
+ background: #95a5a6;
+ color: white;
 }
 
 .btn-secondary:hover:not(:disabled) {
-background: #7f8c8d;
-transform: translateY(-1px);
+ background: #7f8c8d;
+ transform: translateY(-1px);
 }
 
 .btn-danger {
-background: #e74c3c;
-color: white;
+ background: #e74c3c;
+ color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-background: #c0392b;
-transform: translateY(-1px);
-box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+ background: #c0392b;
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 /* Tooltips mejorados */
 [title] {
-position: relative;
+ position: relative;
 }
 
 /* Scrollbar personalizada */
 .sidebar-nav::-webkit-scrollbar {
-width: 4px;
+ width: 4px;
 }
 
 .sidebar-nav::-webkit-scrollbar-track {
-background: rgba(255, 255, 255, 0.1);
+ background: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-background: rgba(255, 255, 255, 0.3);
-border-radius: 4px;
+ background: rgba(255, 255, 255, 0.3);
+ border-radius: 4px;
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-background: rgba(255, 255, 255, 0.5);
+ background: rgba(255, 255, 255, 0.5);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-.sidebar-abierto {
-  width: 280px;
-  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
-}
+ .sidebar-abierto {
+   width: 280px;
+   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+ }
 
-.sidebar-cerrado {
-  width: 0;
-  overflow: hidden;
-}
+ .sidebar-cerrado {
+   width: 0;
+   overflow: hidden;
+ }
 
-.sidebar-header {
-  padding: 1rem;
-}
+ .sidebar-header {
+   padding: 1rem;
+ }
 
-.user-info {
-  padding: 0.75rem 1rem;
-}
+ .logo-img {
+   height: 35px;
+ }
 
-.nav-link {
-  padding: 1rem;
-  margin: 0;
-  border-radius: 0;
-}
+ .user-info {
+   padding: 0.75rem 1rem;
+ }
 
-.nav-link:hover {
-  transform: none;
-}
+ .nav-link {
+   padding: 1rem;
+   margin: 0;
+   border-radius: 0;
+ }
 
-.sidebar-footer {
-  padding: 1rem;
-}
+ .nav-link:hover {
+   transform: none;
+ }
 
-.btn-toggle {
-  width: 38px;
-  height: 38px;
-  font-size: 0.9rem;
-}
+ .sidebar-footer {
+   padding: 1rem;
+ }
 
-.connection-status {
-  display: none;
-}
+ .btn-toggle {
+   width: 38px;
+   height: 38px;
+   font-size: 0.9rem;
+ }
 
-.modal-content {
-  margin: 0.5rem;
-  max-width: calc(100vw - 1rem);
-}
+ .modal-content {
+   margin: 0.5rem;
+   max-width: calc(100vw - 1rem);
+ }
 
-.modal-header,
-.modal-footer {
-  padding: 1rem 1.5rem;
-}
+ .modal-header,
+ .modal-footer {
+   padding: 1rem 1.5rem;
+ }
 
-.modal-body {
-  padding: 1.5rem;
-}
+ .modal-body {
+   padding: 1.5rem;
+ }
 
-.modal-footer {
-  flex-direction: column;
-}
+ .modal-footer {
+   flex-direction: column;
+ }
 
-.btn {
-  width: 100%;
-}
+ .btn {
+   width: 100%;
+ }
 
-.user-info-logout {
-  flex-direction: column;
-  text-align: center;
-  gap: 1rem;
-}
+ .user-info-logout {
+   flex-direction: column;
+   text-align: center;
+   gap: 1rem;
+ }
 
-.user-details-logout {
-  text-align: center;
-}
+ .user-details-logout {
+   text-align: center;
+ }
 }
 
 @media (max-width: 480px) {
-.sidebar-abierto {
-  width: 100vw;
-}
+ .sidebar-abierto {
+   width: 100vw;
+ }
 
-.user-name {
-  font-size: 0.9rem;
-}
+ .logo-img {
+   height: 30px;
+ }
 
-.user-role {
-  font-size: 0.75rem;
-}
+ .user-name {
+   font-size: 0.9rem;
+ }
 
-.user-email {
-  font-size: 0.7rem;
-}
+ .user-role {
+   font-size: 0.75rem;
+ }
 
-.nav-text {
-  font-size: 0.85rem;
-}
+ .user-email {
+   font-size: 0.7rem;
+ }
 
-.modal-title {
-  font-size: 1.1rem;
-}
+ .nav-text {
+   font-size: 0.85rem;
+ }
 
-.logout-message h4 {
-  font-size: 1.1rem;
-}
+ .modal-title {
+   font-size: 1.1rem;
+ }
 
-.logout-message p {
-  font-size: 0.9rem;
-}
+ .logout-message h4 {
+   font-size: 1.1rem;
+ }
 
-.checkbox-text {
-  font-size: 0.85rem;
-}
+ .logout-message p {
+   font-size: 0.9rem;
+ }
 
-.option-description {
-  font-size: 0.75rem;
-}
+ .checkbox-text {
+   font-size: 0.85rem;
+ }
+
+ .option-description {
+   font-size: 0.75rem;
+ }
 }
 
 /* Animaciones para loading */
 @keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
+ 0% { transform: rotate(0deg); }
+ 100% { transform: rotate(360deg); }
 }
 
 .fa-spin {
-animation: spin 1s linear infinite;
+ animation: spin 1s linear infinite;
 }
 
 /* Estados de conexión */
 .status-indicator {
-transition: all 0.3s ease;
+ transition: all 0.3s ease;
 }
 
 .status-indicator.online i {
-text-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
+ text-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
 }
 
 .status-indicator.offline i {
-text-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+ text-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
 }
 
 /* Mejoras de accesibilidad */
 .btn:focus,
 .checkbox-container:focus {
-outline: 2px solid #3498db;
-outline-offset: 2px;
+ outline: 2px solid #3498db;
+ outline-offset: 2px;
 }
 
 /* Transiciones suaves */
 .sidebar * {
-transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+ transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
 /* Efectos hover mejorados */
 .checkbox-container:hover .checkbox-mark {
-border-color: #e74c3c;
-transform: scale(1.05);
+ border-color: #e74c3c;
+ transform: scale(1.05);
 }
 
 .user-info:hover .user-avatar {
-transform: scale(1.05);
+ transform: scale(1.05);
 }
 
 /* Indicadores visuales mejorados */
 .nav-link.active {
-position: relative;
-overflow: hidden;
+ position: relative;
+ overflow: hidden;
 }
 
 .nav-link.active::after {
-content: '';
-position: absolute;
-top: 0;
-left: 0;
-right: 0;
-bottom: 0;
-background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-animation: shimmer 2s infinite;
+ content: '';
+ position: absolute;
+ top: 0;
+ left: 0;
+ right: 0;
+ bottom: 0;
+ background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+ animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
-0% { transform: translateX(-100%); }
-100% { transform: translateX(100%); }
+ 0% { transform: translateX(-100%); }
+ 100% { transform: translateX(100%); }
 }
 </style>

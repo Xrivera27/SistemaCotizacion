@@ -462,14 +462,15 @@ construirParametros(filtros) {
   // ===== UTILIDADES DE FORMATO =====
 
   // Formatear moneda
-  formatearMoneda(cantidad) {
-    if (!cantidad && cantidad !== 0) return 'L. 0.00';
-    return new Intl.NumberFormat('es-HN', {
-      style: 'currency',
-      currency: 'HNL',
-      minimumFractionDigits: 2
-    }).format(cantidad);
-  }
+ // REEMPLAZAR el método formatearMoneda:
+formatearMoneda(valor) {
+  if (!valor && valor !== 0) return '$0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2
+  }).format(valor);
+}
 
   // Formatear fecha
   formatearFecha(fecha) {
