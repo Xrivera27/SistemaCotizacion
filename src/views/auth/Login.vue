@@ -103,7 +103,7 @@
         <div class="demo-grid">
           <div class="demo-user">
             <span class="demo-label">Admin:</span>
-            <span class="demo-credentials">admin / admin123</span>
+            <span class="demo-credentials">admin / Admin123.</span>
           </div>
           <div class="demo-user">
             <span class="demo-label">Vendedor:</span>
