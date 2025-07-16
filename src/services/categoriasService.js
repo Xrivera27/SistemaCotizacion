@@ -288,6 +288,48 @@ class CategoriasService {
      };
    }
  }
+
+ // 🆕 NUEVO: Obtener unidades de medida activas
+ async getUnidadesMedidaActivas() {
+   try {
+     console.log('📏 Obteniendo unidades de medida activas...');
+     
+     const response = await api.get('/unidades-medida/activas');
+     
+     if (response.data.success) {
+       console.log('✅ Unidades de medida obtenidas:', response.data.data.unidades);
+       return {
+         success: true,
+         unidades: response.data.data.unidades
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo unidades de medida'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo unidades de medida:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // 🆕 NUEVO: Validar unidad de medida
+ validateUnidadMedida(unidadMedidaId) {
+   if (!unidadMedidaId) {
+     return { valid: false, message: 'La unidad de medida es requerida' };
+   }
+   
+   if (isNaN(unidadMedidaId) || parseInt(unidadMedidaId) <= 0) {
+     return { valid: false, message: 'Debe seleccionar una unidad de medida válida' };
+   }
+   
+   return { valid: true, message: '' };
+ }
  
  // Validar disponibilidad de nombre de categoría
  async checkNombreDisponible(nombre, excludeId = null) {
@@ -360,7 +402,12 @@ class CategoriasService {
      fecha_actualizacion: this.formatDate(categoria.updated_at),
      servicios_count: categoria.servicios?.length || 0,
      servicios_activos_count: categoria.servicios?.filter(s => s.estado === 'activo').length || 0,
-     descripcion_corta: this.truncateText(categoria.descripcion, 100)
+     descripcion_corta: this.truncateText(categoria.descripcion, 100),
+     // 🆕 NUEVO: Formateo de unidad de medida
+     unidad_medida_display: categoria.unidad_medida ? 
+       `${categoria.unidad_medida.nombre} (${categoria.unidad_medida.abreviacion})` : 
+       'Sin unidad',
+     unidad_medida_tipo: categoria.unidad_medida?.tipo || 'N/A'
    };
  }
  
@@ -448,8 +495,33 @@ class CategoriasService {
      value: categoria.categorias_id,
      label: categoria.nombre,
      description: categoria.descripcion,
-     servicios_count: categoria.servicios?.length || 0
+     servicios_count: categoria.servicios?.length || 0,
+     unidad_medida: categoria.unidad_medida?.nombre || 'Sin unidad'
    }));
+ }
+
+ // 🆕 NUEVO: Helper para formatear unidades de medida para selects
+ formatUnidadesMedidaForSelect(unidades) {
+   return unidades.map(unidad => ({
+     value: unidad.unidades_medida_id,
+     label: `${unidad.nombre} (${unidad.abreviacion})`,
+     tipo: unidad.tipo,
+     descripcion: unidad.descripcion
+   }));
+ }
+
+ // 🆕 NUEVO: Helper para agrupar unidades por tipo
+ groupUnidadesByTipo(unidades) {
+   const grupos = {};
+   
+   unidades.forEach(unidad => {
+     if (!grupos[unidad.tipo]) {
+       grupos[unidad.tipo] = [];
+     }
+     grupos[unidad.tipo].push(unidad);
+   });
+   
+   return grupos;
  }
  
  // Helper para filtrar categorías por texto
@@ -462,7 +534,8 @@ class CategoriasService {
    
    return categorias.filter(categoria => 
      categoria.nombre.toLowerCase().includes(search) ||
-     (categoria.descripcion && categoria.descripcion.toLowerCase().includes(search))
+     (categoria.descripcion && categoria.descripcion.toLowerCase().includes(search)) ||
+     (categoria.unidad_medida?.nombre && categoria.unidad_medida.nombre.toLowerCase().includes(search))
    );
  }
  
@@ -476,6 +549,11 @@ class CategoriasService {
      if (sortBy === 'servicios_count') {
        aValue = a.servicios?.length || 0;
        bValue = b.servicios?.length || 0;
+     }
+     
+     if (sortBy === 'unidad_medida') {
+       aValue = a.unidad_medida?.nombre || '';
+       bValue = b.unidad_medida?.nombre || '';
      }
      
      if (sortBy === 'created_at' || sortBy === 'updated_at') {
@@ -501,6 +579,13 @@ class CategoriasService {
    const inactivas = total - activas;
    const conServicios = categorias.filter(c => c.servicios && c.servicios.length > 0).length;
    
+   // 🆕 NUEVO: Estadísticas por tipo de unidad
+   const porTipoUnidad = {};
+   categorias.forEach(categoria => {
+     const tipo = categoria.unidad_medida?.tipo || 'sin_unidad';
+     porTipoUnidad[tipo] = (porTipoUnidad[tipo] || 0) + 1;
+   });
+   
    return {
      total,
      activas,
@@ -508,7 +593,8 @@ class CategoriasService {
      con_servicios: conServicios,
      sin_servicios: total - conServicios,
      porcentaje_activas: total > 0 ? Math.round((activas / total) * 100) : 0,
-     porcentaje_con_servicios: total > 0 ? Math.round((conServicios / total) * 100) : 0
+     porcentaje_con_servicios: total > 0 ? Math.round((conServicios / total) * 100) : 0,
+     por_tipo_unidad: porTipoUnidad
    };
  }
 }

@@ -34,7 +34,7 @@
        <input
          v-model="filtros.busqueda"
          type="text"
-         placeholder="Buscar por nombre o descripción..."
+         placeholder="Buscar por nombre, descripción o unidad de medida..."
          class="search-input"
          @input="buscarCategorias"
        />
@@ -149,6 +149,7 @@
              <th>ID</th>
              <th>Nombre</th>
              <th>Descripción</th>
+             <th>Unidad de Medida</th>
              <th>Servicios</th>
              <th>Estado</th>
              <th>Fecha Creación</th>
@@ -169,6 +170,14 @@
                <div class="descripcion-info">
                  <span class="descripcion-texto">{{ truncarTexto(categoria.descripcion, 80) }}</span>
                </div>
+             </td>
+             <td>
+               <div class="unidad-medida-info" v-if="categoria.unidad_medida">
+                 <span class="unidad-nombre">{{ categoria.unidad_medida.nombre }}</span>
+                 <span class="unidad-abrev">({{ categoria.unidad_medida.abreviacion }})</span>
+                 <span class="unidad-tipo">{{ categoria.unidad_medida.tipo }}</span>
+               </div>
+               <span v-else class="sin-unidad">Sin unidad</span>
              </td>
              <td>
                <div class="servicios-info">
@@ -244,6 +253,17 @@
            </div>
            
            <div class="categoria-details">
+             <div class="detail" v-if="categoria.unidad_medida">
+               <span class="detail-label">
+                 <i class="fas fa-ruler"></i>
+                 Unidad:
+               </span>
+               <span class="detail-value unidad-card">
+                 {{ categoria.unidad_medida.nombre }} ({{ categoria.unidad_medida.abreviacion }})
+                 <span class="unidad-tipo-small">{{ categoria.unidad_medida.tipo }}</span>
+               </span>
+             </div>
+             
              <div class="detail">
                <span class="detail-label">
                  <i class="fas fa-cogs"></i>
@@ -380,6 +400,11 @@
              <strong><i class="fas fa-align-left"></i> Descripción:</strong> 
              <span class="descripcion-texto">{{ modalCategoria.descripcion }}</span>
            </div>
+           <div class="detalle-item" v-if="modalCategoria.unidad_medida">
+             <strong><i class="fas fa-ruler"></i> Unidad de Medida:</strong> 
+             {{ modalCategoria.unidad_medida.nombre }} ({{ modalCategoria.unidad_medida.abreviacion }})
+             <span class="unidad-tipo-badge">{{ modalCategoria.unidad_medida.tipo }}</span>
+           </div>
            <div class="detalle-item">
              <strong><i class="fas fa-cogs"></i> Servicios:</strong> 
              {{ modalCategoria.servicios?.length || 0 }} servicios 
@@ -436,6 +461,32 @@
                    placeholder="Desarrollo, Consultoría, Marketing, etc."
                  >
                </div>
+
+               <div class="form-group">
+                 <label for="unidades_medida_id">Unidad de Medida *</label>
+                 <select 
+                   id="unidades_medida_id"
+                   v-model="formulario.unidades_medida_id" 
+                   required 
+                   class="form-select"
+                   :disabled="cargandoUnidades"
+                 >
+                   <option value="">{{ cargandoUnidades ? 'Cargando...' : 'Selecciona una unidad de medida' }}</option>
+                   <optgroup 
+                     v-for="(unidades, tipo) in unidadesPorTipo" 
+                     :key="tipo"
+                     :label="formatearTipoUnidad(tipo)"
+                   >
+                     <option 
+                       v-for="unidad in unidades" 
+                       :key="unidad.unidades_medida_id"
+                       :value="unidad.unidades_medida_id"
+                     >
+                       {{ unidad.nombre }} ({{ unidad.abreviacion }})
+                     </option>
+                   </optgroup>
+                 </select>
+               </div>
                
                <div class="form-group full-width">
                  <label for="descripcion">Descripción *</label>
@@ -477,7 +528,6 @@
          @click="guardarCategoria"
          :disabled="guardandoCategoria"
        >
-         
          {{ guardandoCategoria ? 'Guardando...' : (categoriaEditando ? 'Actualizar' : 'Crear') }} Categoría
        </button>
      </div>
@@ -509,6 +559,9 @@
              <div class="categoria-badges">
                <span class="categoria-id">#{{ String(categoriaParaCambiarEstado.categorias_id).padStart(4, '0') }}</span>
                <span class="servicios-count">{{ categoriaParaCambiarEstado.servicios?.length || 0 }} servicios</span>
+               <span v-if="categoriaParaCambiarEstado.unidad_medida" class="unidad-count">
+                 {{ categoriaParaCambiarEstado.unidad_medida.abreviacion }}
+               </span>
              </div>
            </div>
          </div>
@@ -610,6 +663,10 @@ export default {
      paginaSalto: 1,
      itemsPorPagina: 25,
 
+     // 🆕 NUEVO: Unidades de medida
+     unidadesMedida: [],
+     cargandoUnidades: false,
+
      // Datos reales del backend
      categorias: [],
      pagination: null,
@@ -629,6 +686,7 @@ export default {
      formulario: {
        nombre: '',
        descripcion: '',
+       unidades_medida_id: '', // 🆕 NUEVO
        estado: 'activo'
      },
 
@@ -669,417 +727,495 @@ export default {
        paginas.push(i);
      }
      return paginas;
-   }
- },
-
- watch: {
-   // Actualizar paginaSalto cuando cambie la página actual
-   'pagination.currentPage'(newVal) {
-     if (newVal) {
-       this.paginaSalto = newVal;
-     }
-   }
- },
-
- async mounted() {
-   console.log('🚀 Componente MisCategorias montado');
-   await this.cargarDatosIniciales();
- },
-
- methods: {
-   // ==================== CARGA DE DATOS ====================
-   async cargarDatosIniciales() {
-     this.loading = true;
-     this.loadingMessage = 'Cargando categorías...';
-     
-     try {
-       await Promise.all([
-         this.cargarCategorias(),
-         this.cargarEstadisticas()
-       ]);
-     } catch (error) {
-       console.error('❌ Error cargando datos iniciales:', error);
-       this.showNotification('Error cargando datos del sistema', 'error');
-     } finally {
-       this.loading = false;
-     }
    },
 
-   async cargarCategorias() {
-     try {
-       console.log('📋 Cargando categorías con filtros:', this.filtros);
-       
-       const params = {
-         page: this.pagination?.currentPage || 1,
-         limit: this.itemsPorPagina,
-         search: this.filtros.busqueda || undefined,
-         estado: this.filtros.estado || undefined
-       };
-       
-       const result = await categoriasService.getCategorias(params);
-       
-       if (result.success) {
-         this.categorias = result.categorias;
-         this.pagination = result.pagination;
-         console.log('✅ Categorías cargadas:', this.categorias.length);
-       } else {
-         this.showNotification(result.message || 'Error cargando categorías', 'error');
-       }
-       
-     } catch (error) {
-       console.error('❌ Error cargando categorías:', error);
-       this.showNotification('Error de conexión al cargar categorías', 'error');
-     }
-   },
+   // 🆕 NUEVO: Agrupar unidades por tipo
+   unidadesPorTipo() {
+      return categoriasService.groupUnidadesByTipo(this.unidadesMedida);
+  }
+},
 
-   async cargarEstadisticas() {
-     try {
-       console.log('📊 Cargando estadísticas...');
-       
-       const result = await categoriasService.getEstadisticas();
-       
-       if (result.success) {
-         this.estadisticas = result.estadisticas;
-         console.log('✅ Estadísticas cargadas:', this.estadisticas);
-       } else {
-         console.error('❌ Error cargando estadísticas:', result.message);
-       }
-       
-     } catch (error) {
-       console.error('❌ Error cargando estadísticas:', error);
-     }
-   },
+watch: {
+  // Actualizar paginaSalto cuando cambie la página actual
+  'pagination.currentPage'(newVal) {
+    if (newVal) {
+      this.paginaSalto = newVal;
+    }
+  }
+},
 
-   // ==================== BÚSQUEDA Y FILTROS ====================
-   buscarCategorias() {
-     // Debounce para evitar muchas llamadas
-     clearTimeout(this.busquedaTimeout);
-     this.busquedaTimeout = setTimeout(() => {
-       this.aplicarFiltros();
-     }, 500);
-   },
+async mounted() {
+  console.log('🚀 Componente MisCategorias montado');
+  await this.cargarDatosIniciales();
+},
 
-   async aplicarFiltros() {
-     console.log('🔍 Aplicando filtros:', this.filtros);
-     
-     // Resetear a la primera página
-     if (this.pagination) {
-       this.pagination.currentPage = 1;
-     }
-     
-     await this.cargarCategorias();
-   },
+methods: {
+  // ==================== CARGA DE DATOS ====================
+  async cargarDatosIniciales() {
+    this.loading = true;
+    this.loadingMessage = 'Cargando categorías...';
+    
+    try {
+      await Promise.all([
+        this.cargarCategorias(),
+        this.cargarEstadisticas(),
+        this.cargarUnidadesMedida() // 🆕 NUEVO
+      ]);
+    } catch (error) {
+      console.error('❌ Error cargando datos iniciales:', error);
+      this.showNotification('Error cargando datos del sistema', 'error');
+    } finally {
+      this.loading = false;
+    }
+  },
 
-   limpiarFiltros() {
-     this.filtros = {
-       busqueda: '',
-       estado: ''
-     };
-     
-     this.aplicarFiltros();
-   },
+  // 🆕 NUEVO: Cargar unidades de medida
+  async cargarUnidadesMedida() {
+    try {
+      this.cargandoUnidades = true;
+      console.log('📏 Cargando unidades de medida...');
+      
+      const result = await categoriasService.getUnidadesMedidaActivas();
+      
+      if (result.success) {
+        this.unidadesMedida = result.unidades;
+        console.log('✅ Unidades de medida cargadas:', this.unidadesMedida);
+      } else {
+        console.error('❌ Error cargando unidades de medida:', result.message);
+        this.showNotification('Error cargando unidades de medida', 'warning');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando unidades de medida:', error);
+      this.showNotification('Error de conexión al cargar unidades de medida', 'error');
+    } finally {
+      this.cargandoUnidades = false;
+    }
+  },
 
-   // ==================== PAGINACIÓN ====================
-   async cambiarItemsPorPagina() {
-     if (this.pagination) {
-       this.pagination.currentPage = 1;
-     }
-     this.paginaSalto = 1;
-     await this.cargarCategorias();
-   },
+  async cargarCategorias() {
+    try {
+      console.log('📋 Cargando categorías con filtros:', this.filtros);
+      
+      const params = {
+        page: this.pagination?.currentPage || 1,
+        limit: this.itemsPorPagina,
+        search: this.filtros.busqueda || undefined,
+        estado: this.filtros.estado || undefined
+      };
+      
+      const result = await categoriasService.getCategorias(params);
+      
+      if (result.success) {
+        this.categorias = result.categorias;
+        this.pagination = result.pagination;
+        console.log('✅ Categorías cargadas:', this.categorias.length);
+      } else {
+        this.showNotification(result.message || 'Error cargando categorías', 'error');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando categorías:', error);
+      this.showNotification('Error de conexión al cargar categorías', 'error');
+    }
+  },
 
-   async irAPrimera() {
-     if (this.pagination && this.pagination.currentPage !== 1) {
-       this.pagination.currentPage = 1;
-       await this.cargarCategorias();
-     }
-   },
+  async cargarEstadisticas() {
+    try {
+      console.log('📊 Cargando estadísticas...');
+      
+      const result = await categoriasService.getEstadisticas();
+      
+      if (result.success) {
+        this.estadisticas = result.estadisticas;
+        console.log('✅ Estadísticas cargadas:', this.estadisticas);
+      } else {
+        console.error('❌ Error cargando estadísticas:', result.message);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando estadísticas:', error);
+    }
+  },
 
-   async irAUltima() {
-     if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
-       this.pagination.currentPage = this.pagination.totalPages;
-       await this.cargarCategorias();
-     }
-   },
+  // ==================== BÚSQUEDA Y FILTROS ====================
+  buscarCategorias() {
+    // Debounce para evitar muchas llamadas
+    clearTimeout(this.busquedaTimeout);
+    this.busquedaTimeout = setTimeout(() => {
+      this.aplicarFiltros();
+    }, 500);
+  },
 
-   async paginaAnterior() {
-     if (this.pagination && this.pagination.hasPrevPage) {
-       this.pagination.currentPage--;
-       await this.cargarCategorias();
-     }
-   },
+  async aplicarFiltros() {
+    console.log('🔍 Aplicando filtros:', this.filtros);
+    
+    // Resetear a la primera página
+    if (this.pagination) {
+      this.pagination.currentPage = 1;
+    }
+    
+    await this.cargarCategorias();
+  },
 
-   async paginaSiguiente() {
-     if (this.pagination && this.pagination.hasNextPage) {
-       this.pagination.currentPage++;
-       await this.cargarCategorias();
-     }
-   },
+  limpiarFiltros() {
+    this.filtros = {
+      busqueda: '',
+      estado: ''
+    };
+    
+    this.aplicarFiltros();
+  },
 
-   async irAPagina(pagina = null) {
-     const targetPage = pagina || this.paginaSalto;
-     
-     if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
-       this.pagination.currentPage = targetPage;
-       await this.cargarCategorias();
-     } else {
-       this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
-       this.paginaSalto = this.pagination?.currentPage || 1;
-     }
-   },
+  // ==================== PAGINACIÓN ====================
+  async cambiarItemsPorPagina() {
+    if (this.pagination) {
+      this.pagination.currentPage = 1;
+    }
+    this.paginaSalto = 1;
+    await this.cargarCategorias();
+  },
 
-   // ==================== GESTIÓN DE CATEGORÍAS ====================
-   nuevaCategoria() {
-     this.categoriaEditando = null;
-     this.limpiarFormulario();
-     this.modalFormulario = true;
-   },
+  async irAPrimera() {
+    if (this.pagination && this.pagination.currentPage !== 1) {
+      this.pagination.currentPage = 1;
+      await this.cargarCategorias();
+    }
+  },
 
-   verCategoria(categoria) {
-     this.modalCategoria = categoria;
-   },
+  async irAUltima() {
+    if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
+      this.pagination.currentPage = this.pagination.totalPages;
+      await this.cargarCategorias();
+    }
+  },
 
-   editarCategoria(categoria) {
-     this.categoriaEditando = categoria;
-     this.llenarFormulario(categoria);
-     this.modalFormulario = true;
-     this.modalCategoria = null;
-   },
+  async paginaAnterior() {
+    if (this.pagination && this.pagination.hasPrevPage) {
+      this.pagination.currentPage--;
+      await this.cargarCategorias();
+    }
+  },
 
-   async guardarCategoria() {
-     if (this.guardandoCategoria) return;
-     
-     this.erroresFormulario = [];
-     
-     // Validaciones básicas
-     if (!this.validarFormulario()) {
-       return;
-     }
-     
-     this.guardandoCategoria = true;
-     this.loadingMessage = this.categoriaEditando ? 'Actualizando categoría...' : 'Creando categoría...';
-     
-     try {
-       let result;
-       
-       if (this.categoriaEditando) {
-         // Actualizar categoría existente
-         result = await categoriasService.updateCategoria(this.categoriaEditando.categorias_id, this.formulario);
-       } else {
-         // Crear nueva categoría
-         result = await categoriasService.createCategoria(this.formulario);
-       }
-       
-       if (result.success) {
-         this.showNotification(
-           result.message || (this.categoriaEditando ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente'), 
-           'success'
-         );
-         
-         this.cerrarModalFormulario();
-         
-         // Recargar datos
-         await Promise.all([
-           this.cargarCategorias(),
-           this.cargarEstadisticas()
-         ]);
-         
-       } else {
-         // Manejar errores de validación
-         if (result.errors) {
-           this.erroresFormulario = result.errors;
-         } else {
-           this.showNotification(result.message || 'Error al guardar categoría', 'error');
-         }
-       }
-       
-     } catch (error) {
-       console.error('❌ Error guardando categoría:', error);
-       this.showNotification('Error de conexión al guardar categoría', 'error');
-     } finally {
-       this.guardandoCategoria = false;
-     }
-   },
+  async paginaSiguiente() {
+    if (this.pagination && this.pagination.hasNextPage) {
+      this.pagination.currentPage++;
+      await this.cargarCategorias();
+    }
+  },
 
-   validarFormulario() {
-     const errores = [];
-     
-     if (!this.formulario.nombre?.trim()) {
-       errores.push({ field: 'nombre', message: 'El nombre de la categoría es requerido' });
-     }
-     
-     if (this.formulario.nombre && this.formulario.nombre.trim().length < 2) {
-       errores.push({ field: 'nombre', message: 'El nombre debe tener al menos 2 caracteres' });
-     }
-     
-     if (this.formulario.nombre && this.formulario.nombre.trim().length > 100) {
-       errores.push({ field: 'nombre', message: 'El nombre no puede exceder 100 caracteres' });
-     }
-     
-     if (!this.formulario.descripcion?.trim()) {
-       errores.push({ field: 'descripcion', message: 'La descripción es requerida' });
-     }
-     
-     if (this.formulario.descripcion && this.formulario.descripcion.trim().length > 500) {
-       errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 500 caracteres' });
-     }
-     
-     this.erroresFormulario = errores;
-     
-     if (errores.length > 0) {
-       this.showNotification('Por favor corrige los errores en el formulario', 'warning');
-       return false;
-     }
-     
-     return true;
-   },
+  async irAPagina(pagina = null) {
+    const targetPage = pagina || this.paginaSalto;
+    
+    if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
+      this.pagination.currentPage = targetPage;
+      await this.cargarCategorias();
+    } else {
+      this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
+      this.paginaSalto = this.pagination?.currentPage || 1;
+    }
+  },
 
-   llenarFormulario(categoria) {
-     this.formulario = {
-       nombre: categoria.nombre,
-       descripcion: categoria.descripcion || '',
-       estado: categoria.estado
-     };
-   },
+  // ==================== GESTIÓN DE CATEGORÍAS ====================
+  async nuevaCategoria() {
+    this.categoriaEditando = null;
+    this.limpiarFormulario();
+    
+    // Cargar unidades si no están cargadas
+    if (this.unidadesMedida.length === 0) {
+      await this.cargarUnidadesMedida();
+    }
+    
+    this.modalFormulario = true;
+  },
 
-   limpiarFormulario() {
-     this.formulario = {
-       nombre: '',
-       descripcion: '',
-       estado: 'activo'
-     };
-     this.erroresFormulario = [];
-   },
+  verCategoria(categoria) {
+    this.modalCategoria = categoria;
+  },
 
-   // ==================== CAMBIO DE ESTADO ====================
-   mostrarModalCambiarEstado(categoria) {
-     this.categoriaParaCambiarEstado = categoria;
-     this.modalCambiarEstado = true;
-   },
+  async editarCategoria(categoria) {
+    this.categoriaEditando = categoria;
+    
+    // Cargar unidades si no están cargadas
+    if (this.unidadesMedida.length === 0) {
+      await this.cargarUnidadesMedida();
+    }
+    
+    this.llenarFormulario(categoria);
+    this.modalFormulario = true;
+    this.modalCategoria = null;
+  },
 
-   async confirmarCambiarEstado() {
-     if (this.cambiandoEstado || !this.categoriaParaCambiarEstado) return;
-     
-     this.cambiandoEstado = true;
-     
-     try {
-       const nuevoEstado = this.categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
-       
-       let result;
-       if (nuevoEstado === 'activo') {
-         result = await categoriasService.restoreCategoria(this.categoriaParaCambiarEstado.categorias_id);
-       } else {
-         result = await categoriasService.deleteCategoria(this.categoriaParaCambiarEstado.categorias_id);
-       }
-       
-       if (result.success) {
-         const accion = nuevoEstado === 'activo' ? 'activada' : 'desactivada';
-         this.showNotification(`Categoría ${accion} exitosamente`, 'success');
-         
-         // Actualizar el estado local
-         this.categoriaParaCambiarEstado.estado = nuevoEstado;
-         
-         // Recargar datos
-         await Promise.all([
-           this.cargarCategorias(),
-           this.cargarEstadisticas()
-         ]);
-         
-       } else {
-         this.showNotification(result.message || 'Error al cambiar estado de la categoría', 'error');
-       }
-       
-     } catch (error) {
-       console.error('❌ Error cambiando estado:', error);
-       this.showNotification('Error de conexión al cambiar estado', 'error');
-     } finally {
-       this.cambiandoEstado = false;
-       this.cerrarModalCambiarEstado();
-     }
-   },
+  async guardarCategoria() {
+  if (this.guardandoCategoria) return;
+  
+  // ✅ AGREGAR ESTAS LÍNEAS DE DEBUG
+  console.log('📤 Formulario completo:', this.formulario);
+  console.log('🔍 Unidad de medida ID:', this.formulario.unidades_medida_id);
+  console.log('📏 Unidades disponibles:', this.unidadesMedida);
+  console.log('🏷️ Unidades agrupadas:', this.unidadesPorTipo);
+  
+  this.erroresFormulario = [];
+  
+  // Validaciones básicas
+  if (!this.validarFormulario()) {
+    return;
+  }
+  
+  this.guardandoCategoria = true;
+  this.loadingMessage = this.categoriaEditando ? 'Actualizando categoría...' : 'Creando categoría...';
+  
+  try {
+    // 🆕 NUEVO: Serializar el formulario para eliminar Proxies de Vue
+    const formularioData = JSON.parse(JSON.stringify(this.formulario));
+    console.log('📋 Formulario serializado:', formularioData);
+    
+    let result;
+    
+    if (this.categoriaEditando) {
+      // Actualizar categoría existente
+      result = await categoriasService.updateCategoria(this.categoriaEditando.categorias_id, formularioData);
+    } else {
+      // Crear nueva categoría
+      result = await categoriasService.createCategoria(formularioData);
+    }
+    
+    if (result.success) {
+      this.showNotification(
+        result.message || (this.categoriaEditando ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente'), 
+        'success'
+      );
+      
+      this.cerrarModalFormulario();
+      
+      // Recargar datos
+      await Promise.all([
+        this.cargarCategorias(),
+        this.cargarEstadisticas()
+      ]);
+      
+    } else {
+      // Manejar errores de validación
+      if (result.errors) {
+        this.erroresFormulario = result.errors;
+      } else {
+        this.showNotification(result.message || 'Error al guardar categoría', 'error');
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error guardando categoría:', error);
+    this.showNotification('Error de conexión al guardar categoría', 'error');
+  } finally {
+    this.guardandoCategoria = false;
+  }
+},
 
-   cerrarModalCambiarEstado() {
-     this.modalCambiarEstado = false;
-     this.categoriaParaCambiarEstado = null;
-   },
+  validarFormulario() {
+    const errores = [];
+    
+    if (!this.formulario.nombre?.trim()) {
+      errores.push({ field: 'nombre', message: 'El nombre de la categoría es requerido' });
+    }
+    
+    if (this.formulario.nombre && this.formulario.nombre.trim().length < 2) {
+      errores.push({ field: 'nombre', message: 'El nombre debe tener al menos 2 caracteres' });
+    }
+    
+    if (this.formulario.nombre && this.formulario.nombre.trim().length > 100) {
+      errores.push({ field: 'nombre', message: 'El nombre no puede exceder 100 caracteres' });
+    }
+    
+    if (!this.formulario.descripcion?.trim()) {
+      errores.push({ field: 'descripcion', message: 'La descripción es requerida' });
+    }
+    
+    if (this.formulario.descripcion && this.formulario.descripcion.trim().length > 500) {
+      errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 500 caracteres' });
+    }
 
-   // ==================== MODALES ====================
-   cerrarModal() {
-     this.modalCategoria = null;
-   },
+    // ✅ CORREGIDO: Validar unidad de medida
+    console.log('🔍 Validando unidad de medida:', this.formulario.unidades_medida_id);
+    
+    if (!this.formulario.unidades_medida_id || this.formulario.unidades_medida_id === '') {
+      errores.push({ field: 'unidades_medida_id', message: 'La unidad de medida es requerida' });
+    } else {
+      // Asegurar que sea número
+      this.formulario.unidades_medida_id = parseInt(this.formulario.unidades_medida_id);
+    }
+    
+    this.erroresFormulario = errores;
+    
+    if (errores.length > 0) {
+      this.showNotification('Por favor corrige los errores en el formulario', 'warning');
+      return false;
+    }
+    
+    return true;
+  },
 
-   cerrarModalFormulario() {
-     this.modalFormulario = false;
-     this.categoriaEditando = null;
-     this.limpiarFormulario();
-   },
+  llenarFormulario(categoria) {
+    this.formulario = {
+      nombre: categoria.nombre,
+      descripcion: categoria.descripcion || '',
+      unidades_medida_id: categoria.unidad_medida?.unidades_medida_id || '', // 🆕 NUEVO
+      estado: categoria.estado
+    };
+  },
 
-   // ==================== HELPERS ====================
-   formatearFecha(fecha) {
-     if (!fecha) return 'No disponible';
-     
-     try {
-       return new Date(fecha).toLocaleDateString('es-HN', {
-         year: 'numeric',
-         month: 'short',
-         day: 'numeric',
-         hour: '2-digit',
-         minute: '2-digit'
-       });
-     } catch (error) {
-       return fecha;
-     }
-   },
+  limpiarFormulario() {
+    this.formulario = {
+      nombre: '',
+      descripcion: '',
+      unidades_medida_id: '', // 🆕 NUEVO
+      estado: 'activo'
+    };
+    this.erroresFormulario = [];
+  },
 
-   getEstadoTexto(estado) {
-     const estados = {
-       activo: 'Activo',
-       inactivo: 'Inactivo'
-     };
-     return estados[estado] || estado;
-   },
+  // ==================== CAMBIO DE ESTADO ====================
+  mostrarModalCambiarEstado(categoria) {
+    this.categoriaParaCambiarEstado = categoria;
+    this.modalCambiarEstado = true;
+  },
 
-   truncarTexto(texto, limite = 80) {
-     if (!texto) return '';
-     if (texto.length <= limite) return texto;
-     return texto.substring(0, limite) + '...';
-   },
+  async confirmarCambiarEstado() {
+    if (this.cambiandoEstado || !this.categoriaParaCambiarEstado) return;
+    
+    this.cambiandoEstado = true;
+    
+    try {
+      const nuevoEstado = this.categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
+      
+      let result;
+      if (nuevoEstado === 'activo') {
+        result = await categoriasService.restoreCategoria(this.categoriaParaCambiarEstado.categorias_id);
+      } else {
+        result = await categoriasService.deleteCategoria(this.categoriaParaCambiarEstado.categorias_id);
+      }
+      
+      if (result.success) {
+        const accion = nuevoEstado === 'activo' ? 'activada' : 'desactivada';
+        this.showNotification(`Categoría ${accion} exitosamente`, 'success');
+        
+        // Actualizar el estado local
+        this.categoriaParaCambiarEstado.estado = nuevoEstado;
+        
+        // Recargar datos
+        await Promise.all([
+          this.cargarCategorias(),
+          this.cargarEstadisticas()
+        ]);
+        
+      } else {
+        this.showNotification(result.message || 'Error al cambiar estado de la categoría', 'error');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cambiando estado:', error);
+      this.showNotification('Error de conexión al cambiar estado', 'error');
+    } finally {
+      this.cambiandoEstado = false;
+      this.cerrarModalCambiarEstado();
+    }
+  },
 
-   // ==================== NOTIFICACIONES ====================
-   showNotification(message, type = 'success') {
-     const icons = {
-       success: 'fa-check-circle',
-       error: 'fa-exclamation-circle',
-       warning: 'fa-exclamation-triangle',
-       info: 'fa-info-circle'
-     };
-     
-     this.notification = {
-       show: true,
-       type,
-       message,
-       icon: icons[type] || icons.info
-     };
-     
-     // Auto-close después de 5 segundos
-     setTimeout(() => {
-       this.closeNotification();
-     }, 5000);
-   },
+  cerrarModalCambiarEstado() {
+    this.modalCambiarEstado = false;
+    this.categoriaParaCambiarEstado = null;
+  },
 
-   closeNotification() {
-     this.notification.show = false;
-   }
- },
+  // ==================== MODALES ====================
+  cerrarModal() {
+    this.modalCategoria = null;
+  },
 
- // Limpiar timeouts al destruir el componente
- beforeUnmount() {
-   if (this.busquedaTimeout) {
-     clearTimeout(this.busquedaTimeout);
-   }
- }
+  cerrarModalFormulario() {
+    this.modalFormulario = false;
+    this.categoriaEditando = null;
+    this.limpiarFormulario();
+  },
+
+  // ==================== HELPERS ====================
+  formatearFecha(fecha) {
+    if (!fecha) return 'No disponible';
+    
+    try {
+      return new Date(fecha).toLocaleDateString('es-HN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return fecha;
+    }
+  },
+
+  getEstadoTexto(estado) {
+    const estados = {
+      activo: 'Activo',
+      inactivo: 'Inactivo'
+    };
+    return estados[estado] || estado;
+  },
+
+  // 🆕 NUEVO: Formatear tipo de unidad
+  formatearTipoUnidad(tipo) {
+    const tipos = {
+      cantidad: 'Cantidad',
+      capacidad: 'Capacidad',
+      tiempo: 'Tiempo',
+      usuarios: 'Usuarios',
+      sesiones: 'Sesiones'
+    };
+    return tipos[tipo] || tipo;
+  },
+
+  truncarTexto(texto, limite = 80) {
+    if (!texto) return '';
+    if (texto.length <= limite) return texto;
+    return texto.substring(0, limite) + '...';
+  },
+
+  // ==================== NOTIFICACIONES ====================
+  showNotification(message, type = 'success') {
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-exclamation-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    };
+    
+    this.notification = {
+      show: true,
+      type,
+      message,
+      icon: icons[type] || icons.info
+    };
+    
+    // Auto-close después de 5 segundos
+    setTimeout(() => {
+      this.closeNotification();
+    }, 5000);
+  },
+
+  closeNotification() {
+    this.notification.show = false;
+  }
+},
+
+// Limpiar timeouts al destruir el componente
+beforeUnmount() {
+  if (this.busquedaTimeout) {
+    clearTimeout(this.busquedaTimeout);
+  }
+}
 }
 </script>
+
+
 
 <style scoped>
 /* Estilos base */
@@ -2927,5 +3063,82 @@ export default {
 /* Modo oscuro preparado (opcional) */
 @media (prefers-color-scheme: dark) {
  /* Aquí puedes agregar estilos para modo oscuro si lo necesitas */
+}
+
+/* Estilos base (mantenemos todos los existentes) */
+.admin-categorias-container {
+padding: 2rem;
+max-width: 1400px;
+margin: 0 auto;
+}
+
+/* 🆕 NUEVOS ESTILOS PARA UNIDADES DE MEDIDA */
+.unidad-medida-info {
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+
+.unidad-nombre {
+font-weight: 500;
+color: #2c3e50;
+font-size: 0.9rem;
+}
+
+.unidad-abrev {
+color: #3498db;
+font-size: 0.8rem;
+font-weight: 600;
+font-family: monospace;
+}
+
+.unidad-tipo {
+color: #7f8c8d;
+font-size: 0.75rem;
+text-transform: capitalize;
+}
+
+.sin-unidad {
+color: #e74c3c;
+font-size: 0.8rem;
+font-style: italic;
+}
+
+.unidad-card {
+background: #e8f4fd;
+color: #1976d2;
+padding: 0.25rem 0.5rem;
+border-radius: 4px;
+font-size: 0.85rem;
+font-weight: 500;
+}
+
+.unidad-tipo-small {
+display: block;
+color: #1565c0;
+font-size: 0.75rem;
+margin-top: 0.125rem;
+text-transform: capitalize;
+}
+
+.unidad-tipo-badge {
+background: #e3f2fd;
+color: #1976d2;
+padding: 0.2rem 0.5rem;
+border-radius: 12px;
+font-size: 0.75rem;
+font-weight: 500;
+margin-left: 0.5rem;
+text-transform: capitalize;
+}
+
+.unidad-count {
+background: #e8f4fd;
+color: #1976d2;
+padding: 0.2rem 0.5rem;
+border-radius: 4px;
+font-size: 0.8rem;
+font-weight: 600;
+font-family: monospace;
 }
 </style>

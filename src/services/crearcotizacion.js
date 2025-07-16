@@ -1,4 +1,4 @@
-// services/crearcotizacion.js
+// services/crearcotizacion.js - COMPLETO ACTUALIZADO
 import api from './api';
 
 class CrearCotizacionService {
@@ -267,33 +267,85 @@ class CrearCotizacionService {
     }
   }
   
-  // Helper para formatear datos de cotización para el formulario
+  // ✅ ACTUALIZADO COMPLETO: Helper para formatear datos de cotización
   formatCotizacionParaFormulario(serviciosSeleccionados, cliente, añosContrato, tipoPrecio, configuracionPDF, comentario) {
-    console.log('📝 Formateando datos para envío:', {
+    console.log('📝 Formateando datos para envío (NUEVA ESTRUCTURA):', {
       serviciosSeleccionados,
       cliente,
       añosContrato,
       tipoPrecio
     });
     
-    // Calcular precio total
-    const precioTotal = serviciosSeleccionados.reduce((total, item) => {
-      const cantidadTotal = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0);
-      return total + (item.precioVentaFinal * cantidadTotal * añosContrato);
-    }, 0);
+    // ✅ FORMATEAR SERVICIOS CON CATEGORÍAS DETALLADAS
+    const serviciosFormateados = serviciosSeleccionados.map(item => {
+      console.log('🔥 DEBUG - Formateando servicio:', item.servicio.nombre);
+      console.log('🔥 DEBUG - Categorías detalle:', item.categoriasDetalle);
+      console.log('🔥 DEBUG - Cantidades por categoría:', item.cantidadesPorCategoria);
+      
+      // ✅ NUEVA ESTRUCTURA: Priorizar categoriasDetalle
+      if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
+        console.log('✅ Usando categorías detalladas para:', item.servicio.nombre);
+        
+        return {
+          servicio: {
+            servicios_id: item.servicio.servicios_id || item.servicio.id,
+            nombre: item.servicio.nombre,
+            categoria: item.servicio.categoria,
+            precioMinimo: item.servicio.precioMinimo || item.servicio.precio_minimo
+          },
+          precioVentaFinal: item.precioVentaFinal,
+          // ✅ CLAVE: ENVIAR CATEGORÍAS DETALLADAS
+          categoriasDetalle: item.categoriasDetalle.map(cat => ({
+            id: cat.id, // ID de la categoría
+            nombre: cat.nombre, // Nombre de la categoría
+            unidad_id: cat.unidad_id, // ID de la unidad de medida
+            unidad_nombre: cat.unidad_nombre, // Nombre de la unidad
+            unidad_tipo: cat.unidad_tipo, // Tipo de unidad
+            unidad_abreviacion: cat.unidad_abreviacion, // Abreviación
+            cantidad: cat.cantidad || 0 // Cantidad específica
+          }))
+        };
+      } else {
+        // ✅ FALLBACK: Usar método anterior para compatibilidad
+        console.log('⚠️ Sin categorías detalladas, usando fallback para:', item.servicio.nombre);
+        
+        return {
+          servicio: {
+            servicios_id: item.servicio.servicios_id || item.servicio.id,
+            nombre: item.servicio.nombre,
+            categoria: item.servicio.categoria,
+            precioMinimo: item.servicio.precioMinimo || item.servicio.precio_minimo
+          },
+          precioVentaFinal: item.precioVentaFinal,
+          // ✅ MANTENER CAMPOS TRADICIONALES PARA COMPATIBILIDAD
+          cantidadServidores: item.cantidadServidores || 0,
+          cantidadEquipos: item.cantidadEquipos || 0,
+          cantidadGB: item.cantidadGB || 0,
+          cantidadUsuarios: item.cantidadUsuarios || 0,
+          cantidadSesiones: item.cantidadSesiones || 0,
+          cantidadTiempo: item.cantidadTiempo || 0
+        };
+      }
+    });
     
-    // Formatear servicios para el backend
-    const serviciosFormateados = serviciosSeleccionados.map(item => ({
-      servicio: {
-        servicios_id: item.servicio.servicios_id || item.servicio.id,
-        nombre: item.servicio.nombre,
-        categoria: item.servicio.categoria,
-        precioMinimo: item.servicio.precioMinimo || item.servicio.precio_minimo
-      },
-      cantidadServidores: item.cantidadServidores || 0,
-      cantidadEquipos: item.cantidadEquipos || 0,
-      precioVentaFinal: item.precioVentaFinal
-    }));
+    console.log('✅ Servicios formateados con nueva estructura:', serviciosFormateados);
+    
+    // ✅ CALCULAR PRECIO TOTAL DINÁMICAMENTE
+    const precioTotal = serviciosSeleccionados.reduce((total, item) => {
+      if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
+        // Usar categorías detalladas
+        const totalCategorias = item.categoriasDetalle.reduce((subtotal, cat) => {
+          return subtotal + (cat.cantidad * item.precioVentaFinal * añosContrato);
+        }, 0);
+        return total + totalCategorias;
+      } else {
+        // Usar método tradicional
+        const cantidadTotal = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0) + 
+                             (item.cantidadGB || 0) + (item.cantidadUsuarios || 0) + 
+                             (item.cantidadSesiones || 0) + (item.cantidadTiempo || 0);
+        return total + (item.precioVentaFinal * cantidadTotal * añosContrato);
+      }
+    }, 0);
     
     const cotizacionData = {
       cliente,
@@ -311,7 +363,7 @@ class CrearCotizacionService {
       comentario: comentario || ''
     };
     
-    console.log('✅ Datos formateados:', cotizacionData);
+    console.log('✅ Datos formateados finales (NUEVA ESTRUCTURA):', cotizacionData);
     return cotizacionData;
   }
   
@@ -397,6 +449,22 @@ class CrearCotizacionService {
         }
         if (!servicio.precioVentaFinal || servicio.precioVentaFinal <= 0) {
           errors.push(`Servicio ${index + 1}: Precio de venta requerido`);
+        }
+        
+        // ✅ NUEVA VALIDACIÓN: Verificar categorías o cantidades tradicionales
+        if (servicio.categoriasDetalle && servicio.categoriasDetalle.length > 0) {
+          const tieneCantidades = servicio.categoriasDetalle.some(cat => cat.cantidad > 0);
+          if (!tieneCantidades) {
+            errors.push(`Servicio ${index + 1}: Debe tener al menos una cantidad mayor a 0`);
+          }
+        } else {
+          // Validar cantidades tradicionales
+          const cantidadTotal = (servicio.cantidadServidores || 0) + (servicio.cantidadEquipos || 0) + 
+                               (servicio.cantidadGB || 0) + (servicio.cantidadUsuarios || 0) + 
+                               (servicio.cantidadSesiones || 0) + (servicio.cantidadTiempo || 0);
+          if (cantidadTotal === 0) {
+            errors.push(`Servicio ${index + 1}: Debe tener al menos una cantidad mayor a 0`);
+          }
         }
       });
     }
