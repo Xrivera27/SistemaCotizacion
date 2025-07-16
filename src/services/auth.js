@@ -283,7 +283,41 @@ class AuthService {
       console.log('⏹️ Heartbeat detenido');
     }
   }
+
+  // Forgot Password - NUEVO MÉTODO
+async forgotPassword(email) {
+  try {
+    console.log('📧 Enviando solicitud de recuperación para:', email);
+    
+    const response = await api.post('/auth/forgot-password', {
+      email
+    });
+
+    if (response.data.success) {
+      console.log('✅ Email de recuperación enviado exitosamente');
+      return {
+        success: true,
+        message: response.data.message
+      };
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en forgot password:', error);
+    
+    let message = 'Error enviando email de recuperación';
+    if (error.response?.data?.message) {
+      message = error.response.data.message;
+    }
+    
+    return {
+      success: false,
+      message: message
+    };
+  }
 }
+}
+
+
 
 // Exportar instancia única
 export default new AuthService();

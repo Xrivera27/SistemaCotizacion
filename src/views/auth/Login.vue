@@ -149,7 +149,7 @@
         <!-- Mensaje de éxito -->
         <div v-if="emailSent" class="alert alert-success">
           <i class="fas fa-check-circle alert-icon"></i>
-          Se ha enviado un enlace de recuperación a tu email.
+          {{ successMessage }}
         </div>
 
         <!-- Mensaje de error -->
@@ -164,7 +164,7 @@
           :disabled="isLoading || emailSent"
           :class="{ 'loading': isLoading }"
         >
-          <span v-if="!isLoading">ENVIAR ENLACE</span>
+          <span v-if="!isLoading">ENVIAR CONTRASEÑA TEMPORAL</span>
           <div v-else class="loading-spinner"></div>
         </button>
 
@@ -198,6 +198,7 @@ export default {
       showPassword: false,
       isLoading: false,
       emailSent: false,
+      successMessage: '',
       generalError: '',
       loginForm: {
         usuario: '',
@@ -229,6 +230,7 @@ export default {
     goBackToLogin() {
       this.currentView = 'login';
       this.emailSent = false;
+      this.successMessage = '';
       this.generalError = '';
       this.errors = {};
       this.forgotForm.email = '';
@@ -316,20 +318,29 @@ export default {
       
       this.isLoading = true;
       this.generalError = '';
+      this.successMessage = '';
       
       try {
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // TODO: Implementar recuperación de contraseña real
         console.log(`📧 Enviando email de recuperación a: ${this.forgotForm.email}`);
         
-        // Por ahora solo simulamos el éxito
-        this.emailSent = true;
+        // Usar el método real del authService
+        const result = await authService.forgotPassword(this.forgotForm.email);
+        
+        if (result.success) {
+          console.log('✅ Email enviado exitosamente');
+          this.emailSent = true;
+          this.successMessage = result.message;
+          this.generalError = ''; // Limpiar errores
+        } else {
+          console.error('❌ Error enviando email:', result.message);
+          this.generalError = result.message;
+          this.emailSent = false;
+        }
         
       } catch (error) {
-        this.generalError = 'Error al enviar el email. Intenta nuevamente.';
-        console.error('Error en forgot password:', error);
+        console.error('💥 Error inesperado en forgot password:', error);
+        this.generalError = 'Error de conexión. Verifica que el servidor esté funcionando.';
+        this.emailSent = false;
       } finally {
         this.isLoading = false;
       }
