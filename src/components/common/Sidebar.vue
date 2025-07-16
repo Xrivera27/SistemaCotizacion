@@ -236,6 +236,12 @@ export default {
            ruta: '/admin/clientes'
          },
          {
+           id: 'MisUnidadesMedida',
+           texto: 'Unidades de Medida',
+           icono: 'fas fa-ruler',
+           ruta: '/admin/unidades-medida'
+         },
+         {
            id: 'categorias',
            texto: 'Categorías',
            icono: 'fas fa-tags',
@@ -247,6 +253,7 @@ export default {
            icono: 'fas fa-cogs',
            ruta: '/admin/servicios'
          },
+         
          {
            id: 'cotizaciones-admin',
            texto: 'Cotizaciones',

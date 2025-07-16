@@ -1,5 +1,5 @@
 <template>
-<div class="admin-categorias-container">
+<div class="admin-unidades-container">
  <!-- Loading overlay -->
  <div v-if="loading" class="loading-overlay">
    <div class="loading-spinner">
@@ -11,15 +11,15 @@
  <!-- Header de la página -->
  <div class="page-header">
    <div class="header-content">
-     <h1 class="page-title">Gestión de Categorías</h1>
-     <p class="page-subtitle">Administración y control de todas las categorías del sistema</p>
+     <h1 class="page-title">Gestión de Unidades de Medida</h1>
+     <p class="page-subtitle">Administración y control de todas las unidades de medida del sistema</p>
    </div>
    <div class="header-actions">
-     <button class="btn btn-primary" @click="nuevaCategoria">
+     <button class="btn btn-primary" @click="nuevaUnidad">
        <i class="fas fa-plus btn-icon"></i>
-       Nueva Categoría
+       Nueva Unidad
      </button>
-     <button class="btn btn-secondary" @click="cargarCategorias">
+     <button class="btn btn-secondary" @click="cargarUnidades">
        <i class="fas fa-sync-alt btn-icon"></i>
        Actualizar
      </button>
@@ -34,17 +34,26 @@
        <input
          v-model="filtros.busqueda"
          type="text"
-         placeholder="Buscar por nombre, descripción o unidad de medida..."
+         placeholder="Buscar por nombre, descripción o abreviación..."
          class="search-input"
-         @input="buscarCategorias"
+         @input="buscarUnidades"
        />
      </div>
      
      <div class="filtros-grid">
+       <select v-model="filtros.tipo" class="filter-select" @change="aplicarFiltros">
+         <option value="">Todos los tipos</option>
+         <option value="cantidad">Cantidad</option>
+         <option value="capacidad">Capacidad</option>
+         <option value="tiempo">Tiempo</option>
+         <option value="usuarios">Usuarios</option>
+         <option value="sesiones">Sesiones</option>
+       </select>
+       
        <select v-model="filtros.estado" class="filter-select" @change="aplicarFiltros">
          <option value="">Todos los estados</option>
-         <option value="activo">Activas</option>
-         <option value="inactivo">Inactivas</option>
+         <option value="1">Activas</option>
+         <option value="0">Inactivas</option>
        </select>
        
        <select v-model="itemsPorPagina" class="filter-select" @change="cambiarItemsPorPagina">
@@ -66,37 +75,37 @@
    <div class="stat-card total">
      <div class="stat-content">
        <div class="stat-number">{{ estadisticas.total }}</div>
-       <div class="stat-label">Total Categorías</div>
+       <div class="stat-label">Total Unidades</div>
      </div>
    </div>
    
    <div class="stat-card activos">
      <div class="stat-content">
        <div class="stat-number">{{ estadisticas.activas }}</div>
-       <div class="stat-label">Categorías Activas</div>
+       <div class="stat-label">Unidades Activas</div>
      </div>
    </div>
    
    <div class="stat-card inactivos">
      <div class="stat-content">
        <div class="stat-number">{{ estadisticas.inactivas }}</div>
-       <div class="stat-label">Categorías Inactivas</div>
+       <div class="stat-label">Unidades Inactivas</div>
      </div>
    </div>
    
-   <div class="stat-card servicios">
+   <div class="stat-card tipos">
      <div class="stat-content">
-       <div class="stat-number">{{ estadisticas.con_servicios_activos }}</div>
-       <div class="stat-label">Con Servicios</div>
+       <div class="stat-number">{{ estadisticas.tipos_disponibles }}</div>
+       <div class="stat-label">Tipos Disponibles</div>
      </div>
    </div>
  </div>
 
- <!-- Categorías section -->
- <div class="categorias-section">
+ <!-- Unidades section -->
+ <div class="unidades-section">
    <div class="section-header">
      <h2 class="section-title">
-       {{ pagination ? pagination.totalItems : categorias.length }} Categorías encontradas
+       {{ pagination ? pagination.totalItems : unidades.length }} Unidades encontradas
      </h2>
      <div class="view-controls">
        <button 
@@ -121,7 +130,7 @@
      <span class="items-info">
        Mostrando {{ pagination.totalItems > 0 ? ((pagination.currentPage - 1) * pagination.itemsPerPage + 1) : 0 }} - 
        {{ Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems) }} 
-       de {{ pagination.totalItems }} categorías
+       de {{ pagination.totalItems }} unidades
      </span>
      <div class="pagination-jump" v-if="pagination.totalPages > 1">
        <label for="jump-page">Ir a página:</label>
@@ -143,81 +152,75 @@
    <!-- Vista de tabla -->
    <div v-if="vistaActual === 'tabla'" class="tabla-container">
      <div class="tabla-wrapper">
-       <table class="categorias-tabla">
+       <table class="unidades-tabla">
          <thead>
            <tr>
              <th>ID</th>
              <th>Nombre</th>
+             <th>Abreviación</th>
+             <th>Tipo</th>
              <th>Descripción</th>
-             <th>Unidad de Medida</th>
-             <th>Servicios</th>
              <th>Estado</th>
              <th>Fecha Creación</th>
              <th>Acciones</th>
            </tr>
          </thead>
          <tbody>
-           <tr v-for="categoria in categorias" :key="categoria.categorias_id">
+           <tr v-for="unidad in unidades" :key="unidad.unidades_medida_id">
              <td>
-               <span class="categoria-id">#{{ String(categoria.categorias_id).padStart(4, '0') }}</span>
+               <span class="unidad-id">#{{ String(unidad.unidades_medida_id).padStart(4, '0') }}</span>
              </td>
              <td>
-               <div class="categoria-info">
-                 <span class="categoria-nombre">{{ categoria.nombre }}</span>
+               <div class="unidad-info">
+                 <span class="unidad-nombre">{{ unidad.nombre }}</span>
                </div>
              </td>
              <td>
-               <div class="descripcion-info">
-                 <span class="descripcion-texto">{{ truncarTexto(categoria.descripcion, 80) }}</span>
+               <div class="abreviacion-info">
+                 <span class="abreviacion-badge">{{ unidad.abreviacion }}</span>
                </div>
              </td>
              <td>
-               <div class="unidad-medida-info" v-if="categoria.unidad_medida">
-                 <span class="unidad-nombre">{{ categoria.unidad_medida.nombre }}</span>
-                 <span class="unidad-abrev">({{ categoria.unidad_medida.abreviacion }})</span>
-                 <span class="unidad-tipo">{{ categoria.unidad_medida.tipo }}</span>
-               </div>
-               <span v-else class="sin-unidad">Sin unidad</span>
-             </td>
-             <td>
-               <div class="servicios-info">
-                 <span class="servicios-total">{{ categoria.servicios?.length || 0 }} servicios</span>
-                 <span class="servicios-activos" v-if="categoria.servicios">
-                   ({{ categoria.servicios.filter(s => s.estado === 'activo').length }} activos)
-                 </span>
-               </div>
-             </td>
-             <td>
-               <span class="estado-badge" :class="categoria.estado">
-                 {{ getEstadoTexto(categoria.estado) }}
+               <span class="tipo-badge" :class="unidad.tipo">
+                 {{ formatearTipo(unidad.tipo) }}
                </span>
              </td>
              <td>
-               <span class="fecha">{{ formatearFecha(categoria.created_at) }}</span>
+               <div class="descripcion-info">
+                 <span class="descripcion-texto">{{ truncarTexto(unidad.descripcion, 80) }}</span>
+               </div>
+             </td>
+             <td>
+               <span class="estado-badge" :class="unidad.activo ? 'activo' : 'inactivo'">
+                 {{ unidad.activo ? 'Activa' : 'Inactiva' }}
+               </span>
+             </td>
+             <td>
+               <span class="fecha">{{ formatearFecha(unidad.created_at) }}</span>
              </td>
              <td>
                <div class="acciones">
                  <button 
                    class="btn-accion ver"
-                   @click="verCategoria(categoria)"
+                   @click="verUnidad(unidad)"
                    title="Ver detalles"
                  >
                    <i class="fas fa-eye"></i>
                  </button>
                  <button 
                    class="btn-accion editar"
-                   @click="editarCategoria(categoria)"
-                   title="Editar categoría"
+                   @click="editarUnidad(unidad)"
+                   title="Editar unidad"
                  >
                    <i class="fas fa-edit"></i>
                  </button>
                  <button 
                    class="btn-accion" 
-                   :class="categoria.estado === 'activo' ? 'deshabilitar' : 'habilitar'"
-                   @click="mostrarModalCambiarEstado(categoria)"
-                   :title="categoria.estado === 'activo' ? 'Desactivar categoría' : 'Activar categoría'"
+                   :class="unidad.activo ? 'deshabilitar' : 'habilitar'"
+                   @click="mostrarModalCambiarEstado(unidad)"
+                   :title="unidad.activo ? 'Desactivar unidad' : 'Activar unidad'"
                  >
-                   <i :class="categoria.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+                   <i :class="unidad.activo ? 'fas fa-ban' : 'fas fa-check'"></i>
                  </button>
                </div>
              </td>
@@ -231,49 +234,39 @@
    <div v-if="vistaActual === 'tarjetas'" class="tarjetas-container">
      <div class="tarjetas-grid">
        <div 
-         v-for="categoria in categorias" 
-         :key="categoria.categorias_id"
-         class="categoria-card"
+         v-for="unidad in unidades" 
+         :key="unidad.unidades_medida_id"
+         class="unidad-card"
        >
          <div class="card-header">
-           <div class="card-numero">#{{ String(categoria.categorias_id).padStart(4, '0') }}</div>
-           <span class="estado-badge" :class="categoria.estado">
-             {{ getEstadoTexto(categoria.estado) }}
+           <div class="card-numero">#{{ String(unidad.unidades_medida_id).padStart(4, '0') }}</div>
+           <span class="estado-badge" :class="unidad.activo ? 'activo' : 'inactivo'">
+             {{ unidad.activo ? 'Activa' : 'Inactiva' }}
            </span>
          </div>
          
          <div class="card-content">
-           <h3 class="categoria-nombre-card">
-             <i class="fas fa-tags"></i>
-             {{ categoria.nombre }}
+           <h3 class="unidad-nombre-card">
+             <i class="fas fa-ruler"></i>
+             {{ unidad.nombre }}
            </h3>
            
-           <div class="descripcion-card">
-             <p>{{ categoria.descripcion }}</p>
+           <div class="abreviacion-card">
+             <span class="abreviacion-display">{{ unidad.abreviacion }}</span>
            </div>
            
-           <div class="categoria-details">
-             <div class="detail" v-if="categoria.unidad_medida">
-               <span class="detail-label">
-                 <i class="fas fa-ruler"></i>
-                 Unidad:
-               </span>
-               <span class="detail-value unidad-card">
-                 {{ categoria.unidad_medida.nombre }} ({{ categoria.unidad_medida.abreviacion }})
-                 <span class="unidad-tipo-small">{{ categoria.unidad_medida.tipo }}</span>
-               </span>
-             </div>
-             
+           <div class="descripcion-card">
+             <p>{{ unidad.descripcion }}</p>
+           </div>
+           
+           <div class="unidad-details">
              <div class="detail">
                <span class="detail-label">
-                 <i class="fas fa-cogs"></i>
-                 Servicios:
+                 <i class="fas fa-tag"></i>
+                 Tipo:
                </span>
-               <span class="detail-value servicios-card">
-                 {{ categoria.servicios?.length || 0 }} servicios
-                 <span v-if="categoria.servicios" class="servicios-activos-small">
-                   ({{ categoria.servicios.filter(s => s.estado === 'activo').length }} activos)
-                 </span>
+               <span class="detail-value tipo-card" :class="unidad.tipo">
+                 {{ formatearTipo(unidad.tipo) }}
                </span>
              </div>
              
@@ -282,44 +275,44 @@
                  <i class="fas fa-calendar-alt"></i>
                  Creación:
                </span>
-               <span class="detail-value">{{ formatearFecha(categoria.created_at) }}</span>
+               <span class="detail-value">{{ formatearFecha(unidad.created_at) }}</span>
              </div>
            </div>
          </div>
          
          <div class="card-actions">
-           <button class="btn btn-sm btn-outline" @click="verCategoria(categoria)">
+           <button class="btn btn-sm btn-outline" @click="verUnidad(unidad)">
              <i class="fas fa-eye"></i>
              Ver Detalles
            </button>
-           <button class="btn btn-sm btn-primary" @click="editarCategoria(categoria)">
+           <button class="btn btn-sm btn-primary" @click="editarUnidad(unidad)">
              <i class="fas fa-edit"></i> Editar
            </button>
            <button 
              class="btn btn-sm"
-             :class="categoria.estado === 'activo' ? 'btn-danger' : 'btn-success'"
-             @click="mostrarModalCambiarEstado(categoria)"
+             :class="unidad.activo ? 'btn-danger' : 'btn-success'"
+             @click="mostrarModalCambiarEstado(unidad)"
            >
-             <i :class="categoria.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
-             {{ categoria.estado === 'activo' ? 'Desactivar' : 'Activar' }}
+             <i :class="unidad.activo ? 'fas fa-ban' : 'fas fa-check'"></i>
+             {{ unidad.activo ? 'Desactivar' : 'Activar' }}
            </button>
          </div>
        </div>
      </div>
    </div>
 
-   <!-- Mensaje cuando no hay categorías -->
-   <div v-if="categorias.length === 0 && !loading" class="empty-state">
-     <div class="empty-icon"><i class="fas fa-tags"></i></div>
-     <h3 class="empty-title">No hay categorías</h3>
+   <!-- Mensaje cuando no hay unidades -->
+   <div v-if="unidades.length === 0 && !loading" class="empty-state">
+     <div class="empty-icon"><i class="fas fa-ruler"></i></div>
+     <h3 class="empty-title">No hay unidades de medida</h3>
      <p class="empty-description">
-       {{ filtros.busqueda || filtros.estado 
-         ? 'No se encontraron categorías con los filtros aplicados.' 
-         : 'Aún no se han registrado categorías en el sistema.' }}
+       {{ filtros.busqueda || filtros.tipo || filtros.estado 
+         ? 'No se encontraron unidades con los filtros aplicados.' 
+         : 'Aún no se han registrado unidades de medida en el sistema.' }}
      </p>
-     <button class="btn btn-primary" @click="nuevaCategoria">
+     <button class="btn btn-primary" @click="nuevaUnidad">
        <i class="fas fa-plus"></i>
-       Crear Primera Categoría
+       Crear Primera Unidad
      </button>
    </div>
 
@@ -384,41 +377,37 @@
  </div>
 
  <!-- Modal de vista previa -->
- <div v-if="modalCategoria" class="modal-overlay" @click="cerrarModal">
+ <div v-if="modalUnidad" class="modal-overlay" @click="cerrarModal">
    <div class="modal-content" @click.stop>
      <div class="modal-header">
-       <h3>Categoría #{{ String(modalCategoria.categorias_id).padStart(4, '0') }} - {{ modalCategoria.nombre }}</h3>
+       <h3>Unidad #{{ String(modalUnidad.unidades_medida_id).padStart(4, '0') }} - {{ modalUnidad.nombre }}</h3>
        <button class="btn-close" @click="cerrarModal"><i class="fas fa-times"></i></button>
      </div>
      <div class="modal-body">
-       <div class="categoria-detalle">
+       <div class="unidad-detalle">
          <div class="detalle-grid">
            <div class="detalle-item">
-             <strong><i class="fas fa-tags"></i> Nombre:</strong> {{ modalCategoria.nombre }}
+             <strong><i class="fas fa-ruler"></i> Nombre:</strong> {{ modalUnidad.nombre }}
+           </div>
+           <div class="detalle-item">
+             <strong><i class="fas fa-code"></i> Abreviación:</strong> 
+             <span class="abreviacion-badge">{{ modalUnidad.abreviacion }}</span>
+           </div>
+           <div class="detalle-item">
+             <strong><i class="fas fa-tag"></i> Tipo:</strong> 
+             <span class="tipo-badge" :class="modalUnidad.tipo">{{ formatearTipo(modalUnidad.tipo) }}</span>
            </div>
            <div class="detalle-item descripcion-completa">
              <strong><i class="fas fa-align-left"></i> Descripción:</strong> 
-             <span class="descripcion-texto">{{ modalCategoria.descripcion }}</span>
-           </div>
-           <div class="detalle-item" v-if="modalCategoria.unidad_medida">
-             <strong><i class="fas fa-ruler"></i> Unidad de Medida:</strong> 
-             {{ modalCategoria.unidad_medida.nombre }} ({{ modalCategoria.unidad_medida.abreviacion }})
-             <span class="unidad-tipo-badge">{{ modalCategoria.unidad_medida.tipo }}</span>
+             <span class="descripcion-texto">{{ modalUnidad.descripcion }}</span>
            </div>
            <div class="detalle-item">
-             <strong><i class="fas fa-cogs"></i> Servicios:</strong> 
-             {{ modalCategoria.servicios?.length || 0 }} servicios 
-             <span v-if="modalCategoria.servicios">
-               ({{ modalCategoria.servicios.filter(s => s.estado === 'activo').length }} activos)
-             </span>
-           </div>
-           <div class="detalle-item">
-             <strong><i class="fas fa-calendar-alt"></i> Fecha de Creación:</strong> {{ formatearFecha(modalCategoria.created_at) }}
+             <strong><i class="fas fa-calendar-alt"></i> Fecha de Creación:</strong> {{ formatearFecha(modalUnidad.created_at) }}
            </div>
            <div class="detalle-item">
              <strong><i class="fas fa-info-circle"></i> Estado:</strong> 
-             <span class="estado-badge" :class="modalCategoria.estado">
-               {{ getEstadoTexto(modalCategoria.estado) }}
+             <span class="estado-badge" :class="modalUnidad.activo ? 'activo' : 'inactivo'">
+               {{ modalUnidad.activo ? 'Activa' : 'Inactiva' }}
              </span>
            </div>
          </div>
@@ -426,8 +415,8 @@
      </div>
      <div class="modal-footer">
        <button class="btn btn-outline" @click="cerrarModal">Cerrar</button>
-       <button class="btn btn-primary" @click="editarCategoria(modalCategoria)">
-         Editar Categoría
+       <button class="btn btn-primary" @click="editarUnidad(modalUnidad)">
+         Editar Unidad
        </button>
      </div>
    </div>
@@ -437,56 +426,59 @@
  <div v-if="modalFormulario" class="modal-overlay" @click="cerrarModalFormulario">
    <div class="modal-content modal-formulario" @click.stop>
      <div class="modal-header">
-       <h3>{{ categoriaEditando ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
+       <h3>{{ unidadEditando ? 'Editar Unidad de Medida' : 'Nueva Unidad de Medida' }}</h3>
        <button class="btn-close" @click="cerrarModalFormulario"><i class="fas fa-times"></i></button>
      </div>
      <div class="modal-body">
-       <form @submit.prevent="guardarCategoria" class="formulario-categoria">
+       <form @submit.prevent="guardarUnidad" class="formulario-unidad">
          <div class="form-sections">
            <!-- Información Principal -->
            <div class="form-section">
              <h4 class="section-title">
-               <i class="fas fa-tags"></i>
-               Información de la Categoría
+               <i class="fas fa-ruler"></i>
+               Información de la Unidad de Medida
              </h4>
              <div class="form-grid">
                <div class="form-group">
-                 <label for="nombre">Nombre de la Categoría *</label>
+                 <label for="nombre">Nombre de la Unidad *</label>
                  <input 
                    id="nombre"
                    v-model="formulario.nombre" 
                    type="text" 
                    required 
                    class="form-input"
-                   placeholder="Desarrollo, Consultoría, Marketing, etc."
+                   placeholder="Equipos, Gigabytes, Usuarios, etc."
                  >
                </div>
 
                <div class="form-group">
-                 <label for="unidades_medida_id">Unidad de Medida *</label>
+                 <label for="abreviacion">Abreviación *</label>
+                 <input 
+                   id="abreviacion"
+                   v-model="formulario.abreviacion" 
+                   type="text" 
+                   required 
+                   class="form-input"
+                   placeholder="eq, GB, usr, etc."
+                   maxlength="20"
+                 >
+               </div>
+
+               <div class="form-group">
+                 <label for="tipo">Tipo de Unidad *</label>
                  <select 
-  id="unidades_medida_id"
-  v-model="formulario.unidades_medida_id" 
-  required 
-  class="form-select"
-  :disabled="cargandoUnidades"
->
-  <option value="">{{ cargandoUnidades ? 'Cargando...' : 'Selecciona una unidad de medida' }}</option>
-  <!-- ✅ CORRECCIÓN: Validación en template -->
-  <optgroup 
-    v-for="(unidades, tipo) in (unidadesPorTipo || {})" 
-    :key="tipo"
-    :label="formatearTipoUnidad(tipo)"
-  >
-    <option 
-      v-for="unidad in (unidades || [])" 
-      :key="unidad.unidades_medida_id"
-      :value="unidad.unidades_medida_id"
-    >
-      {{ unidad.nombre }} ({{ unidad.abreviacion }})
-    </option>
-  </optgroup>
-</select>
+                   id="tipo"
+                   v-model="formulario.tipo" 
+                   required 
+                   class="form-select"
+                 >
+                   <option value="">Selecciona un tipo</option>
+                   <option value="cantidad">Cantidad</option>
+                   <option value="capacidad">Capacidad</option>
+                   <option value="tiempo">Tiempo</option>
+                   <option value="usuarios">Usuarios</option>
+                   <option value="sesiones">Sesiones</option>
+                 </select>
                </div>
                
                <div class="form-group full-width">
@@ -496,16 +488,16 @@
                    v-model="formulario.descripcion" 
                    required 
                    class="form-textarea"
-                   placeholder="Describe detalladamente el tipo de servicios que incluye esta categoría..."
+                   placeholder="Describe detalladamente para qué se utiliza esta unidad de medida..."
                    rows="4"
                  ></textarea>
                </div>
                
-               <div class="form-group" v-if="categoriaEditando">
-                 <label for="estado">Estado</label>
-                 <select id="estado" v-model="formulario.estado" class="form-select">
-                   <option value="activo">Activa</option>
-                   <option value="inactivo">Inactiva</option>
+               <div class="form-group" v-if="unidadEditando">
+                 <label for="activo">Estado</label>
+                 <select id="activo" v-model="formulario.activo" class="form-select">
+                   <option :value="1">Activa</option>
+                   <option :value="0">Inactiva</option>
                  </select>
                </div>
              </div>
@@ -526,10 +518,10 @@
        <button 
          type="button" 
          class="btn btn-primary" 
-         @click="guardarCategoria"
-         :disabled="guardandoCategoria"
+         @click="guardarUnidad"
+         :disabled="guardandoUnidad"
        >
-         {{ guardandoCategoria ? 'Guardando...' : (categoriaEditando ? 'Actualizar' : 'Crear') }} Categoría
+         {{ guardandoUnidad ? 'Guardando...' : (unidadEditando ? 'Actualizar' : 'Crear') }} Unidad
        </button>
      </div>
    </div>
@@ -540,8 +532,8 @@
    <div class="modal-content modal-confirmacion" @click.stop>
      <div class="modal-header">
        <h3>
-         <i :class="categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
-         {{ categoriaParaCambiarEstado.estado === 'activo' ? 'Desactivar Categoría' : 'Activar Categoría' }}
+         <i :class="unidadParaCambiarEstado.activo ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
+         {{ unidadParaCambiarEstado.activo ? 'Desactivar Unidad' : 'Activar Unidad' }}
        </h3>
        <button class="btn-close" @click="cerrarModalCambiarEstado">
          <i class="fas fa-times"></i>
@@ -550,45 +542,45 @@
      
      <div class="modal-body">
        <div class="confirmacion-content">
-         <div class="categoria-info-resumen">
-           <div class="categoria-avatar">
-             <i class="fas fa-tags"></i>
+         <div class="unidad-info-resumen">
+           <div class="unidad-avatar">
+             <i class="fas fa-ruler"></i>
            </div>
-           <div class="categoria-datos">
-             <h4>{{ categoriaParaCambiarEstado.nombre }}</h4>
-             <p class="categoria-descripcion">{{ truncarTexto(categoriaParaCambiarEstado.descripcion, 100) }}</p>
-             <div class="categoria-badges">
-               <span class="categoria-id">#{{ String(categoriaParaCambiarEstado.categorias_id).padStart(4, '0') }}</span>
-               <span class="servicios-count">{{ categoriaParaCambiarEstado.servicios?.length || 0 }} servicios</span>
-               <span v-if="categoriaParaCambiarEstado.unidad_medida" class="unidad-count">
-                 {{ categoriaParaCambiarEstado.unidad_medida.abreviacion }}
+           <div class="unidad-datos">
+             <h4>{{ unidadParaCambiarEstado.nombre }}</h4>
+             <p class="unidad-descripcion">{{ truncarTexto(unidadParaCambiarEstado.descripcion, 100) }}</p>
+             <div class="unidad-badges">
+               <span class="unidad-id">#{{ String(unidadParaCambiarEstado.unidades_medida_id).padStart(4, '0') }}</span>
+               <span class="abreviacion-count">{{ unidadParaCambiarEstado.abreviacion }}</span>
+               <span class="tipo-count" :class="unidadParaCambiarEstado.tipo">
+                 {{ formatearTipo(unidadParaCambiarEstado.tipo) }}
                </span>
              </div>
            </div>
          </div>
          
          <div class="mensaje-confirmacion">
-           <div class="icono-estado" :class="categoriaParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
-             <i :class="categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+           <div class="icono-estado" :class="unidadParaCambiarEstado.activo ? 'desactivar' : 'activar'">
+             <i :class="unidadParaCambiarEstado.activo ? 'fas fa-ban' : 'fas fa-check'"></i>
            </div>
            
            <div class="texto-confirmacion">
              <p class="pregunta-principal">
                ¿Está seguro que desea 
-               <strong :class="categoriaParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
-                 {{ categoriaParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar' }}
+               <strong :class="unidadParaCambiarEstado.activo ? 'text-danger' : 'text-success'">
+                 {{ unidadParaCambiarEstado.activo ? 'desactivar' : 'activar' }}
                </strong> 
-               esta categoría?
+               esta unidad de medida?
              </p>
              
-             <div class="advertencia-estado" v-if="categoriaParaCambiarEstado.estado === 'activo'">
+             <div class="advertencia-estado" v-if="unidadParaCambiarEstado.activo">
                <i class="fas fa-exclamation-triangle"></i>
-               <span>Al desactivar esta categoría, no estará disponible para ser asignada a nuevos servicios hasta que sea activada nuevamente.</span>
+               <span>Al desactivar esta unidad, no estará disponible para ser asignada a nuevas categorías hasta que sea activada nuevamente.</span>
              </div>
              
              <div class="info-estado" v-else>
                <i class="fas fa-info-circle"></i>
-               <span>Al activar esta categoría, estará disponible para ser asignada a servicios.</span>
+               <span>Al activar esta unidad, estará disponible para ser asignada a categorías.</span>
              </div>
            </div>
          </div>
@@ -596,8 +588,8 @@
          <div class="cambio-estado-visual">
            <div class="estado-actual">
              <span class="label">Estado actual:</span>
-             <span class="estado-badge" :class="categoriaParaCambiarEstado.estado">
-               {{ getEstadoTexto(categoriaParaCambiarEstado.estado) }}
+             <span class="estado-badge" :class="unidadParaCambiarEstado.activo ? 'activo' : 'inactivo'">
+               {{ unidadParaCambiarEstado.activo ? 'Activa' : 'Inactiva' }}
              </span>
            </div>
            
@@ -607,8 +599,8 @@
            
            <div class="estado-nuevo">
              <span class="label">Nuevo estado:</span>
-             <span class="estado-badge" :class="categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
-               {{ categoriaParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
+             <span class="estado-badge" :class="unidadParaCambiarEstado.activo ? 'inactivo' : 'activo'">
+               {{ unidadParaCambiarEstado.activo ? 'Inactiva' : 'Activa' }}
              </span>
            </div>
          </div>
@@ -622,12 +614,12 @@
        </button>
        <button 
          class="btn"
-         :class="categoriaParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+         :class="unidadParaCambiarEstado.activo ? 'btn-danger' : 'btn-success'"
          @click="confirmarCambiarEstado"
          :disabled="cambiandoEstado"
        >
-         <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (categoriaParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check')"></i>
-         {{ cambiandoEstado ? 'Procesando...' : (categoriaParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar') }} Categoría
+         <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (unidadParaCambiarEstado.activo ? 'fas fa-ban' : 'fas fa-check')"></i>
+         {{ cambiandoEstado ? 'Procesando...' : (unidadParaCambiarEstado.activo ? 'Desactivar' : 'Activar') }} Unidad
        </button>
      </div>
    </div>
@@ -645,51 +637,47 @@
 </template>
 
 <script>
-import categoriasService from '@/services/categoriasService';
-import unidadesMedidaService from '@/services/unidadesMedidaService'; // ✅ NUEVA IMPORTACIÓN
+import unidadesMedidaService from '@/services/unidadesMedidaService';
 
 export default {
- name: 'MisCategorias',
+ name: 'MisUnidadesMedida',
  data() {
    return {
      loading: false,
-     loadingMessage: 'Cargando categorías...',
+     loadingMessage: 'Cargando unidades de medida...',
      vistaActual: 'tabla',
-     modalCategoria: null,
+     modalUnidad: null,
      modalFormulario: false,
      modalCambiarEstado: false,
-     categoriaEditando: null,
-     categoriaParaCambiarEstado: null,
-     guardandoCategoria: false,
+     unidadEditando: null,
+     unidadParaCambiarEstado: null,
+     guardandoUnidad: false,
      cambiandoEstado: false,
      paginaSalto: 1,
      itemsPorPagina: 25,
 
-     // 🆕 NUEVO: Unidades de medida
-     unidadesMedida: [],
-     cargandoUnidades: false,
-
-     // Datos reales del backend
-     categorias: [],
+     // Datos del backend
+     unidades: [],
      pagination: null,
      estadisticas: {
        total: 0,
        activas: 0,
        inactivas: 0,
-       con_servicios_activos: 0,
-       sin_servicios_activos: 0
+       tipos_disponibles: 0
      },
 
      filtros: {
        busqueda: '',
+       tipo: '',
        estado: ''
      },
 
      formulario: {
        nombre: '',
        descripcion: '',
-       unidades_medida_id: '', // 🆕 NUEVO
-       estado: 'activo'
+       abreviacion: '',
+       tipo: '',
+       activo: 1
      },
 
      erroresFormulario: [],
@@ -729,19 +717,10 @@ export default {
        paginas.push(i);
      }
      return paginas;
-   },
-
-   // 🆕 NUEVO: Agrupar unidades por tipo - CON VALIDACIÓN MEJORADA
-   unidadesPorTipo() {
-     if (!this.unidadesMedida || this.unidadesMedida.length === 0) {
-       return {};
-     }
-     return unidadesMedidaService.groupUnidadesByTipo(this.unidadesMedida);
    }
  },
 
  watch: {
-   // Actualizar paginaSalto cuando cambie la página actual
    'pagination.currentPage'(newVal) {
      if (newVal) {
        this.paginaSalto = newVal;
@@ -750,7 +729,7 @@ export default {
  },
 
  async mounted() {
-   console.log('🚀 Componente MisCategorias montado');
+   console.log('🚀 Componente MisUnidadesMedida montado');
    await this.cargarDatosIniciales();
  },
 
@@ -758,13 +737,12 @@ export default {
    // ==================== CARGA DE DATOS ====================
    async cargarDatosIniciales() {
      this.loading = true;
-     this.loadingMessage = 'Cargando categorías...';
+     this.loadingMessage = 'Cargando unidades de medida...';
      
      try {
        await Promise.all([
-         this.cargarCategorias(),
-         this.cargarEstadisticas(),
-         this.cargarUnidadesMedida() // 🆕 NUEVO
+         this.cargarUnidades(),
+         this.cargarEstadisticas()
        ]);
      } catch (error) {
        console.error('❌ Error cargando datos iniciales:', error);
@@ -774,64 +752,31 @@ export default {
      }
    },
 
-   // 🆕 NUEVO: Cargar unidades de medida - CORREGIDO
-   async cargarUnidadesMedida() {
+   async cargarUnidades() {
      try {
-       this.cargandoUnidades = true;
-       console.log('📏 Cargando unidades de medida...');
-       
-       // ✅ CORRECCIÓN: Usar el servicio correcto
-       const result = await unidadesMedidaService.getUnidadesActivas();
-       
-       console.log('🔍 RESULTADO COMPLETO:', result);
-       console.log('🔍 RESULT.SUCCESS:', result.success);
-       console.log('🔍 RESULT.UNIDADES:', result.unidades);
-       
-       if (result.success) {
-         // ✅ CORRECCIÓN: Asegurar que siempre sea un array
-         this.unidadesMedida = result.unidades || [];
-         console.log('✅ Unidades de medida cargadas:', this.unidadesMedida);
-       } else {
-         console.error('❌ Error cargando unidades de medida:', result.message);
-         // ✅ CORRECCIÓN: Mantener array vacío en caso de error
-         this.unidadesMedida = [];
-         this.showNotification('Error cargando unidades de medida', 'warning');
-       }
-       
-     } catch (error) {
-       console.error('❌ Error cargando unidades de medida:', error);
-       // ✅ CORRECCIÓN: Mantener array vacío en caso de excepción
-       this.unidadesMedida = [];
-       this.showNotification('Error de conexión al cargar unidades de medida', 'error');
-     } finally {
-       this.cargandoUnidades = false;
-     }
-   },
-
-   async cargarCategorias() {
-     try {
-       console.log('📋 Cargando categorías con filtros:', this.filtros);
+       console.log('📏 Cargando unidades de medida con filtros:', this.filtros);
        
        const params = {
          page: this.pagination?.currentPage || 1,
          limit: this.itemsPorPagina,
          search: this.filtros.busqueda || undefined,
-         estado: this.filtros.estado || undefined
+         tipo: this.filtros.tipo || undefined,
+         activo: this.filtros.estado || undefined
        };
        
-       const result = await categoriasService.getCategorias(params);
+       const result = await unidadesMedidaService.getUnidades(params);
        
        if (result.success) {
-         this.categorias = result.categorias;
+         this.unidades = result.unidades;
          this.pagination = result.pagination;
-         console.log('✅ Categorías cargadas:', this.categorias.length);
+         console.log('✅ Unidades cargadas:', this.unidades.length);
        } else {
-         this.showNotification(result.message || 'Error cargando categorías', 'error');
+         this.showNotification(result.message || 'Error cargando unidades', 'error');
        }
        
      } catch (error) {
-       console.error('❌ Error cargando categorías:', error);
-       this.showNotification('Error de conexión al cargar categorías', 'error');
+       console.error('❌ Error cargando unidades:', error);
+       this.showNotification('Error de conexión al cargar unidades', 'error');
      }
    },
 
@@ -839,7 +784,7 @@ export default {
      try {
        console.log('📊 Cargando estadísticas...');
        
-       const result = await categoriasService.getEstadisticas();
+       const result = await unidadesMedidaService.getEstadisticas();
        
        if (result.success) {
          this.estadisticas = result.estadisticas;
@@ -854,8 +799,7 @@ export default {
    },
 
    // ==================== BÚSQUEDA Y FILTROS ====================
-   buscarCategorias() {
-     // Debounce para evitar muchas llamadas
+   buscarUnidades() {
      clearTimeout(this.busquedaTimeout);
      this.busquedaTimeout = setTimeout(() => {
        this.aplicarFiltros();
@@ -870,12 +814,13 @@ export default {
        this.pagination.currentPage = 1;
      }
      
-     await this.cargarCategorias();
+     await this.cargarUnidades();
    },
 
    limpiarFiltros() {
      this.filtros = {
        busqueda: '',
+       tipo: '',
        estado: ''
      };
      
@@ -888,34 +833,34 @@ export default {
        this.pagination.currentPage = 1;
      }
      this.paginaSalto = 1;
-     await this.cargarCategorias();
+     await this.cargarUnidades();
    },
 
    async irAPrimera() {
      if (this.pagination && this.pagination.currentPage !== 1) {
        this.pagination.currentPage = 1;
-       await this.cargarCategorias();
+       await this.cargarUnidades();
      }
    },
 
    async irAUltima() {
      if (this.pagination && this.pagination.currentPage !== this.pagination.totalPages) {
        this.pagination.currentPage = this.pagination.totalPages;
-       await this.cargarCategorias();
+       await this.cargarUnidades();
      }
    },
 
    async paginaAnterior() {
      if (this.pagination && this.pagination.hasPrevPage) {
        this.pagination.currentPage--;
-       await this.cargarCategorias();
+       await this.cargarUnidades();
      }
    },
 
    async paginaSiguiente() {
      if (this.pagination && this.pagination.hasNextPage) {
        this.pagination.currentPage++;
-       await this.cargarCategorias();
+       await this.cargarUnidades();
      }
    },
 
@@ -924,80 +869,60 @@ export default {
      
      if (this.pagination && targetPage >= 1 && targetPage <= this.pagination.totalPages) {
        this.pagination.currentPage = targetPage;
-       await this.cargarCategorias();
+       await this.cargarUnidades();
      } else {
        this.showNotification(`Por favor ingresa un número entre 1 y ${this.pagination?.totalPages || 1}`, 'warning');
        this.paginaSalto = this.pagination?.currentPage || 1;
      }
    },
 
-   // ==================== GESTIÓN DE CATEGORÍAS ====================
-   async nuevaCategoria() {
-     this.categoriaEditando = null;
+   // ==================== GESTIÓN DE UNIDADES ====================
+   nuevaUnidad() {
+     this.unidadEditando = null;
      this.limpiarFormulario();
-     
-     // ✅ CORRECCIÓN: Validación más segura
-     if (!this.unidadesMedida || this.unidadesMedida.length === 0) {
-       await this.cargarUnidadesMedida();
-     }
-     
      this.modalFormulario = true;
    },
 
-   verCategoria(categoria) {
-     this.modalCategoria = categoria;
+   verUnidad(unidad) {
+     this.modalUnidad = unidad;
    },
 
-   async editarCategoria(categoria) {
-     this.categoriaEditando = categoria;
-     
-     // ✅ CORRECCIÓN: Validación más segura
-     if (!this.unidadesMedida || this.unidadesMedida.length === 0) {
-       await this.cargarUnidadesMedida();
-     }
-     
-     this.llenarFormulario(categoria);
+   editarUnidad(unidad) {
+     this.unidadEditando = unidad;
+     this.llenarFormulario(unidad);
      this.modalFormulario = true;
-     this.modalCategoria = null;
+     this.modalUnidad = null;
    },
 
-   async guardarCategoria() {
-     if (this.guardandoCategoria) return;
+   async guardarUnidad() {
+     if (this.guardandoUnidad) return;
      
-     // ✅ AGREGAR ESTAS LÍNEAS DE DEBUG
      console.log('📤 Formulario completo:', this.formulario);
-     console.log('🔍 Unidad de medida ID:', this.formulario.unidades_medida_id);
-     console.log('📏 Unidades disponibles:', this.unidadesMedida);
-     console.log('🏷️ Unidades agrupadas:', this.unidadesPorTipo);
      
      this.erroresFormulario = [];
      
-     // Validaciones básicas
      if (!this.validarFormulario()) {
        return;
      }
      
-     this.guardandoCategoria = true;
-     this.loadingMessage = this.categoriaEditando ? 'Actualizando categoría...' : 'Creando categoría...';
+     this.guardandoUnidad = true;
+     this.loadingMessage = this.unidadEditando ? 'Actualizando unidad...' : 'Creando unidad...';
      
      try {
-       // 🆕 NUEVO: Serializar el formulario para eliminar Proxies de Vue
        const formularioData = JSON.parse(JSON.stringify(this.formulario));
        console.log('📋 Formulario serializado:', formularioData);
        
        let result;
        
-       if (this.categoriaEditando) {
-         // Actualizar categoría existente
-         result = await categoriasService.updateCategoria(this.categoriaEditando.categorias_id, formularioData);
+       if (this.unidadEditando) {
+         result = await unidadesMedidaService.updateUnidad(this.unidadEditando.unidades_medida_id, formularioData);
        } else {
-         // Crear nueva categoría
-         result = await categoriasService.createCategoria(formularioData);
+         result = await unidadesMedidaService.createUnidad(formularioData);
        }
        
        if (result.success) {
          this.showNotification(
-           result.message || (this.categoriaEditando ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente'), 
+           result.message || (this.unidadEditando ? 'Unidad actualizada exitosamente' : 'Unidad creada exitosamente'), 
            'success'
          );
          
@@ -1005,7 +930,7 @@ export default {
          
          // Recargar datos
          await Promise.all([
-           this.cargarCategorias(),
+           this.cargarUnidades(),
            this.cargarEstadisticas()
          ]);
          
@@ -1014,15 +939,15 @@ export default {
          if (result.errors) {
            this.erroresFormulario = result.errors;
          } else {
-           this.showNotification(result.message || 'Error al guardar categoría', 'error');
+           this.showNotification(result.message || 'Error al guardar unidad', 'error');
          }
        }
        
      } catch (error) {
-       console.error('❌ Error guardando categoría:', error);
-       this.showNotification('Error de conexión al guardar categoría', 'error');
+       console.error('❌ Error guardando unidad:', error);
+       this.showNotification('Error de conexión al guardar unidad', 'error');
      } finally {
-       this.guardandoCategoria = false;
+       this.guardandoUnidad = false;
      }
    },
 
@@ -1030,7 +955,7 @@ export default {
      const errores = [];
      
      if (!this.formulario.nombre?.trim()) {
-       errores.push({ field: 'nombre', message: 'El nombre de la categoría es requerido' });
+       errores.push({ field: 'nombre', message: 'El nombre de la unidad es requerido' });
      }
      
      if (this.formulario.nombre && this.formulario.nombre.trim().length < 2) {
@@ -1041,22 +966,24 @@ export default {
        errores.push({ field: 'nombre', message: 'El nombre no puede exceder 100 caracteres' });
      }
      
+     if (!this.formulario.abreviacion?.trim()) {
+       errores.push({ field: 'abreviacion', message: 'La abreviación es requerida' });
+     }
+     
+     if (this.formulario.abreviacion && this.formulario.abreviacion.trim().length > 20) {
+       errores.push({ field: 'abreviacion', message: 'La abreviación no puede exceder 20 caracteres' });
+     }
+     
+     if (!this.formulario.tipo) {
+       errores.push({ field: 'tipo', message: 'El tipo de unidad es requerido' });
+     }
+     
      if (!this.formulario.descripcion?.trim()) {
        errores.push({ field: 'descripcion', message: 'La descripción es requerida' });
      }
      
      if (this.formulario.descripcion && this.formulario.descripcion.trim().length > 500) {
        errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 500 caracteres' });
-     }
-
-     // ✅ CORREGIDO: Validar unidad de medida
-     console.log('🔍 Validando unidad de medida:', this.formulario.unidades_medida_id);
-     
-     if (!this.formulario.unidades_medida_id || this.formulario.unidades_medida_id === '') {
-       errores.push({ field: 'unidades_medida_id', message: 'La unidad de medida es requerida' });
-     } else {
-       // Asegurar que sea número
-       this.formulario.unidades_medida_id = parseInt(this.formulario.unidades_medida_id);
      }
      
      this.erroresFormulario = errores;
@@ -1069,12 +996,13 @@ export default {
      return true;
    },
 
-   llenarFormulario(categoria) {
+   llenarFormulario(unidad) {
      this.formulario = {
-       nombre: categoria.nombre,
-       descripcion: categoria.descripcion || '',
-       unidades_medida_id: categoria.unidad_medida?.unidades_medida_id || '', // 🆕 NUEVO
-       estado: categoria.estado
+       nombre: unidad.nombre,
+       descripcion: unidad.descripcion || '',
+       abreviacion: unidad.abreviacion,
+       tipo: unidad.tipo,
+       activo: unidad.activo ? 1 : 0
      };
    },
 
@@ -1082,48 +1010,49 @@ export default {
      this.formulario = {
        nombre: '',
        descripcion: '',
-       unidades_medida_id: '', // 🆕 NUEVO
-       estado: 'activo'
+       abreviacion: '',
+       tipo: '',
+       activo: 1
      };
      this.erroresFormulario = [];
    },
 
    // ==================== CAMBIO DE ESTADO ====================
-   mostrarModalCambiarEstado(categoria) {
-     this.categoriaParaCambiarEstado = categoria;
+   mostrarModalCambiarEstado(unidad) {
+     this.unidadParaCambiarEstado = unidad;
      this.modalCambiarEstado = true;
    },
 
    async confirmarCambiarEstado() {
-     if (this.cambiandoEstado || !this.categoriaParaCambiarEstado) return;
+     if (this.cambiandoEstado || !this.unidadParaCambiarEstado) return;
      
      this.cambiandoEstado = true;
      
      try {
-       const nuevoEstado = this.categoriaParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo';
+       const nuevoEstado = this.unidadParaCambiarEstado.activo ? 0 : 1;
        
        let result;
-       if (nuevoEstado === 'activo') {
-         result = await categoriasService.restoreCategoria(this.categoriaParaCambiarEstado.categorias_id);
+       if (nuevoEstado === 1) {
+         result = await unidadesMedidaService.restoreUnidad(this.unidadParaCambiarEstado.unidades_medida_id);
        } else {
-         result = await categoriasService.deleteCategoria(this.categoriaParaCambiarEstado.categorias_id);
+         result = await unidadesMedidaService.deleteUnidad(this.unidadParaCambiarEstado.unidades_medida_id);
        }
        
        if (result.success) {
-         const accion = nuevoEstado === 'activo' ? 'activada' : 'desactivada';
-         this.showNotification(`Categoría ${accion} exitosamente`, 'success');
+         const accion = nuevoEstado === 1 ? 'activada' : 'desactivada';
+         this.showNotification(`Unidad ${accion} exitosamente`, 'success');
          
          // Actualizar el estado local
-         this.categoriaParaCambiarEstado.estado = nuevoEstado;
+         this.unidadParaCambiarEstado.activo = nuevoEstado;
          
          // Recargar datos
          await Promise.all([
-           this.cargarCategorias(),
+           this.cargarUnidades(),
            this.cargarEstadisticas()
          ]);
          
        } else {
-         this.showNotification(result.message || 'Error al cambiar estado de la categoría', 'error');
+         this.showNotification(result.message || 'Error al cambiar estado de la unidad', 'error');
        }
        
      } catch (error) {
@@ -1137,17 +1066,17 @@ export default {
 
    cerrarModalCambiarEstado() {
      this.modalCambiarEstado = false;
-     this.categoriaParaCambiarEstado = null;
+     this.unidadParaCambiarEstado = null;
    },
 
    // ==================== MODALES ====================
    cerrarModal() {
-     this.modalCategoria = null;
+     this.modalUnidad = null;
    },
 
    cerrarModalFormulario() {
      this.modalFormulario = false;
-     this.categoriaEditando = null;
+     this.unidadEditando = null;
      this.limpiarFormulario();
    },
 
@@ -1168,16 +1097,7 @@ export default {
      }
    },
 
-   getEstadoTexto(estado) {
-     const estados = {
-       activo: 'Activo',
-       inactivo: 'Inactivo'
-     };
-     return estados[estado] || estado;
-   },
-
-   // 🆕 NUEVO: Formatear tipo de unidad
-   formatearTipoUnidad(tipo) {
+   formatearTipo(tipo) {
      const tipos = {
        cantidad: 'Cantidad',
        capacidad: 'Capacidad',
@@ -1230,11 +1150,9 @@ export default {
 }
 </script>
 
-
-
 <style scoped>
-/* Estilos base */
-.admin-categorias-container {
+/* Estilos base heredados del componente de categorías */
+.admin-unidades-container {
  padding: 2rem;
  max-width: 1400px;
  margin: 0 auto;
@@ -1262,6 +1180,10 @@ export default {
  gap: 1rem;
  color: white;
  font-size: 1.1rem;
+ background: rgba(0, 0, 0, 0.8);
+ padding: 2rem;
+ border-radius: 12px;
+ box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .loading-spinner i {
@@ -1468,10 +1390,10 @@ export default {
 .stat-card.total { border-left: 4px solid #3498db; }
 .stat-card.activos { border-left: 4px solid #27ae60; }
 .stat-card.inactivos { border-left: 4px solid #95a5a6; }
-.stat-card.servicios { border-left: 4px solid #f39c12; }
+.stat-card.tipos { border-left: 4px solid #9c27b0; }
 
-/* Sección de categorías */
-.categorias-section {
+/* Sección de unidades */
+.unidades-section {
  background: white;
  border-radius: 12px;
  padding: 1.5rem;
@@ -1569,13 +1491,13 @@ export default {
  overflow-x: auto;
 }
 
-.categorias-tabla {
+.unidades-tabla {
  width: 100%;
  border-collapse: collapse;
  margin-bottom: 1rem;
 }
 
-.categorias-tabla th {
+.unidades-tabla th {
  background: #f8f9fa;
  padding: 1rem;
  text-align: left;
@@ -1585,40 +1507,26 @@ export default {
  white-space: nowrap;
 }
 
-.categorias-tabla th.sortable {
- cursor: pointer;
- user-select: none;
-}
-
-.categorias-tabla th.sortable:hover {
- background: #e9ecef;
-}
-
-.sort-icon {
- margin-left: 0.5rem;
- opacity: 0.5;
-}
-
-.categorias-tabla td {
+.unidades-tabla td {
  padding: 1rem;
  border-bottom: 1px solid #e9ecef;
  vertical-align: middle;
 }
 
-.categoria-id {
+.unidad-id {
  font-weight: 600;
  color: #3498db;
  font-family: monospace;
  font-size: 1rem;
 }
 
-.categoria-info {
+.unidad-info {
  display: flex;
  flex-direction: column;
  gap: 0.25rem;
 }
 
-.categoria-nombre {
+.unidad-nombre {
  font-weight: 500;
  color: #2c3e50;
 }
@@ -1640,23 +1548,62 @@ export default {
  font-size: 0.85rem;
 }
 
-/* Estilos específicos para servicios */
-.servicios-info {
- display: flex;
- flex-direction: column;
- gap: 0.25rem;
-}
+/* ESTILOS ESPECÍFICOS PARA UNIDADES DE MEDIDA */
 
-.servicios-total {
- font-weight: 500;
- color: #2c3e50;
+/* Badge para abreviaciones */
+.abreviacion-badge {
+ background: linear-gradient(135deg, #37474f, #455a64);
+ color: white;
+ padding: 0.375rem 0.75rem;
+ border-radius: 6px;
+ font-family: monospace;
+ font-weight: 700;
  font-size: 0.9rem;
+ letter-spacing: 0.5px;
+ text-transform: uppercase;
+ box-shadow: 0 2px 6px rgba(55, 71, 79, 0.3);
+ border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.servicios-activos {
- color: #27ae60;
+/* Badges específicos para tipos de unidades */
+.tipo-badge {
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
  font-size: 0.8rem;
- font-weight: 500;
+ font-weight: 600;
+ text-transform: capitalize;
+ letter-spacing: 0.5px;
+ border: 1px solid;
+}
+
+.tipo-badge.cantidad {
+ background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+ color: #1976d2;
+ border-color: #90caf9;
+}
+
+.tipo-badge.capacidad {
+ background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+ color: #7b1fa2;
+ border-color: #ce93d8;
+}
+
+.tipo-badge.tiempo {
+ background: linear-gradient(135deg, #fff3e0, #ffcc02);
+ color: #f57c00;
+ border-color: #ffb74d;
+}
+
+.tipo-badge.usuarios {
+ background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+ color: #2e7d32;
+ border-color: #a5d6a7;
+}
+
+.tipo-badge.sesiones {
+ background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+ color: #c2185b;
+ border-color: #f48fb1;
 }
 
 /* Estados */
@@ -1684,11 +1631,11 @@ export default {
 /* Acciones */
 .acciones {
  display: flex;
- flex-direction: row;
+ flex-direction: row !important;
  gap: 0.5rem;
  align-items: center;
  justify-content: flex-start;
- flex-wrap: nowrap;
+ flex-wrap: nowrap !important;
  min-width: 120px;
 }
 
@@ -1749,7 +1696,7 @@ export default {
  gap: 1.5rem;
 }
 
-.categoria-card {
+.unidad-card {
  border: 1px solid #e9ecef;
  border-radius: 12px;
  padding: 1.5rem;
@@ -1757,7 +1704,7 @@ export default {
  background: white;
 }
 
-.categoria-card:hover {
+.unidad-card:hover {
  transform: translateY(-2px);
  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
@@ -1776,7 +1723,7 @@ export default {
  font-size: 1.1rem;
 }
 
-.categoria-nombre-card {
+.unidad-nombre-card {
  color: #2c3e50;
  margin-bottom: 1rem;
  font-size: 1.3rem;
@@ -1786,12 +1733,61 @@ export default {
  gap: 0.5rem;
 }
 
+.abreviacion-card {
+ margin-bottom: 1rem;
+ text-align: center;
+}
+
+.abreviacion-display {
+ background: linear-gradient(135deg, #37474f, #455a64);
+ color: white;
+ padding: 0.75rem 1.5rem;
+ border-radius: 10px;
+ font-family: monospace;
+ font-weight: 700;
+ font-size: 1.4rem;
+ letter-spacing: 1px;
+ text-transform: uppercase;
+ display: inline-block;
+ box-shadow: 0 4px 12px rgba(55, 71, 79, 0.4);
+ border: 2px solid rgba(255, 255, 255, 0.1);
+ position: relative;
+ overflow: hidden;
+}
+
+.abreviacion-display::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: -100%;
+ width: 100%;
+ height: 100%;
+ background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+ transition: left 0.5s;
+}
+
+.abreviacion-display:hover::before {
+ left: 100%;
+}
+
 .descripcion-card {
  margin-bottom: 1.5rem;
  padding: 1rem;
- background: #f8f9fa;
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
  border-radius: 8px;
- border-left: 4px solid #3498db;
+ border-left: 4px solid #607d8b;
+ position: relative;
+ overflow: hidden;
+}
+
+.descripcion-card::before {
+ content: '';
+ position: absolute;
+ top: 0;
+ left: 0;
+ right: 0;
+ height: 2px;
+ background: linear-gradient(90deg, #607d8b, #455a64);
 }
 
 .descripcion-card p {
@@ -1800,7 +1796,7 @@ export default {
  line-height: 1.5;
 }
 
-.categoria-details {
+.unidad-details {
  display: grid;
  gap: 0.75rem;
  margin-bottom: 1.5rem;
@@ -1830,21 +1826,21 @@ export default {
  font-size: 0.9rem;
 }
 
-.servicios-card {
- background: #e8f5e8;
- color: #2e7d32;
- padding: 0.25rem 0.5rem;
- border-radius: 4px;
+/* Tipos en tarjetas */
+.tipo-card {
+ padding: 0.375rem 0.75rem;
+ border-radius: 12px;
  font-size: 0.85rem;
- font-weight: 500;
+ font-weight: 600;
+ text-transform: capitalize;
+ border: 1px solid;
 }
 
-.servicios-activos-small {
- display: block;
- color: #27ae60;
- font-size: 0.75rem;
- margin-top: 0.125rem;
-}
+.tipo-card.cantidad { background: #e3f2fd; color: #1976d2; border-color: #90caf9; }
+.tipo-card.capacidad { background: #f3e5f5; color: #7b1fa2; border-color: #ce93d8; }
+.tipo-card.tiempo { background: #fff3e0; color: #f57c00; border-color: #ffb74d; }
+.tipo-card.usuarios { background: #e8f5e8; color: #2e7d32; border-color: #a5d6a7; }
+.tipo-card.sesiones { background: #fce4ec; color: #c2185b; border-color: #f48fb1; }
 
 .card-actions {
  display: flex;
@@ -1935,12 +1931,6 @@ export default {
  display: flex;
  gap: 0.25rem;
  align-items: center;
-}
-
-.pagina-separador {
- padding: 0.5rem 0.25rem;
- color: #6c757d;
- font-weight: bold;
 }
 
 .paginacion-info-bottom {
@@ -2037,8 +2027,8 @@ export default {
  background: #f8f9fa;
 }
 
-/* Detalle de categoría */
-.categoria-detalle {
+/* Detalle de unidad */
+.unidad-detalle {
  padding: 1rem 0;
 }
 
@@ -2071,8 +2061,18 @@ export default {
  gap: 0.5rem;
 }
 
+.detalle-item.descripcion-completa .descripcion-texto {
+ color: #2c3e50;
+ line-height: 1.6;
+ margin-top: 0.5rem;
+ padding: 0.75rem;
+ background: #f8f9fa;
+ border-radius: 6px;
+ border-left: 3px solid #607d8b;
+}
+
 /* Formulario */
-.formulario-categoria {
+.formulario-unidad {
  padding: 1rem 0;
 }
 
@@ -2180,20 +2180,20 @@ export default {
  gap: 2rem;
 }
 
-.categoria-info-resumen {
+.unidad-info-resumen {
  display: flex;
  align-items: center;
  gap: 1rem;
  padding: 1rem;
  background: #f8f9fa;
  border-radius: 8px;
- border-left: 4px solid #3498db;
+ border-left: 4px solid #607d8b;
 }
 
-.categoria-avatar {
+.unidad-avatar {
  width: 60px;
  height: 60px;
- background: linear-gradient(135deg, #3498db, #2980b9);
+ background: linear-gradient(135deg, #607d8b, #455a64);
  border-radius: 50%;
  display: flex;
  align-items: center;
@@ -2203,25 +2203,26 @@ export default {
  flex-shrink: 0;
 }
 
-.categoria-datos h4 {
+.unidad-datos h4 {
  margin: 0 0 0.25rem 0;
  color: #2c3e50;
  font-size: 1.2rem;
 }
 
-.categoria-descripcion {
+.unidad-descripcion {
  margin: 0 0 0.25rem 0;
  color: #7f8c8d;
  font-size: 0.9rem;
 }
 
-.categoria-badges {
+.unidad-badges {
  display: flex;
  gap: 0.5rem;
  align-items: center;
+ flex-wrap: wrap;
 }
 
-.categoria-id {
+.unidad-id {
  font-family: monospace;
  background: #e3f2fd;
  color: #1976d2;
@@ -2231,249 +2232,266 @@ export default {
  font-weight: 600;
 }
 
-.servicios-count {
- background: #fff3e0;
- color: #f57c00;
- padding: 0.2rem 0.5rem;
- border-radius: 4px;
- font-size: 0.8rem;
- font-weight: 600;
+.abreviacion-count {
+background: #37474f;
+color: white;
+padding: 0.2rem 0.5rem;
+border-radius: 4px;
+font-size: 0.8rem;
+font-weight: 600;
+font-family: monospace;
+letter-spacing: 0.5px;
 }
 
+.tipo-count {
+padding: 0.2rem 0.5rem;
+border-radius: 4px;
+font-size: 0.8rem;
+font-weight: 600;
+text-transform: capitalize;
+border: 1px solid;
+}
+
+.tipo-count.cantidad { background: #e3f2fd; color: #1976d2; border-color: #90caf9; }
+.tipo-count.capacidad { background: #f3e5f5; color: #7b1fa2; border-color: #ce93d8; }
+.tipo-count.tiempo { background: #fff3e0; color: #f57c00; border-color: #ffb74d; }
+.tipo-count.usuarios { background: #e8f5e8; color: #2e7d32; border-color: #a5d6a7; }
+.tipo-count.sesiones { background: #fce4ec; color: #c2185b; border-color: #f48fb1; }
+
 .mensaje-confirmacion {
- text-align: center;
- padding: 1.5rem;
+text-align: center;
+padding: 1.5rem;
 }
 
 .icono-estado {
- width: 80px;
- height: 80px;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- margin: 0 auto 1.5rem;
- font-size: 2rem;
- color: white;
+width: 80px;
+height: 80px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+margin: 0 auto 1.5rem;
+font-size: 2rem;
+color: white;
 }
 
 .icono-estado.desactivar {
- background: linear-gradient(135deg, #e74c3c, #c0392b);
+background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .icono-estado.activar {
- background: linear-gradient(135deg, #27ae60, #219a52);
+background: linear-gradient(135deg, #27ae60, #219a52);
 }
 
 .texto-confirmacion {
- max-width: 400px;
- margin: 0 auto;
+max-width: 400px;
+margin: 0 auto;
 }
 
 .pregunta-principal {
- font-size: 1.1rem;
- color: #2c3e50;
- margin-bottom: 1rem;
- line-height: 1.5;
+font-size: 1.1rem;
+color: #2c3e50;
+margin-bottom: 1rem;
+line-height: 1.5;
 }
 
 .text-danger {
- color: #e74c3c;
+color: #e74c3c;
 }
 
 .text-success {
- color: #27ae60;
+color: #27ae60;
 }
 
 .advertencia-estado,
 .info-estado {
- display: flex;
- align-items: flex-start;
- gap: 0.5rem;
- padding: 1rem;
- border-radius: 6px;
- font-size: 0.9rem;
- line-height: 1.4;
- text-align: left;
+display: flex;
+align-items: flex-start;
+gap: 0.5rem;
+padding: 1rem;
+border-radius: 6px;
+font-size: 0.9rem;
+line-height: 1.4;
+text-align: left;
 }
 
 .advertencia-estado {
- background: #fff3cd;
- color: #856404;
- border: 1px solid #ffeaa7;
+background: #fff3cd;
+color: #856404;
+border: 1px solid #ffeaa7;
 }
 
 .advertencia-estado i {
- color: #f39c12;
- margin-top: 0.1rem;
+color: #f39c12;
+margin-top: 0.1rem;
 }
 
 .info-estado {
- background: #d1ecf1;
- color: #0c5460;
- border: 1px solid #bee5eb;
+background: #d1ecf1;
+color: #0c5460;
+border: 1px solid #bee5eb;
 }
 
 .info-estado i {
- color: #17a2b8;
- margin-top: 0.1rem;
+color: #17a2b8;
+margin-top: 0.1rem;
 }
 
 .cambio-estado-visual {
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 1.5rem;
- padding: 1.5rem;
- background: #f8f9fa;
- border-radius: 8px;
- border: 1px solid #e9ecef;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 1.5rem;
+padding: 1.5rem;
+background: #f8f9fa;
+border-radius: 8px;
+border: 1px solid #e9ecef;
 }
 
 .estado-actual,
 .estado-nuevo {
- display: flex;
- flex-direction: column;
- align-items: center;
- gap: 0.5rem;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 0.5rem;
 }
 
 .label {
- font-size: 0.8rem;
- color: #6c757d;
- font-weight: 500;
- text-transform: uppercase;
- letter-spacing: 0.5px;
+font-size: 0.8rem;
+color: #6c757d;
+font-weight: 500;
+text-transform: uppercase;
+letter-spacing: 0.5px;
 }
 
 .flecha-cambio {
- color: #6c757d;
- font-size: 1.5rem;
+color: #6c757d;
+font-size: 1.5rem;
 }
 
 /* Notificaciones */
 .notification {
- position: fixed;
- top: 2rem;
- right: 2rem;
- padding: 1rem 1.5rem;
- border-radius: 8px;
- color: white;
- font-weight: 500;
- z-index: 3000;
- display: flex;
- align-items: center;
- gap: 0.5rem;
- min-width: 300px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
- animation: slideInRight 0.3s ease-out;
+position: fixed;
+top: 2rem;
+right: 2rem;
+padding: 1rem 1.5rem;
+border-radius: 8px;
+color: white;
+font-weight: 500;
+z-index: 3000;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+min-width: 300px;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+animation: slideInRight 0.3s ease-out;
 }
 
 .notification-success {
- background: #27ae60;
+background: #27ae60;
 }
 
 .notification-error {
- background: #e74c3c;
+background: #e74c3c;
 }
 
 .notification-warning {
- background: #f39c12;
+background: #f39c12;
 }
 
 .notification-info {
- background: #3498db;
+background: #3498db;
 }
 
 .notification-close {
- background: none;
- border: none;
- color: white;
- cursor: pointer;
- padding: 0.25rem;
- border-radius: 50%;
- transition: all 0.3s ease;
- margin-left: auto;
+background: none;
+border: none;
+color: white;
+cursor: pointer;
+padding: 0.25rem;
+border-radius: 50%;
+transition: all 0.3s ease;
+margin-left: auto;
 }
 
 .notification-close:hover {
- background: rgba(255, 255, 255, 0.2);
+background: rgba(255, 255, 255, 0.2);
 }
 
 /* Animaciones */
 @keyframes slideInRight {
- from {
-   opacity: 0;
-   transform: translateX(100%);
- }
- to {
-   opacity: 1;
-   transform: translateX(0);
- }
+from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+to {
+  opacity: 1;
+  transform: translateX(0);
+}
 }
 
 @keyframes slideOutRight {
- from {
-   opacity: 1;
-   transform: translateX(0);
- }
- to {
-   opacity: 0;
-   transform: translateX(100%);
- }
+from {
+  opacity: 1;
+  transform: translateX(0);
+}
+to {
+  opacity: 0;
+  transform: translateX(100%);
+}
 }
 
 @keyframes fadeIn {
- from {
-   opacity: 0;
-   transform: translateY(20px);
- }
- to {
-   opacity: 1;
-   transform: translateY(0);
- }
+from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+to {
+  opacity: 1;
+  transform: translateY(0);
+}
 }
 
 @keyframes modalSlideIn {
- from {
-   opacity: 0;
-   transform: scale(0.9) translateY(-20px);
- }
- to {
-   opacity: 1;
-   transform: scale(1) translateY(0);
- }
+from {
+  opacity: 0;
+  transform: scale(0.9) translateY(-20px);
+}
+to {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
 }
 
 @keyframes spin {
- 0% { transform: rotate(0deg); }
- 100% { transform: rotate(360deg); }
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
 }
 
-.admin-categorias-container {
- animation: fadeIn 0.5s ease-out;
+.admin-unidades-container {
+animation: fadeIn 0.5s ease-out;
 }
 
-.categoria-card,
+.unidad-card,
 .stat-card {
- animation: fadeIn 0.3s ease-out;
+animation: fadeIn 0.3s ease-out;
 }
 
 /* Estados de hover mejorados */
 .btn:hover:not(:disabled) {
- transform: translateY(-1px);
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+transform: translateY(-1px);
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.categorias-tabla tbody tr:hover {
- background-color: #f8f9fa;
- transform: scale(1.01);
- transition: all 0.2s ease;
+.unidades-tabla tbody tr:hover {
+background-color: #f8f9fa;
+transform: scale(1.01);
+transition: all 0.2s ease;
 }
 
 .btn-accion:hover {
- transform: translateY(-2px);
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+transform: translateY(-2px);
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Mejoras de accesibilidad */
@@ -2483,677 +2501,526 @@ export default {
 .form-textarea:focus,
 .btn-accion:focus,
 .view-btn:focus {
- outline: 2px solid #3498db;
- outline-offset: 2px;
+outline: 2px solid #3498db;
+outline-offset: 2px;
 }
 
 /* Estados de carga específicos */
 .btn.loading {
- pointer-events: none;
- opacity: 0.7;
+pointer-events: none;
+opacity: 0.7;
 }
 
 .btn.loading i {
- animation: spin 1s linear infinite;
+animation: spin 1s linear infinite;
 }
 
 /* Transiciones suaves */
 * {
- transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Mejoras visuales para la paginación */
+/* Scroll personalizado para la tabla */
+.tabla-wrapper::-webkit-scrollbar {
+height: 8px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-track {
+background: #f1f1f1;
+border-radius: 4px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-thumb {
+background: #c1c1c1;
+border-radius: 4px;
+}
+
+.tabla-wrapper::-webkit-scrollbar-thumb:hover {
+background: #a8a8a8;
+}
+
+/* Personalización de scrollbars para modales */
+.modal-content::-webkit-scrollbar {
+width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+background: #f1f1f1;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+background: #c1c1c1;
+border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+background: #a8a8a8;
+}
+
+/* Efectos especiales para abreviaciones */
+.abreviacion-badge:hover {
+transform: scale(1.05);
+box-shadow: 0 4px 16px rgba(55, 71, 79, 0.4);
+}
+
+/* Efectos para tipos */
+.tipo-badge:hover {
+transform: scale(1.05);
+filter: brightness(1.1);
+}
+
+/* Estados específicos de badges */
+.estado-badge {
+position: relative;
+overflow: hidden;
+}
+
+.estado-badge::before {
+content: '';
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+transition: left 0.5s;
+}
+
+.estado-badge:hover::before {
+left: 100%;
+}
+
+/* Mejoras para la navegación con teclado */
 .btn-pag:focus {
- outline: 2px solid #3498db;
- outline-offset: 2px;
+outline: 2px solid #3498db;
+outline-offset: 2px;
 }
 
 .page-input:invalid {
- border-color: #e74c3c;
- box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+border-color: #e74c3c;
+box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
 }
 
-/* Mejoras para el formulario */
+/* Estados de validación para formularios */
 .form-input:invalid,
 .form-select:invalid,
 .form-textarea:invalid {
- border-color: #e74c3c;
+border-color: #e74c3c;
 }
 
 .form-input:valid,
 .form-select:valid,
 .form-textarea:valid {
- border-color: #27ae60;
+border-color: #27ae60;
 }
 
-/* Mejoras para la búsqueda */
-.search-input:focus + .search-icon {
- color: #3498db;
-}
-
-/* Estados específicos para notificaciones */
-.notification.hide {
- animation: slideOutRight 0.3s ease-in forwards;
-}
-
-/* Sombras mejoradas */
-.categoria-card,
-.modal-content,
-.categorias-section,
-.filtros-section {
- box-shadow: 
-   0 1px 3px rgba(0, 0, 0, 0.12),
-   0 1px 2px rgba(0, 0, 0, 0.24);
-}
-
-.categoria-card:hover {
- box-shadow: 
-   0 14px 28px rgba(0, 0, 0, 0.25),
-   0 10px 10px rgba(0, 0, 0, 0.22);
-}
-
-/* Scroll personalizado para la tabla */
-.tabla-wrapper::-webkit-scrollbar {
- height: 8px;
-}
-
-.tabla-wrapper::-webkit-scrollbar-track {
- background: #f1f1f1;
- border-radius: 4px;
-}
-
-.tabla-wrapper::-webkit-scrollbar-thumb {
- background: #c1c1c1;
- border-radius: 4px;
-}
-
-.tabla-wrapper::-webkit-scrollbar-thumb:hover {
- background: #a8a8a8;
-}
-
-/* Estados de éxito y error para formularios */
 .form-group.success .form-input,
 .form-group.success .form-select,
 .form-group.success .form-textarea {
- border-color: #27ae60;
- box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+border-color: #27ae60;
+box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
 }
 
 .form-group.error .form-input,
 .form-group.error .form-select,
 .form-group.error .form-textarea {
- border-color: #e74c3c;
- box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+border-color: #e74c3c;
+box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+/* Animación especial para estadísticas */
+.stat-number {
+background: linear-gradient(135deg, #2c3e50, #34495e);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
 }
 
 /* Responsive Design */
 @media (max-width: 1200px) {
- .estadisticas-grid {
-   grid-template-columns: repeat(3, 1fr);
- }
+.estadisticas-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
 
- .confirmacion-content {
-   gap: 1.5rem;
- }
+.confirmacion-content {
+  gap: 1.5rem;
+}
 
- .cambio-estado-visual {
-   flex-direction: column;
-   gap: 1rem;
- }
+.cambio-estado-visual {
+  flex-direction: column;
+  gap: 1rem;
+}
 
- .flecha-cambio {
-   transform: rotate(90deg);
- }
+.flecha-cambio {
+  transform: rotate(90deg);
+}
 }
 
 @media (max-width: 768px) {
- .admin-categorias-container {
-   padding: 1rem;
- }
+.admin-unidades-container {
+  padding: 1rem;
+}
 
- .page-header {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 1rem;
- }
+.page-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+}
 
- .header-actions {
-   flex-direction: column;
- }
+.header-actions {
+  flex-direction: column;
+}
 
- .header-content h1 {
-   font-size: 2rem;
- }
+.header-content h1 {
+  font-size: 2rem;
+}
 
- .estadisticas-grid {
-   grid-template-columns: repeat(2, 1fr);
- }
+.estadisticas-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
 
- .filtros-grid {
-   flex-direction: column;
-   align-items: stretch;
- }
+.filtros-grid {
+  flex-direction: column;
+  align-items: stretch;
+}
 
- .filter-select {
-   min-width: auto;
- }
+.filter-select {
+  min-width: auto;
+}
 
- .section-header {
-   flex-direction: column;
-   align-items: stretch;
- }
+.section-header {
+  flex-direction: column;
+  align-items: stretch;
+}
 
- .paginacion-info {
-   flex-direction: column;
-   align-items: stretch;
-   text-align: center;
- }
+.paginacion-info {
+  flex-direction: column;
+  align-items: stretch;
+  text-align: center;
+}
 
- .tabla-wrapper {
-   overflow-x: scroll;
- }
+.tabla-wrapper {
+  overflow-x: scroll;
+}
 
- .categorias-tabla {
-   min-width: 900px;
- }
+.unidades-tabla {
+  min-width: 900px;
+}
 
- .tarjetas-grid {
-   grid-template-columns: 1fr;
- }
+.tarjetas-grid {
+  grid-template-columns: 1fr;
+}
 
- .card-actions {
-   justify-content: stretch;
- }
+.card-actions {
+  justify-content: stretch;
+}
 
- .card-actions .btn {
-   flex: 1;
-   justify-content: center;
- }
+.card-actions .btn {
+  flex: 1;
+  justify-content: center;
+}
 
- .detalle-item {
-   flex-direction: column;
-   align-items: flex-start;
-   gap: 0.5rem;
- }
+.detalle-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
 
- .form-grid {
-   grid-template-columns: 1fr;
- }
+.form-grid {
+  grid-template-columns: 1fr;
+}
 
- .modal-footer {
-   flex-direction: column;
- }
+.modal-footer {
+  flex-direction: column;
+}
 
- .modal-confirmacion {
-   max-width: 95%;
-   margin: 1rem;
- }
+.modal-confirmacion {
+  max-width: 95%;
+  margin: 1rem;
+}
 
- .categoria-info-resumen {
-   flex-direction: column;
-   text-align: center;
-   gap: 0.75rem;
- }
+.unidad-info-resumen {
+  flex-direction: column;
+  text-align: center;
+  gap: 0.75rem;
+}
 
- .icono-estado {
-   width: 60px;
-   height: 60px;
-   font-size: 1.5rem;
- }
+.icono-estado {
+  width: 60px;
+  height: 60px;
+  font-size: 1.5rem;
+}
 
- .cambio-estado-visual {
-   padding: 1rem;
- }
+.cambio-estado-visual {
+  padding: 1rem;
+}
 
- .notification {
-   right: 1rem;
-   left: 1rem;
-   min-width: auto;
- }
+.notification {
+  right: 1rem;
+  left: 1rem;
+  min-width: auto;
+}
 
- /* Botones de acción en móvil - mantener horizontal */
- .acciones {
-   gap: 0.25rem;
- }
+.abreviacion-display {
+  font-size: 1.2rem;
+  padding: 0.5rem 1rem;
+}
 
- .btn-accion {
-   width: 28px;
-   height: 28px;
-   font-size: 0.8rem;
- }
+/* Mantener botones de acción horizontales en móvil */
+.acciones {
+  gap: 0.25rem;
+}
+
+.btn-accion {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+}
 }
 
 @media (max-width: 480px) {
- .estadisticas-grid {
-   grid-template-columns: 1fr;
- }
+.estadisticas-grid {
+  grid-template-columns: 1fr;
+}
 
- .filtros-section,
- .categorias-section {
-   padding: 1rem;
- }
+.filtros-section,
+.unidades-section {
+  padding: 1rem;
+}
 
- .stat-card {
-   padding: 1rem;
- }
+.stat-card {
+  padding: 1rem;
+}
 
- .categoria-card {
-   padding: 1rem;
- }
+.unidad-card {
+  padding: 1rem;
+}
 
- .modal-content {
-   margin: 0.5rem;
- }
+.modal-content {
+  margin: 0.5rem;
+}
 
- .btn-pag {
-   min-width: 35px;
-   padding: 0.375rem 0.5rem;
- }
+.btn-pag {
+  min-width: 35px;
+  padding: 0.375rem 0.5rem;
+}
 
- .card-actions {
-   flex-direction: column;
- }
+.card-actions {
+  flex-direction: column;
+}
 
- .card-actions .btn {
-   width: 100%;
- }
+.card-actions .btn {
+  width: 100%;
+}
 
- .modal-confirmacion {
-   max-width: 100%;
-   margin: 0.5rem;
- }
+.modal-confirmacion {
+  max-width: 100%;
+  margin: 0.5rem;
+}
 
- .categoria-avatar {
-   width: 50px;
-   height: 50px;
-   font-size: 1.2rem;
- }
+.unidad-avatar {
+  width: 50px;
+  height: 50px;
+  font-size: 1.2rem;
+}
 
- .pregunta-principal {
-   font-size: 1rem;
- }
+.pregunta-principal {
+  font-size: 1rem;
+}
 
- .advertencia-estado,
- .info-estado {
-   padding: 0.75rem;
-   font-size: 0.85rem;
- }
+.advertencia-estado,
+.info-estado {
+  padding: 0.75rem;
+  font-size: 0.85rem;
+}
 
- .notification {
-   top: 1rem;
-   right: 0.5rem;
-   left: 0.5rem;
-   padding: 0.75rem 1rem;
-   font-size: 0.9rem;
- }
+.notification {
+  top: 1rem;
+  right: 0.5rem;
+  left: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+}
 
- .loading-spinner {
-   font-size: 1rem;
- }
+.loading-spinner {
+  font-size: 1rem;
+}
 
- .loading-spinner i {
-   font-size: 2rem;
- }
+.loading-spinner i {
+  font-size: 2rem;
+}
 
- /* Mantener botones horizontales incluso en pantallas muy pequeñas */
- .acciones {
-   min-width: 90px;
-   overflow-x: auto;
- }
+.abreviacion-display {
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+}
 
- .btn-accion {
-   width: 26px;
-   height: 26px;
-   font-size: 0.75rem;
-   flex-shrink: 0;
- }
+/* Asegurar que los botones se mantengan horizontales */
+.acciones {
+  min-width: 90px;
+  overflow-x: auto;
+}
+
+.btn-accion {
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
 }
 
 /* Mejoras para dispositivos táctiles */
 @media (hover: none) and (pointer: coarse) {
- .btn-accion {
-   width: 40px;
-   height: 40px;
- }
-
- .btn {
-   padding: 1rem 1.5rem;
- }
-
- .categorias-tabla td {
-   padding: 1.5rem 1rem;
- }
-
- /* Asegurar que los botones de acción permanezcan en fila */
- .acciones {
-   gap: 0.75rem;
- }
-}
-
-/* Estados específicos de badges y indicadores */
-.estado-badge {
- position: relative;
- overflow: hidden;
-}
-
-.estado-badge::before {
- content: '';
- position: absolute;
- top: 0;
- left: -100%;
- width: 100%;
- height: 100%;
- background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
- transition: left 0.5s;
-}
-
-.estado-badge:hover::before {
- left: 100%;
-}
-
-/* Indicadores de loading específicos */
-.btn[disabled] i.fa-spinner {
- animation: spin 1s linear infinite;
-}
-
-/* Mejoras de contraste y legibilidad */
-.stat-card:focus-within {
- outline: 2px solid #3498db;
- outline-offset: 2px;
-}
-
-.categoria-card:focus-within {
- outline: 2px solid #3498db;
- outline-offset: 2px;
-}
-
-/* Estados de error y éxito más visuales */
-.form-input.error,
-.form-textarea.error {
- border-color: #e74c3c;
- background-color: rgba(231, 76, 60, 0.05);
-}
-
-.form-input.success,
-.form-textarea.success {
- border-color: #27ae60;
- background-color: rgba(39, 174, 96, 0.05);
-}
-
-/* Mejoras en la presentación de datos */
-.stat-number {
- background: linear-gradient(135deg, #2c3e50, #34495e);
- -webkit-background-clip: text;
- -webkit-text-fill-color: transparent;
- background-clip: text;
-}
-
-/* Efectos especiales para estados importantes */
-.btn-danger:hover {
- box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
-}
-
-.btn-success:hover {
- box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
-}
-
-/* Mejoras finales de UX */
-.modal-overlay {
- animation: fadeIn 0.3s ease-out;
-}
-
-.empty-state {
- animation: fadeIn 0.5s ease-out;
-}
-
-.categoria-card {
- transform-origin: center;
-}
-
-.stat-card {
- transform-origin: center;
-}
-
-/* Personalización de scrollbars para todo el modal */
-.modal-content::-webkit-scrollbar {
- width: 6px;
-}
-
-.modal-content::-webkit-scrollbar-track {
- background: #f1f1f1;
-}
-
-.modal-content::-webkit-scrollbar-thumb {
- background: #c1c1c1;
- border-radius: 3px;
-}
-
-.modal-content::-webkit-scrollbar-thumb:hover {
- background: #a8a8a8;
-}
-
-/* CORRECCIÓN ESPECÍFICA PARA BOTONES DE ACCIONES */
-/* Asegurar que los botones siempre estén en fila horizontal */
-.acciones {
- display: flex !important;
- flex-direction: row !important;
- align-items: center !important;
- justify-content: flex-start !important;
- gap: 0.5rem !important;
- flex-wrap: nowrap !important;
- white-space: nowrap !important;
-}
-
-/* Prevenir que los botones se apilen verticalmente */
 .btn-accion {
- flex: 0 0 auto !important;
- display: inline-flex !important;
- margin: 0 !important;
+  width: 40px;
+  height: 40px;
 }
 
-/* Ajustes específicos para la tabla */
-.categorias-tabla .acciones {
- min-width: 120px;
- max-width: 150px;
+.btn {
+  padding: 1rem 1.5rem;
 }
 
-/* Asegurar que la columna de acciones tenga suficiente espacio */
-.categorias-tabla th:last-child,
-.categorias-tabla td:last-child {
- width: 140px;
- min-width: 140px;
- text-align: center;
+.unidades-tabla td {
+  padding: 1.5rem 1rem;
 }
 
-/* Mejoras específicas para categorías */
-.categoria-nombre {
- font-weight: 600;
- color: #2c3e50;
- font-size: 1.05rem;
+.acciones {
+  gap: 0.75rem;
+}
 }
 
-.descripcion-info {
- max-width: 300px;
-}
-
-.descripcion-texto {
- color: #6c757d;
- font-size: 0.9rem;
- line-height: 1.4;
-}
-
-/* Estilos específicos para el modal de categorías */
-.detalle-item.descripcion-completa .descripcion-texto {
- color: #2c3e50;
- line-height: 1.6;
- margin-top: 0.5rem;
- padding: 0.75rem;
- background: #f8f9fa;
- border-radius: 6px;
- border-left: 3px solid #3498db;
-}
-
-/* Mejoras para la vista de tarjetas de categorías */
-.descripcion-card {
- background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- border-left: 4px solid #3498db;
- position: relative;
- overflow: hidden;
-}
-
-.descripcion-card::before {
- content: '';
- position: absolute;
- top: 0;
- left: 0;
- right: 0;
- height: 2px;
- background: linear-gradient(90deg, #3498db, #2980b9);
-}
-
-/* Efectos adicionales para badges de servicios */
-.servicios-card {
- position: relative;
- overflow: hidden;
-}
-
-.servicios-card::after {
- content: '';
- position: absolute;
- top: 0;
- right: 0;
- width: 20px;
- height: 20px;
- background: radial-gradient(circle, rgba(39, 174, 96, 0.2), transparent);
- border-radius: 50%;
-}
-
-/* Transición suave para el cambio de vista */
-.tabla-container,
-.tarjetas-container {
- animation: fadeIn 0.4s ease-out;
-}
-
-/* Mejoras para el estado de carga */
-.loading-overlay {
- backdrop-filter: blur(8px);
- -webkit-backdrop-filter: blur(8px);
-}
-
-.loading-spinner {
- background: rgba(0, 0, 0, 0.8);
- padding: 2rem;
- border-radius: 12px;
- box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* Pulso animado para elementos importantes */
+/* Efectos de pulso para elementos importantes */
 @keyframes pulse {
- 0% {
-   box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
- }
- 70% {
-   box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
- }
- 100% {
-   box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
- }
+0% {
+  box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+}
+70% {
+  box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+}
+100% {
+  box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+}
 }
 
 .btn-primary:focus {
- animation: pulse 2s infinite;
+animation: pulse 2s infinite;
 }
 
-/* Mejoras finales de accesibilidad */
+/* Modo de contraste alto */
+@media (prefers-contrast: high) {
+.tipo-badge,
+.estado-badge,
+.abreviacion-badge {
+  border-width: 2px;
+  font-weight: 700;
+}
+}
+
+/* Modo sin animaciones */
 @media (prefers-reduced-motion: reduce) {
- *,
- *::before,
- *::after {
-   animation-duration: 0.01ms !important;
-   animation-iteration-count: 1 !important;
-   transition-duration: 0.01ms !important;
- }
+*,
+*::before,
+*::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
 }
 
-/* Modo oscuro preparado (opcional) */
-@media (prefers-color-scheme: dark) {
- /* Aquí puedes agregar estilos para modo oscuro si lo necesitas */
+/* Indicadores de estado de conexión */
+.status-indicator {
+transition: all 0.3s ease;
 }
 
-/* Estilos base (mantenemos todos los existentes) */
-.admin-categorias-container {
-padding: 2rem;
-max-width: 1400px;
-margin: 0 auto;
+.status-indicator.online i {
+text-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
 }
 
-/* 🆕 NUEVOS ESTILOS PARA UNIDADES DE MEDIDA */
-.unidad-medida-info {
-display: flex;
-flex-direction: column;
-gap: 0.25rem;
+.status-indicator.offline i {
+text-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
 }
 
-.unidad-nombre {
-font-weight: 500;
-color: #2c3e50;
-font-size: 0.9rem;
+/* Estados de notificaciones con salida */
+.notification.hide {
+animation: slideOutRight 0.3s ease-in forwards;
 }
 
-.unidad-abrev {
-color: #3498db;
-font-size: 0.8rem;
-font-weight: 600;
-font-family: monospace;
+/* Mejoras en sombras */
+.unidad-card,
+.modal-content,
+.unidades-section,
+.filtros-section {
+box-shadow: 
+  0 1px 3px rgba(0, 0, 0, 0.12),
+  0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
-.unidad-tipo {
-color: #7f8c8d;
-font-size: 0.75rem;
-text-transform: capitalize;
+.unidad-card:hover {
+box-shadow: 
+  0 14px 28px rgba(0, 0, 0, 0.25),
+  0 10px 10px rgba(0, 0, 0, 0.22);
 }
 
-.sin-unidad {
-color: #e74c3c;
-font-size: 0.8rem;
-font-style: italic;
+/* Indicadores activos mejorados */
+.nav-link.active {
+position: relative;
+overflow: hidden;
 }
 
-.unidad-card {
-background: #e8f4fd;
-color: #1976d2;
-padding: 0.25rem 0.5rem;
-border-radius: 4px;
-font-size: 0.85rem;
-font-weight: 500;
+.nav-link.active::after {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+animation: shimmer 2s infinite;
 }
 
-.unidad-tipo-small {
-display: block;
-color: #1565c0;
-font-size: 0.75rem;
-margin-top: 0.125rem;
-text-transform: capitalize;
+@keyframes shimmer {
+0% { transform: translateX(-100%); }
+100% { transform: translateX(100%); }
 }
 
-.unidad-tipo-badge {
-background: #e3f2fd;
-color: #1976d2;
-padding: 0.2rem 0.5rem;
-border-radius: 12px;
-font-size: 0.75rem;
-font-weight: 500;
-margin-left: 0.5rem;
-text-transform: capitalize;
+/* Transiciones de vista */
+.tabla-container,
+.tarjetas-container {
+animation: fadeIn 0.4s ease-out;
 }
 
-.unidad-count {
-background: #e8f4fd;
-color: #1976d2;
-padding: 0.2rem 0.5rem;
-border-radius: 4px;
-font-size: 0.8rem;
-font-weight: 600;
-font-family: monospace;
+/* Focus visible mejorado */
+.stat-card:focus-within {
+outline: 2px solid #3498db;
+outline-offset: 2px;
+}
+
+.unidad-card:focus-within {
+outline: 2px solid #3498db;
+outline-offset: 2px;
+}
+
+/* Corrección final para botones de acciones - IMPORTANTE */
+.unidades-tabla th:last-child,
+.unidades-tabla td:last-child {
+width: 140px;
+min-width: 140px;
+text-align: center;
+}
+
+.acciones {
+display: flex !important;
+flex-direction: row !important;
+align-items: center !important;
+justify-content: center !important;
+gap: 0.5rem !important;
+flex-wrap: nowrap !important;
+white-space: nowrap !important;
+}
+
+.btn-accion {
+flex: 0 0 auto !important;
+display: inline-flex !important;
+margin: 0 !important;
 }
 </style>

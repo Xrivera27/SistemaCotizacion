@@ -17,6 +17,7 @@ import MisClientes from '@/views/admin/MisClientes.vue';
 import MisCategorias from '@/views/admin/MisCategorias.vue';
 import MisServicios from '@/views/admin/MisServicios.vue';
 import MisReportes from '@/views/admin/MisReportes.vue';
+import MisUnidadesMedida from '@/views/admin/MisUnidadesMedida.vue';
 
 // Vistas para SuperUsuario
 import SuperDashboard from '@/views/super/Dashboard.vue';
@@ -144,6 +145,11 @@ const routes = [
         component: MisUsuarios
       },
       {
+        path: '/admin/unidades-medida',
+        name: 'MisUnidadesMedida',
+        component: MisUnidadesMedida
+      },
+      {
         path: '/admin/clientes',
         name: 'MisClientes',
         component: MisClientes
@@ -163,6 +169,7 @@ const routes = [
         name: 'MisReportes',
         component: MisReportes
       },
+      
       
       // Rutas de SuperUsuario
       {
