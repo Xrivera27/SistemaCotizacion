@@ -696,41 +696,38 @@ class ClientesService {
     return telefono;
   }
   
-  // Helper para validar documento fiscal (RTN Honduras)
-  validateRTN(rtn) {
-    if (!rtn) return false;
-    
-    // RTN de Honduras: 14 dígitos (DDMMAAAANNNNNC)
-    const cleaned = rtn.replace(/\D/g, '');
-    
-    if (cleaned.length !== 14) {
-      return false;
-    }
-    
-    // Verificar que empiece con fecha válida
-    const dia = parseInt(cleaned.slice(0, 2));
-    const mes = parseInt(cleaned.slice(2, 4));
-    const año = parseInt(cleaned.slice(4, 8));
-    
-    if (dia < 1 || dia > 31 || mes < 1 || mes > 12 || año < 1900) {
-      return false;
-    }
-    
-    return true;
+ // Helper para validar documento fiscal (Internacional - más flexible)
+validateRTN(rtn) {
+  if (!rtn) return false;
+  
+  // Documento fiscal internacional: mínimo 5 caracteres, máximo 20
+  const cleaned = rtn.replace(/\s/g, ''); // Solo quitar espacios, mantener otros caracteres
+  
+  if (cleaned.length < 5 || cleaned.length > 20) {
+    return false;
   }
   
-  // Helper para formatear RTN
-  formatRTN(rtn) {
-    if (!rtn) return '';
-    
-    const cleaned = rtn.replace(/\D/g, '');
-    
-    if (cleaned.length === 14) {
-      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
-    }
-    
-    return rtn;
+  // Validación básica: debe contener al menos un carácter alfanumérico
+  const hasAlphaNumeric = /[a-zA-Z0-9]/.test(cleaned);
+  
+  return hasAlphaNumeric;
+}
+  
+// Helper para formatear RTN (más flexible para internacional)
+formatRTN(rtn) {
+  if (!rtn) return '';
+  
+  const cleaned = rtn.replace(/\s+/g, ' ').trim(); // Normalizar espacios
+  
+  // Para RTN de Honduras (14 dígitos), aplicar formato tradicional
+  const digitsOnly = rtn.replace(/\D/g, '');
+  if (digitsOnly.length === 14) {
+    return `${digitsOnly.slice(0, 4)}-${digitsOnly.slice(4, 8)}-${digitsOnly.slice(8)}`;
   }
+  
+  // Para otros países, devolver tal como está (sin formateo especial)
+  return cleaned;
+}
 
   // ✅ NUEVO: Helper para formatear precios/moneda
   formatPrice(precio) {

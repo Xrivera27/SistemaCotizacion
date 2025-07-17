@@ -219,26 +219,26 @@
             <div class="form-group">
               <label>
                 <i class="fas fa-id-card"></i>
-                RTN (Documento Fiscal) *
+                Documento Fiscal 
               </label>
-              <input 
-                v-model="clienteForm.documento_fiscal" 
-                type="text" 
-                required
-                class="form-input"
-                :class="{ 'error': validationErrors.documento_fiscal }"
-                placeholder="08011234567890"
-                :disabled="loading"
-                maxlength="14"
-                @blur="formatearRTN"
-                @input="validarRTN"
-              >
+             <input 
+  v-model="clienteForm.documento_fiscal" 
+  type="text" 
+  required
+  class="form-input"
+  :class="{ 'error': validationErrors.documento_fiscal }"
+  placeholder="Documento fiscal del país" 
+  :disabled="loading"
+  maxlength="20"   
+  @blur="formatearRTN"
+  @input="validarRTN"
+>
               <small v-if="validationErrors.documento_fiscal" class="error-text">
                 {{ validationErrors.documento_fiscal }}
               </small>
               <small v-else class="help-text">
-                Formato: DDMMAAAANNNNNC (14 dígitos)
-              </small>
+  Documento fiscal (5-20 caracteres)  
+</small>
             </div>
 
             <div class="form-row">

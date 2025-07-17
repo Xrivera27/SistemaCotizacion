@@ -142,7 +142,7 @@
               <th>ID</th>
               <th>Empresa</th>
               <th>Encargado</th>
-              <th>RTN</th>
+              <th>Documento Fiscal</th>
               <th>Teléfonos</th>
               <th>Manager</th>
               <th>Estado</th>
@@ -250,7 +250,7 @@
               <div class="detail">
                 <span class="detail-label">
                   <i class="fas fa-id-card"></i>
-                  RTN:
+                  Documento Fiscal:
                 </span>
                 <span class="detail-value rtn-card">{{ cliente.documento_fiscal }}</span>
               </div>
@@ -415,7 +415,7 @@
               <strong><i class="fas fa-building"></i> Empresa:</strong> {{ modalCliente.nombre_empresa }}
             </div>
             <div class="detalle-item">
-              <strong><i class="fas fa-id-card"></i> RTN:</strong> {{ modalCliente.documento_fiscal }}
+              <strong><i class="fas fa-id-card"></i> Documento Fiscal: </strong> {{ modalCliente.documento_fiscal }}
             </div>
             <div class="detalle-item">
               <strong><i class="fas fa-user"></i> Encargado:</strong> {{ modalCliente.nombre_encargado }}
@@ -486,16 +486,16 @@
                 </div>
                 
                 <div class="form-group">
-                  <label for="documento_fiscal">RTN *</label>
+                  <label for="documento_fiscal">Documento Fiscal</label>
                   <input 
-                    id="documento_fiscal"
-                    v-model="formulario.documento_fiscal" 
-                    type="text" 
-                    required 
-                    class="form-input"
-                    placeholder="08011989123456"
-                    maxlength="14"
-                  >
+  id="documento_fiscal"
+  v-model="formulario.documento_fiscal" 
+  type="text" 
+  required 
+  class="form-input"
+  placeholder="Documento fiscal del país"    
+  maxlength="20"    
+>
                 </div>
                 
                 <div class="form-group">
