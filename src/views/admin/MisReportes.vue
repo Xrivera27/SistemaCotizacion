@@ -254,10 +254,10 @@
         </div>
       </div>
 
-      <!-- Reporte de Servicios -->
+      <!-- Reporte de Servicios ACTUALIZADO -->
       <div v-if="tipoSeleccionado === 'servicios'" class="reporte-servicios">
         <div class="tabla-reporte">
-          <h4>Rendimiento por Servicio</h4>
+          <h4>Rendimiento por Servicio (Agrupado)</h4>
           <div v-if="!datosReporte.rendimientoServicios || datosReporte.rendimientoServicios.length === 0" class="no-data">
             <p>No hay datos de servicios para mostrar</p>
           </div>
@@ -266,6 +266,7 @@
               <tr>
                 <th>Servicio</th>
                 <th>Categoría</th>
+                <th>Variantes</th>
                 <th>Cotizaciones</th>
                 <th>Efectivas</th>
                 <th>Conversión</th>
@@ -275,8 +276,16 @@
             </thead>
             <tbody>
               <tr v-for="servicio in datosReporte.rendimientoServicios" :key="servicio.nombre">
-                <td>{{ servicio.nombre }}</td>
+                <td>
+                  <div class="servicio-info">
+                    <span class="servicio-nombre">{{ servicio.nombre }}</span>
+                    <small class="servicio-detalle" v-if="servicio.cantidadVariantes > 1">
+                      {{ servicio.cantidadVariantes }} variantes incluidas
+                    </small>
+                  </div>
+                </td>
                 <td>{{ servicio.categoria || 'Sin categoría' }}</td>
+                <td>{{ servicio.cantidadVariantes }}</td>
                 <td>{{ servicio.cotizaciones }}</td>
                 <td>{{ servicio.efectivas }}</td>
                 <td>{{ servicio.conversion }}%</td>
@@ -577,331 +586,170 @@ export default {
       }
     },
 
-    
+    async exportarPDF() {
+      try {
+        this.isLoading = true;
+        this.loadingMessage = 'Generando PDF...';
 
-async exportarPDF() {
-  try {
-    this.isLoading = true;
-    this.loadingMessage = 'Generando PDF...';
+        const resultado = await ReportesService.generarPDF(this.tipoSeleccionado, this.filtros);
+        
+        if (resultado.success) {
+          console.log('✅ PDF generado exitosamente');
+        } else {
+          this.mostrarError(resultado.message || 'Error generando PDF');
+        }
 
-    const resultado = await ReportesService.generarPDF(this.tipoSeleccionado, this.filtros);
-    
-    if (resultado.success) {
-      console.log('✅ PDF generado exitosamente');
-    } else {
-      this.mostrarError(resultado.message || 'Error generando PDF');
+      } catch (error) {
+        console.error('❌ Error al generar PDF:', error);
+        this.mostrarError('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // ===== MÉTODOS AUXILIARES =====
+
+    formatearMoneda(valor) {
+      if (!valor && valor !== 0) return '$0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+      }).format(valor);
+    },
+
+    formatearFecha(fecha) {
+      if (!fecha) return '';
+      try {
+        return new Date(fecha).toLocaleDateString('es-HN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      } catch (error) {
+        return fecha;
+      }
+    },
+
+    getEstadoTexto(estado) {
+      const estados = {
+        'efectiva': 'Efectiva',
+        'pendiente': 'Pendiente',
+        'pendiente_aprobacion': 'Esperando Aprobación',
+        'rechazada': 'Cancelada'
+      };
+      return estados[estado] || estado;
+    },
+
+    mostrarError(mensaje) {
+      this.errorMessage = mensaje;
+      this.showError = true;
+      
+      // Auto-ocultar después de 5 segundos
+      setTimeout(() => {
+        this.showError = false;
+      }, 5000);
     }
-
-  } catch (error) {
-    console.error('❌ Error al generar PDF:', error);
-    this.mostrarError('Error al generar el PDF. Por favor, inténtalo de nuevo.');
-  } finally {
-    this.isLoading = false;
   }
-},
-
-    generarContenidoPDF(pdf) {
-      let yPos = 70;
-
-      switch (this.tipoSeleccionado) {
-        case 'cotizaciones':
-          this.generarPDFCotizaciones(pdf, yPos);
-          break;
-        case 'vendedores':
-          this.generarPDFVendedores(pdf, yPos);
-          break;
-        case 'servicios':
-          this.generarPDFServicios(pdf, yPos);
-          break;
-        case 'clientes':
-          this.generarPDFClientes(pdf, yPos);
-          break;
-        case 'financiero':
-          this.generarPDFFinanciero(pdf, yPos);
-          break;
-      }
-    },
-
-    generarPDFCotizaciones(pdf, yPos) {
-      // Resumen
-      pdf.setFontSize(14);
-      pdf.text('Resumen de Cotizaciones', 20, yPos);
-      yPos += 15;
-
-      pdf.setFontSize(10);
-      pdf.text(`Total de Cotizaciones: ${this.datosReporte.totalCotizaciones || 0}`, 20, yPos);
-      pdf.text(`Efectivas: ${this.datosReporte.cotizacionesEfectivas || 0}`, 20, yPos + 10);
-      pdf.text(`Pendientes: ${this.datosReporte.cotizacionesPendientes || 0}`, 20, yPos + 20);
-      pdf.text(`Canceladas: ${this.datosReporte.cotizacionesCanceladas || 0}`, 20, yPos + 30);
-      pdf.text(`Ingresos Totales: ${this.formatearMoneda(this.datosReporte.ingresosTotales)}`, 20, yPos + 40);
-
-      // Tabla de detalles
-      if (this.datosReporte.detalleCotizaciones && this.datosReporte.detalleCotizaciones.length > 0) {
-        const columnas = ['CT#', 'Cliente', 'Vendedor', 'Fecha', 'Total', 'Estado'];
-        const filas = this.datosReporte.detalleCotizaciones.map(c => [
-          `CT${String(c.id).padStart(6, '0')}`,
-          c.cliente,
-          c.vendedor,
-          this.formatearFecha(c.fecha),
-          this.formatearMoneda(c.total),
-          this.getEstadoTexto(c.estado)
-        ]);
-
-        pdf.autoTable({
-          head: [columnas],
-          body: filas,
-          startY: yPos + 60,
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [52, 152, 219] }
-        });
-      }
-    },
-
-    generarPDFVendedores(pdf, yPos) {
-      if (this.datosReporte.rendimientoVendedores && this.datosReporte.rendimientoVendedores.length > 0) {
-        const columnas = ['Vendedor', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Ticket Promedio'];
-        const filas = this.datosReporte.rendimientoVendedores.map(v => [
-          v.nombre,
-          v.cotizaciones.toString(),
-          v.efectivas.toString(),
-          `${v.conversion}%`,
-          this.formatearMoneda(v.ingresos),
-          this.formatearMoneda(v.ticketPromedio)
-        ]);
-
-        pdf.autoTable({
-          head: [columnas],
-          body: filas,
-          startY: yPos,
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [52, 152, 219] }
-        });
-      }
-    },
-
-    generarPDFServicios(pdf, yPos) {
-     if (this.datosReporte.rendimientoServicios && this.datosReporte.rendimientoServicios.length > 0) {
-       const columnas = ['Servicio', 'Categoría', 'Cotizaciones', 'Efectivas', 'Conversión', 'Ingresos', 'Precio Promedio'];
-       const filas = this.datosReporte.rendimientoServicios.map(s => [
-         s.nombre,
-         s.categoria || 'Sin categoría',
-         s.cotizaciones.toString(),
-         s.efectivas.toString(),
-         `${s.conversion}%`,
-         this.formatearMoneda(s.ingresos),
-         this.formatearMoneda(s.precioPromedio)
-       ]);
-
-       pdf.autoTable({
-         head: [columnas],
-         body: filas,
-         startY: yPos,
-         styles: { fontSize: 8 },
-         headStyles: { fillColor: [52, 152, 219] }
-       });
-     }
-   },
-
-   generarPDFClientes(pdf, yPos) {
-     if (this.datosReporte.actividadClientes && this.datosReporte.actividadClientes.length > 0) {
-       const columnas = ['Cliente', 'Empresa', 'Vendedor', 'Cotizaciones', 'Última Cotización', 'Total Facturado'];
-       const filas = this.datosReporte.actividadClientes.map(c => [
-         c.nombreEncargado,
-         c.empresa,
-         c.vendedorAsignado,
-         c.totalCotizaciones.toString(),
-         this.formatearFecha(c.ultimaCotizacion),
-         this.formatearMoneda(c.totalFacturado)
-       ]);
-
-       pdf.autoTable({
-         head: [columnas],
-         body: filas,
-         startY: yPos,
-         styles: { fontSize: 8 },
-         headStyles: { fillColor: [52, 152, 219] }
-       });
-     }
-   },
-
-   generarPDFFinanciero(pdf, yPos) {
-     // Resumen financiero
-     pdf.setFontSize(14);
-     pdf.text('Resumen Financiero', 20, yPos);
-     yPos += 15;
-
-     pdf.setFontSize(10);
-     pdf.text(`Ingresos Brutos: ${this.formatearMoneda(this.datosReporte.financiero?.ingresosBrutos)}`, 20, yPos);
-     pdf.text(`Promedio Mensual: ${this.formatearMoneda(this.datosReporte.financiero?.promedioMensual)}`, 20, yPos + 10);
-     pdf.text(`Mejor Mes: ${this.datosReporte.financiero?.mejorMes || 'Sin datos'}`, 20, yPos + 20);
-     pdf.text(`Crecimiento: ${this.datosReporte.financiero?.crecimiento || 0}%`, 20, yPos + 30);
-
-     // Tabla de detalles mensuales
-     if (this.datosReporte.financiero?.detallesMensuales && this.datosReporte.financiero.detallesMensuales.length > 0) {
-       const columnas = ['Mes', 'Cotizaciones', 'Efectivas', 'Ingresos', 'Crecimiento'];
-       const filas = this.datosReporte.financiero.detallesMensuales.map(m => [
-         m.mes,
-         m.cotizaciones.toString(),
-         m.efectivas.toString(),
-         this.formatearMoneda(m.ingresos),
-         `${m.crecimiento}%`
-       ]);
-
-       pdf.autoTable({
-         head: [columnas],
-         body: filas,
-         startY: yPos + 50,
-         styles: { fontSize: 9 },
-         headStyles: { fillColor: [52, 152, 219] }
-       });
-     }
-   },
-
-   // ===== MÉTODOS AUXILIARES =====
-
-   // REEMPLAZAR el método formatearMoneda en el script:
-formatearMoneda(valor) {
-  if (!valor && valor !== 0) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(valor);
-},
-
-   formatearFecha(fecha) {
-     if (!fecha) return '';
-     try {
-       return new Date(fecha).toLocaleDateString('es-HN', {
-         year: 'numeric',
-         month: '2-digit',
-         day: '2-digit'
-       });
-     } catch (error) {
-       return fecha;
-     }
-   },
-
-   getEstadoTexto(estado) {
-     const estados = {
-       'efectiva': 'Efectiva',
-       'pendiente': 'Pendiente',
-       'pendiente_aprobacion': 'Esperando Aprobación',
-       'rechazada': 'Cancelada'
-     };
-     return estados[estado] || estado;
-   },
-
-   mostrarError(mensaje) {
-     this.errorMessage = mensaje;
-     this.showError = true;
-     
-     // Auto-ocultar después de 5 segundos
-     setTimeout(() => {
-       this.showError = false;
-     }, 5000);
-   }
- }
 }
 </script>
 
 <style scoped>
-/* Mantener todos los estilos existentes... */
 .admin-reportes-container {
- padding: 20px;
- background: #f8f9fa;
- min-height: 100vh;
- position: relative;
+  padding: 20px;
+  background: #f8f9fa;
+  min-height: 100vh;
+  position: relative;
 }
 
 .page-header {
- background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
- color: white;
- padding: 30px;
- border-radius: 12px;
- margin-bottom: 30px;
- box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .header-content {
- text-align: center;
+  text-align: center;
 }
 
 .page-title {
- font-size: 2.5rem;
- font-weight: 700;
- margin: 0 0 10px 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
 }
 
 .page-subtitle {
- font-size: 1.1rem;
- opacity: 0.9;
- margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
 }
 
 .filtros-section {
- background: white;
- padding: 25px;
- border-radius: 12px;
- box-shadow: 0 2px 10px rgba(0,0,0,0.08);
- margin-bottom: 30px;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  margin-bottom: 30px;
 }
 
 .tipo-reporte-selector h3 {
- color: #2c3e50;
- margin-bottom: 20px;
- font-size: 1.3rem;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
 }
 
 .tipos-grid {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
- gap: 20px;
- margin-bottom: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
 .tipo-card {
- display: flex;
- padding: 20px;
- border: 2px solid #e9ecef;
- border-radius: 10px;
- cursor: pointer;
- transition: all 0.3s ease;
- background: #f8f9fa;
+  display: flex;
+  padding: 20px;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
 }
 
 .tipo-card:hover {
- border-color: #3498db;
- background: #fff;
- transform: translateY(-2px);
- box-shadow: 0 4px 15px rgba(52, 152, 219, 0.1);
+  border-color: #3498db;
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.1);
 }
 
 .tipo-card.active {
- border-color: #3498db;
- background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
- color: white;
+  border-color: #3498db;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
 }
 
 .tipo-icon {
- margin-right: 15px;
- display: flex;
- align-items: center;
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
 }
 
 .tipo-icon i {
- font-size: 2rem;
- color: #3498db;
+  font-size: 2rem;
+  color: #3498db;
 }
 
 .tipo-card.active .tipo-icon i {
- color: white;
+  color: white;
 }
 
 .tipo-info h4 {
- margin: 0 0 8px 0;
- font-size: 1.1rem;
- font-weight: 600;
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .tipo-info p {
@@ -1189,6 +1037,24 @@ formatearMoneda(valor) {
 .vendedor-rol {
  font-size: 0.8rem;
  color: #7f8c8d;
+}
+
+/* Estilos para servicios agrupados */
+.servicio-info {
+ display: flex;
+ flex-direction: column;
+ gap: 2px;
+}
+
+.servicio-nombre {
+ font-weight: 600;
+ color: #2c3e50;
+}
+
+.servicio-detalle {
+ font-size: 0.75rem;
+ color: #7f8c8d;
+ font-style: italic;
 }
 
 .positivo {
