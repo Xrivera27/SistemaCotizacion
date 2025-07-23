@@ -41,7 +41,7 @@
      </div>
      
      <div class="filtros-grid">
-       <!-- 🔧 ACTUALIZADO: Selector múltiple de categorías -->
+       <!-- Selector múltiple de categorías -->
        <div class="filtro-categorias">
          <label>Filtrar por categorías:</label>
          <div class="categorias-multi-select">
@@ -126,7 +126,7 @@
      </div>
    </div>
 
-   <!-- 🆕 NUEVA: Estadística de múltiples categorías -->
+   <!-- Estadística de múltiples categorías -->
    <div class="stat-card multiples">
      <div class="stat-content">
        <div class="stat-number">{{ estadisticas.servicios_con_multiples_categorias || 0 }}</div>
@@ -134,7 +134,7 @@
      </div>
    </div>
 
-   <!-- 🆕 NUEVA: Estadística de límites -->
+   <!-- Estadística de límites -->
    <div class="stat-card limites">
      <div class="stat-content">
        <div class="stat-number">{{ estadisticas.limites?.con_limites || 0 }}</div>
@@ -203,9 +203,8 @@
              <th>Descripción</th>
              <th>Precio Mínimo</th>
              <th>Precio Recomendado</th>
-             <th>Límites</th> <!-- 🆕 NUEVA COLUMNA -->
+             <th>Límites</th>
              <th>Estado</th>
-             <th>Fecha Creación</th>
              <th>Acciones</th>
            </tr>
          </thead>
@@ -220,7 +219,7 @@
                </div>
              </td>
              <td>
-               <!-- 🆕 NUEVO: Mostrar múltiples categorías -->
+               <!-- Mostrar múltiples categorías -->
                <div class="categorias-container">
                  <div class="categoria-principal">
                    <span class="categoria-badge principal">
@@ -263,7 +262,7 @@
              <td>
                <span class="precio recomendado">{{ formatearMoneda(servicio.precio_recomendado) }}</span>
              </td>
-             <!-- 🆕 NUEVA COLUMNA: Límites -->
+             <!-- Columna de Límites -->
              <td>
                <div class="limites-info">
                  <div v-if="servicio.limite_minimo || servicio.limite_maximo" class="limites-container">
@@ -281,9 +280,6 @@
                <span class="estado-badge" :class="servicio.estado">
                  {{ getEstadoTexto(servicio.estado) }}
                </span>
-             </td>
-             <td>
-               <span class="fecha">{{ formatearFecha(servicio.created_at) }}</span>
              </td>
              <td>
                <div class="acciones">
@@ -338,7 +334,7 @@
              {{ servicio.nombre }}
            </h3>
 
-           <!-- 🆕 ACTUALIZADO: Mostrar múltiples categorías en tarjetas -->
+           <!-- Mostrar múltiples categorías en tarjetas -->
            <div class="categorias-info-card">
              <div class="categoria-principal-card">
                <span class="categoria-badge principal">
@@ -387,7 +383,7 @@
                <span class="precio-valor recomendado">{{ formatearMoneda(servicio.precio_recomendado) }}</span>
              </div>
 
-             <!-- 🆕 NUEVO: Mostrar límites en tarjetas -->
+             <!-- Mostrar límites en tarjetas -->
              <div class="precio-item" v-if="servicio.limite_minimo || servicio.limite_maximo">
                <span class="precio-label">
                  <i class="fas fa-ruler"></i>
@@ -516,7 +512,7 @@
              <strong><i class="fas fa-cogs"></i> Nombre:</strong> {{ modalServicio.nombre }}
            </div>
            
-           <!-- 🆕 ACTUALIZADO: Mostrar todas las categorías -->
+           <!-- Mostrar todas las categorías -->
            <div class="detalle-item categorias-completas">
              <strong><i class="fas fa-tags"></i> Categorías:</strong> 
              <div class="categorias-detalle">
@@ -557,7 +553,7 @@
              <strong><i class="fas fa-calculator"></i> Diferencia:</strong> {{ formatearMoneda(modalServicio.precio_recomendado - modalServicio.precio_minimo) }}
            </div>
            
-           <!-- 🆕 NUEVO: Mostrar límites en modal -->
+           <!-- Mostrar límites en modal -->
            <div class="detalle-item" v-if="modalServicio.limite_minimo || modalServicio.limite_maximo">
              <strong><i class="fas fa-ruler"></i> Límites de cantidad:</strong> 
              <div class="limites-detalle">
@@ -620,7 +616,7 @@
                  >
                </div>
 
-               <!-- 🆕 NUEVO: Selector múltiple de categorías -->
+               <!-- Selector múltiple de categorías -->
                <div class="form-group full-width">
                  <label>Categorías del Servicio *</label>
                  
@@ -730,223 +726,223 @@
                    step="0.01"
                    class="form-input"
                    placeholder="0.00"
-                 >
-               </div>
+                   >
+              </div>
 
-               <!-- 🆕 NUEVO: Campos de límites -->
-               <div class="form-group">
-                 <label for="limite_minimo">Límite Mínimo</label>
-                 <input 
-                   id="limite_minimo"
-                   v-model.number="formulario.limite_minimo" 
-                   type="number" 
-                   min="0.01"
-                   step="0.01"
-                   class="form-input"
-                   placeholder="1.00"
-                 >
-                 <small class="form-help">Cantidad mínima permitida para este servicio</small>
-               </div>
-               
-               <div class="form-group">
-                 <label for="limite_maximo">Límite Máximo</label>
-                 <input 
-                   id="limite_maximo"
-                   v-model.number="formulario.limite_maximo" 
-                   type="number" 
-                   min="0.01"
-                   step="0.01"
-                   class="form-input"
-                   placeholder="Dejar vacío para sin límite"
-                 >
-                 <small class="form-help">Cantidad máxima permitida (vacío = sin límite)</small>
-               </div>
-               
-               <div class="form-group" v-if="servicioEditando">
-                 <label for="estado">Estado</label>
-                 <select id="estado" v-model="formulario.estado" class="form-select">
-                   <option value="activo">Activo</option>
-                   <option value="inactivo">Inactivo</option>
-                 </select>
-               </div>
-             </div>
-           </div>
-         </div>
-
-         <!-- Validación visual de precios -->
-         <div v-if="formulario.precio_minimo && formulario.precio_recomendado" class="precio-validacion">
-           <div v-if="formulario.precio_recomendado < formulario.precio_minimo" class="validacion-error">
-             <i class="fas fa-exclamation-triangle"></i>
-             El precio recomendado debe ser mayor o igual al precio mínimo
-           </div>
-           <div v-else class="validacion-exito">
-             <i class="fas fa-check-circle"></i>
-             Diferencia: {{ formatearMoneda(formulario.precio_recomendado - formulario.precio_minimo) }}
-           </div>
-         </div>
-
-         <!-- 🆕 NUEVO: Validación visual de límites -->
-         <div v-if="formulario.limite_minimo || formulario.limite_maximo" class="limites-validacion">
-           <div v-if="formulario.limite_maximo && formulario.limite_minimo && formulario.limite_maximo < formulario.limite_minimo" class="validacion-error">
-             <i class="fas fa-exclamation-triangle"></i>
-             El límite máximo debe ser mayor o igual al límite mínimo
-           </div>
-           <div v-else-if="formulario.limite_minimo || formulario.limite_maximo" class="validacion-exito">
-             <i class="fas fa-check-circle"></i>
-             Límites: {{ formatearLimitesFormulario() }}
-           </div>
-         </div>
-
-         <!-- 🆕 NUEVO: Validación de categorías -->
-         <div v-if="formulario.categoriasSeleccionadas.length === 0" class="categorias-validacion">
-           <div class="validacion-error">
-             <i class="fas fa-exclamation-triangle"></i>
-             Debe seleccionar al menos una categoría
-           </div>
-         </div>
-
-         <!-- Errores de validación -->
-         <div v-if="erroresFormulario.length > 0" class="form-errors">
-           <div class="error-item" v-for="error in erroresFormulario" :key="error.field">
-             <i class="fas fa-exclamation-triangle"></i>
-            <span>{{ error.message }}</span>
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-outline" @click="cerrarModalFormulario">Cancelar</button>
-      <button 
-        type="button" 
-        class="btn btn-primary" 
-        @click="guardarServicio"
-        :disabled="guardandoServicio || formulario.categoriasSeleccionadas.length === 0 || (formulario.limite_maximo && formulario.limite_minimo && formulario.limite_maximo < formulario.limite_minimo)"
-      >
-        {{ guardandoServicio ? 'Guardando...' : (servicioEditando ? 'Actualizar' : 'Crear') }} Servicio
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de confirmación para cambiar estado -->
-<div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
-  <div class="modal-content modal-confirmacion" @click.stop>
-    <div class="modal-header">
-      <h3>
-        <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
-        {{ servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar Servicio' : 'Activar Servicio' }}
-      </h3>
-      <button class="btn-close" @click="cerrarModalCambiarEstado">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    
-    <div class="modal-body">
-      <div class="confirmacion-content">
-        <div class="servicio-info-resumen">
-          <div class="servicio-avatar">
-            <i class="fas fa-cogs"></i>
-          </div>
-          <div class="servicio-datos">
-            <h4>{{ servicioParaCambiarEstado.nombre }}</h4>
-            <div class="categoria-info-modal">
-              <span class="categoria-badge">
-                <i class="fas fa-tag"></i>
-                {{ obtenerNombreCategoria(servicioParaCambiarEstado.categorias_id) }}
-              </span>
-              <!-- 🆕 NUEVO: Mostrar total de categorías -->
-              <span v-if="servicioParaCambiarEstado.categorias_completas && servicioParaCambiarEstado.categorias_completas.length > 1" 
-                    class="total-categorias-badge">
-                +{{ servicioParaCambiarEstado.categorias_completas.length - 1 }} más
-              </span>
-              <!-- 🆕 NUEVO: Mostrar límites si existen -->
-              <span v-if="servicioParaCambiarEstado.limite_minimo || servicioParaCambiarEstado.limite_maximo" 
-                    class="limites-badge">
-                <i class="fas fa-ruler"></i>
-                {{ formatearLimites(servicioParaCambiarEstado) }}
-              </span>
-            </div>
-            <p class="servicio-descripcion">{{ truncarTexto(servicioParaCambiarEstado.descripcion, 100) }}</p>
-            <div class="servicio-badges">
-              <span class="servicio-id">#{{ String(servicioParaCambiarEstado.servicios_id).padStart(4, '0') }}</span>
-              <span class="precio-badge">{{ formatearMoneda(servicioParaCambiarEstado.precio_recomendado) }}</span>
+              <!-- Campos de límites -->
+              <div class="form-group">
+                <label for="limite_minimo">Límite Mínimo</label>
+                <input 
+                  id="limite_minimo"
+                  v-model.number="formulario.limite_minimo" 
+                  type="number" 
+                  min="0.01"
+                  step="0.01"
+                  class="form-input"
+                  placeholder="1.00"
+                >
+                <small class="form-help">Cantidad mínima permitida para este servicio</small>
+              </div>
+              
+              <div class="form-group">
+                <label for="limite_maximo">Límite Máximo</label>
+                <input 
+                  id="limite_maximo"
+                  v-model.number="formulario.limite_maximo" 
+                  type="number" 
+                  min="0.01"
+                  step="0.01"
+                  class="form-input"
+                  placeholder="Dejar vacío para sin límite"
+                >
+                <small class="form-help">Cantidad máxima permitida (vacío = sin límite)</small>
+              </div>
+              
+              <div class="form-group" v-if="servicioEditando">
+                <label for="estado">Estado</label>
+                <select id="estado" v-model="formulario.estado" class="form-select">
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div class="mensaje-confirmacion">
-          <div class="icono-estado" :class="servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
-            <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+
+        <!-- Validación visual de precios -->
+        <div v-if="formulario.precio_minimo && formulario.precio_recomendado" class="precio-validacion">
+          <div v-if="formulario.precio_recomendado < formulario.precio_minimo" class="validacion-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            El precio recomendado debe ser mayor o igual al precio mínimo
           </div>
-          
-          <div class="texto-confirmacion">
-            <p class="pregunta-principal">
-              ¿Está seguro que desea 
-              <strong :class="servicioParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
-                {{ servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar' }}
-              </strong> 
-              este servicio?
-            </p>
-            
-            <div class="advertencia-estado" v-if="servicioParaCambiarEstado.estado === 'activo'">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>Al desactivar este servicio, no estará disponible para nuevas cotizaciones hasta que sea activado nuevamente.</span>
-            </div>
-            
-            <div class="info-estado" v-else>
-              <i class="fas fa-info-circle"></i>
-              <span>Al activar este servicio, estará disponible para ser incluido en cotizaciones.</span>
-            </div>
+          <div v-else class="validacion-exito">
+            <i class="fas fa-check-circle"></i>
+            Diferencia: {{ formatearMoneda(formulario.precio_recomendado - formulario.precio_minimo) }}
           </div>
         </div>
-        
-        <div class="cambio-estado-visual">
-          <div class="estado-actual">
-            <span class="label">Estado actual:</span>
-            <span class="estado-badge" :class="servicioParaCambiarEstado.estado">
-              {{ getEstadoTexto(servicioParaCambiarEstado.estado) }}
-            </span>
+
+        <!-- Validación visual de límites -->
+        <div v-if="formulario.limite_minimo || formulario.limite_maximo" class="limites-validacion">
+          <div v-if="formulario.limite_maximo && formulario.limite_minimo && formulario.limite_maximo < formulario.limite_minimo" class="validacion-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            El límite máximo debe ser mayor o igual al límite mínimo
           </div>
-          
-          <div class="flecha-cambio">
-            <i class="fas fa-arrow-right"></i>
+          <div v-else-if="formulario.limite_minimo || formulario.limite_maximo" class="validacion-exito">
+            <i class="fas fa-check-circle"></i>
+            Límites: {{ formatearLimitesFormulario() }}
           </div>
-          
-           <div class="estado-nuevo">
-         <span class="label">Nuevo estado:</span>
-         <span class="estado-badge" :class="servicioParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
-           {{ servicioParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
-         </span>
+        </div>
+
+        <!-- Validación de categorías -->
+        <div v-if="formulario.categoriasSeleccionadas.length === 0" class="categorias-validacion">
+          <div class="validacion-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            Debe seleccionar al menos una categoría
+          </div>
+        </div>
+
+        <!-- Errores de validación -->
+        <div v-if="erroresFormulario.length > 0" class="form-errors">
+          <div class="error-item" v-for="error in erroresFormulario" :key="error.field">
+            <i class="fas fa-exclamation-triangle"></i>
+           <span>{{ error.message }}</span>
+         </div>
        </div>
-       </div>
-     </div>
+     </form>
    </div>
-   
    <div class="modal-footer">
-     <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
-       <i class="fas fa-times"></i>
-       Cancelar
-     </button>
+     <button type="button" class="btn btn-outline" @click="cerrarModalFormulario">Cancelar</button>
      <button 
-       class="btn"
-       :class="servicioParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
-       @click="confirmarCambiarEstado"
-       :disabled="cambiandoEstado"
+       type="button" 
+       class="btn btn-primary" 
+       @click="guardarServicio"
+       :disabled="guardandoServicio || formulario.categoriasSeleccionadas.length === 0 || (formulario.limite_maximo && formulario.limite_minimo && formulario.limite_maximo < formulario.limite_minimo)"
      >
-       <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check')"></i>
-       {{ cambiandoEstado ? 'Procesando...' : (servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar') }} Servicio
+       {{ guardandoServicio ? 'Guardando...' : (servicioEditando ? 'Actualizar' : 'Crear') }} Servicio
      </button>
    </div>
  </div>
 </div>
 
+<!-- Modal de confirmación para cambiar estado -->
+<div v-if="modalCambiarEstado" class="modal-overlay" @click="cerrarModalCambiarEstado">
+ <div class="modal-content modal-confirmacion" @click.stop>
+   <div class="modal-header">
+     <h3>
+       <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban text-danger' : 'fas fa-check text-success'"></i>
+       {{ servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar Servicio' : 'Activar Servicio' }}
+     </h3>
+     <button class="btn-close" @click="cerrarModalCambiarEstado">
+       <i class="fas fa-times"></i>
+     </button>
+   </div>
+   
+   <div class="modal-body">
+     <div class="confirmacion-content">
+       <div class="servicio-info-resumen">
+         <div class="servicio-avatar">
+           <i class="fas fa-cogs"></i>
+         </div>
+         <div class="servicio-datos">
+           <h4>{{ servicioParaCambiarEstado.nombre }}</h4>
+           <div class="categoria-info-modal">
+             <span class="categoria-badge">
+               <i class="fas fa-tag"></i>
+               {{ obtenerNombreCategoria(servicioParaCambiarEstado.categorias_id) }}
+             </span>
+             <!-- Mostrar total de categorías -->
+             <span v-if="servicioParaCambiarEstado.categorias_completas && servicioParaCambiarEstado.categorias_completas.length > 1" 
+                   class="total-categorias-badge">
+               +{{ servicioParaCambiarEstado.categorias_completas.length - 1 }} más
+             </span>
+             <!-- Mostrar límites si existen -->
+             <span v-if="servicioParaCambiarEstado.limite_minimo || servicioParaCambiarEstado.limite_maximo" 
+                   class="limites-badge">
+               <i class="fas fa-ruler"></i>
+               {{ formatearLimites(servicioParaCambiarEstado) }}
+             </span>
+           </div>
+           <p class="servicio-descripcion">{{ truncarTexto(servicioParaCambiarEstado.descripcion, 100) }}</p>
+           <div class="servicio-badges">
+             <span class="servicio-id">#{{ String(servicioParaCambiarEstado.servicios_id).padStart(4, '0') }}</span>
+             <span class="precio-badge">{{ formatearMoneda(servicioParaCambiarEstado.precio_recomendado) }}</span>
+           </div>
+         </div>
+       </div>
+       
+       <div class="mensaje-confirmacion">
+         <div class="icono-estado" :class="servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar'">
+           <i :class="servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check'"></i>
+         </div>
+         
+         <div class="texto-confirmacion">
+           <p class="pregunta-principal">
+             ¿Está seguro que desea 
+             <strong :class="servicioParaCambiarEstado.estado === 'activo' ? 'text-danger' : 'text-success'">
+               {{ servicioParaCambiarEstado.estado === 'activo' ? 'desactivar' : 'activar' }}
+             </strong> 
+             este servicio?
+           </p>
+           
+           <div class="advertencia-estado" v-if="servicioParaCambiarEstado.estado === 'activo'">
+             <i class="fas fa-exclamation-triangle"></i>
+             <span>Al desactivar este servicio, no estará disponible para nuevas cotizaciones hasta que sea activado nuevamente.</span>
+           </div>
+           
+           <div class="info-estado" v-else>
+             <i class="fas fa-info-circle"></i>
+             <span>Al activar este servicio, estará disponible para ser incluido en cotizaciones.</span>
+           </div>
+         </div>
+       </div>
+       
+       <div class="cambio-estado-visual">
+         <div class="estado-actual">
+           <span class="label">Estado actual:</span>
+           <span class="estado-badge" :class="servicioParaCambiarEstado.estado">
+             {{ getEstadoTexto(servicioParaCambiarEstado.estado) }}
+           </span>
+         </div>
+         
+         <div class="flecha-cambio">
+           <i class="fas fa-arrow-right"></i>
+         </div>
+         
+          <div class="estado-nuevo">
+        <span class="label">Nuevo estado:</span>
+        <span class="estado-badge" :class="servicioParaCambiarEstado.estado === 'activo' ? 'inactivo' : 'activo'">
+          {{ servicioParaCambiarEstado.estado === 'activo' ? 'Inactivo' : 'Activo' }}
+        </span>
+      </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal-footer">
+    <button class="btn btn-outline" @click="cerrarModalCambiarEstado">
+      <i class="fas fa-times"></i>
+      Cancelar
+    </button>
+    <button 
+      class="btn"
+      :class="servicioParaCambiarEstado.estado === 'activo' ? 'btn-danger' : 'btn-success'"
+      @click="confirmarCambiarEstado"
+      :disabled="cambiandoEstado"
+    >
+      <i :class="cambiandoEstado ? 'fas fa-spinner fa-spin' : (servicioParaCambiarEstado.estado === 'activo' ? 'fas fa-ban' : 'fas fa-check')"></i>
+      {{ cambiandoEstado ? 'Procesando...' : (servicioParaCambiarEstado.estado === 'activo' ? 'Desactivar' : 'Activar') }} Servicio
+    </button>
+  </div>
+</div>
+</div>
+
 <!-- Toast de notificaciones -->
 <div v-if="notification.show" :class="['notification', `notification-${notification.type}`]">
- <i class="fas" :class="notification.icon"></i>
- <span>{{ notification.message }}</span>
- <button class="notification-close" @click="closeNotification">
-   <i class="fas fa-times"></i>
- </button>
+<i class="fas" :class="notification.icon"></i>
+<span>{{ notification.message }}</span>
+<button class="notification-close" @click="closeNotification">
+  <i class="fas fa-times"></i>
+</button>
 </div>
 </div>
 </template>

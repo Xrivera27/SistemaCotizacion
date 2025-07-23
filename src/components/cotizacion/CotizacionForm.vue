@@ -58,7 +58,7 @@
           <input 
             v-model="filtros.busqueda" 
             type="text" 
-            placeholder="Buscar por nombre o descripción..."
+            placeholder="Buscar por nombre..."
             class="input-busqueda"
             @input="buscarServicios"
           >
@@ -87,21 +87,7 @@
         </select>
       </div>
 
-      <!-- Filtro por tipo de unidad -->
-      <div class="unidades-filter">
-        <label>
-          <i class="fas fa-ruler"></i>
-          Tipo de Unidad:
-        </label>
-        <select v-model="filtros.tipoUnidad" @change="filtrarPorTipoUnidad" class="select-unidad">
-          <option value="">Todos los tipos</option>
-          <option v-for="tipo in tiposUnidadDisponibles" :key="tipo.value" :value="tipo.value">
-            {{ tipo.label }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Filtro por precio -->
+      <!-- Filtro por precio ACTUALIZADO -->
       <div class="precio-filter">
         <label>
           <i class="fas fa-dollar-sign"></i>
@@ -109,9 +95,9 @@
         </label>
         <select v-model="filtros.rangoPrecio" @change="filtrarPorPrecio" class="select-precio">
           <option value="">Todos los precios</option>
-          <option value="economico">Económico (menor a $. 1,000)</option>
-          <option value="medio">Medio ($. 1,000 - $. 5,000)</option>
-          <option value="premium">Premium (mayor a $. 5,000)</option>
+          <option v-for="rango in rangosPrecioDisponibles" :key="rango.value" :value="rango.value">
+            {{ rango.label }}
+          </option>
         </select>
       </div>
 
@@ -255,7 +241,7 @@
     </div>
   </div>
 
-  <!-- ✅ NUEVO: Mostrar errores de límites globales -->
+  <!-- Mostrar errores de límites globales -->
   <div v-if="tieneErroresGlobales" class="errores-limites">
     <div class="error-header">
       <i class="fas fa-exclamation-triangle"></i>
@@ -332,10 +318,10 @@ setup() {
   const cantidadesEquipos = reactive({})
   const preciosVenta = reactive({})
   
-  // ✅ NUEVO: Estados para manejar cantidades por categoría
+  // Estados para manejar cantidades por categoría
   const cantidadesPorCategoria = reactive({})
   
-  // ✅ NUEVO: Key reactivo para forzar re-render
+  // Key reactivo para forzar re-render
   const formularioKey = ref(0)
   
   const serviciosSeleccionados = ref([])
@@ -345,13 +331,13 @@ setup() {
   const esDuplicacion = ref(false)
   const cotizacionOrigen = ref(null)
   
-  // ✅ NUEVOS: Estados para validación de límites
+  // Estados para validación de límites
   const validacionErrores = reactive({})
   
   // TOAST SYSTEM
   const showToast = ref(false)
   const toastMessage = ref('')
-  const toastType = ref('success') // success, error, warning, info
+  const toastType = ref('success')
   
   // Filtros con tipo de unidad
   const filtros = reactive({
@@ -370,7 +356,7 @@ setup() {
   const cacheResultados = reactive({})
   const timeoutBusqueda = ref(null)
 
-  // ✅ NUEVO: Computed para verificar errores de límites globales
+  // Computed para verificar errores de límites globales
   const tieneErroresGlobales = computed(() => {
     return Object.values(validacionErrores).some(servicioErrores => 
       Object.values(servicioErrores).some(error => !error.esValido)
@@ -388,13 +374,13 @@ setup() {
     return iconos[toastType.value] || 'fas fa-info-circle';
   })
 
-  // ✅ NUEVO: Helper para obtener nombre del servicio por ID
+  // Helper para obtener nombre del servicio por ID
   const obtenerNombreServicio = (servicioId) => {
     const servicio = servicios.value.find(s => s.servicios_id == servicioId)
     return servicio ? servicio.nombre : `Servicio #${servicioId}`
   }
 
-  // ✅ NUEVO: Manejar notificaciones de ServicioItem
+  // Manejar notificaciones de ServicioItem
   const mostrarNotificacionHijo = (notificacion) => {
     mostrarToast(notificacion.mensaje, notificacion.tipo)
   }
@@ -405,7 +391,6 @@ setup() {
     toastType.value = tipo
     showToast.value = true
     
-    // Auto-ocultar después de 5 segundos
     setTimeout(() => {
       hideToast()
     }, 5000)
@@ -420,11 +405,10 @@ setup() {
     return servicio.categoria?.unidad_medida?.tipo || 'cantidad'
   }
 
-  // ✅ NUEVA FUNCIÓN: Reinicializar precios correctamente
+  // Reinicializar precios correctamente
   const reinicializarPrecios = () => {
     servicios.value.forEach(servicio => {
       const id = servicio.servicios_id
-      // Solo reinicializar si no existe o si está en 0
       if (!preciosVenta[id] || preciosVenta[id] === 0) {
         preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
         console.log(`💰 Precio reinicializado para ${servicio.nombre}: ${preciosVenta[id]}`)
@@ -453,7 +437,6 @@ setup() {
       loading.value = true
       loadingMessage.value = 'Cargando datos para duplicar...'
       
-      // Obtener datos del sessionStorage
       const datosGuardados = sessionStorage.getItem('datosParaDuplicar')
       
       if (datosGuardados) {
@@ -461,13 +444,8 @@ setup() {
         
         console.log('✅ Datos para duplicar encontrados:', datos)
         
-        // Cargar servicios primero
         await cargarServicios()
-        
-        // Luego precargar el formulario
         await precargarFormulario(datos)
-        
-        // Limpiar sessionStorage
         sessionStorage.removeItem('datosParaDuplicar')
         
         mostrarToast(`Cotización duplicada exitosamente desde ${cotizacionOrigen.value}`, 'success')
@@ -488,17 +466,15 @@ setup() {
     }
   }
 
-  // ✅ ACTUALIZADO: Precarga con manejo de categorías
+  // Precarga con manejo de categorías
   const precargarFormulario = async (datos) => {
     console.log('🔄 Precargando formulario con datos:', datos)
     
     try {
-      // PASO 1: Configurar años del contrato
       if (datos.servicios && datos.servicios.length > 0) {
         añosContrato.value = datos.servicios[0].cantidadAnos || 1
       }
       
-      // PASO 2: Precargar servicios usando datos directos
       if (datos.servicios && datos.servicios.length > 0) {
         for (const servicioData of datos.servicios) {
           const servicioId = servicioData.id
@@ -508,12 +484,10 @@ setup() {
           if (servicioExistente) {
             console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
             
-            // Configurar cantidad principal (para compatibilidad)
             cantidades[servicioId] = servicioData.cantidadServicios || 0
             cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
             preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
             
-            // ✅ NUEVO: Configurar cantidades por categoría si están disponibles
             if (servicioData.cantidadesPorCategoria) {
               cantidadesPorCategoria[servicioId] = { ...servicioData.cantidadesPorCategoria }
             }
@@ -572,70 +546,67 @@ setup() {
   }
 
   // ===== FUNCIÓN BUSCAR =====
-const buscarServicios = async () => {
-  const termino = filtros.busqueda.trim()
-  
-  if (timeoutBusqueda.value) {
-    clearTimeout(timeoutBusqueda.value)
-  }
-  
-  if (!termino) {
-    servicios.value = [...serviciosOriginales.value]
-    aplicarFiltros()
-    return
-  }
-  
-  if (cacheResultados[termino]) {
-    servicios.value = cacheResultados[termino]
-    aplicarFiltros()
-    return
-  }
-  
-  timeoutBusqueda.value = setTimeout(async () => {
-    try {
-      loadingServicios.value = true
-      
-      const resultado = await serviciosService.searchServicios(termino, 50)
-      
-      if (resultado.success) {
-        // ✅ SOLUCIÓN: Mezclar precios de servicios originales
-        const serviciosConPreciosCorrectos = resultado.servicios.map(servicioEncontrado => {
-          // Buscar el servicio original con precios correctos
-          const servicioOriginal = serviciosOriginales.value.find(
-            orig => orig.servicios_id === servicioEncontrado.servicios_id
-          )
-          
-          if (servicioOriginal) {
-            // Usar los precios del servicio original
-            return {
-              ...servicioEncontrado,
-              precio_minimo: servicioOriginal.precio_minimo,
-              precio_recomendado: servicioOriginal.precio_recomendado,
-              precioMinimo: servicioOriginal.precioMinimo || servicioOriginal.precio_minimo,
-              precioRecomendado: servicioOriginal.precioRecomendado || servicioOriginal.precio_recomendado
-            }
-          }
-          
-          return servicioEncontrado
-        })
-        
-        cacheResultados[termino] = serviciosConPreciosCorrectos
-        servicios.value = serviciosConPreciosCorrectos
-        aplicarFiltros()
-        console.log(`🔍 Búsqueda "${termino}": ${resultado.servicios.length} resultados con precios corregidos`)
-        
-        mostrarToast(`${resultado.servicios.length} servicios encontrados para "${termino}"`, 'info')
-      } else {
-        throw new Error(resultado.message)
-      }
-    } catch (err) {
-      console.error('❌ Error en búsqueda:', err)
-      mostrarToast('Error en la búsqueda de servicios', 'error')
-    } finally {
-      loadingServicios.value = false
+  const buscarServicios = async () => {
+    const termino = filtros.busqueda.trim()
+    
+    if (timeoutBusqueda.value) {
+      clearTimeout(timeoutBusqueda.value)
     }
-  }, 300)
-}
+    
+    if (!termino) {
+      servicios.value = [...serviciosOriginales.value]
+      aplicarFiltros()
+      return
+    }
+    
+    if (cacheResultados[termino]) {
+      servicios.value = cacheResultados[termino]
+      aplicarFiltros()
+      return
+    }
+    
+    timeoutBusqueda.value = setTimeout(async () => {
+      try {
+        loadingServicios.value = true
+        
+        const resultado = await serviciosService.searchServicios(termino, 50)
+        
+        if (resultado.success) {
+          const serviciosConPreciosCorrectos = resultado.servicios.map(servicioEncontrado => {
+            const servicioOriginal = serviciosOriginales.value.find(
+              orig => orig.servicios_id === servicioEncontrado.servicios_id
+            )
+            
+            if (servicioOriginal) {
+              return {
+                ...servicioEncontrado,
+                precio_minimo: servicioOriginal.precio_minimo,
+                precio_recomendado: servicioOriginal.precio_recomendado,
+                precioMinimo: servicioOriginal.precioMinimo || servicioOriginal.precio_minimo,
+                precioRecomendado: servicioOriginal.precioRecomendado || servicioOriginal.precio_recomendado
+              }
+            }
+            
+            return servicioEncontrado
+          })
+          
+          cacheResultados[termino] = serviciosConPreciosCorrectos
+          servicios.value = serviciosConPreciosCorrectos
+          aplicarFiltros()
+          console.log(`🔍 Búsqueda "${termino}": ${resultado.servicios.length} resultados con precios corregidos`)
+          
+          mostrarToast(`${resultado.servicios.length} servicios encontrados para "${termino}"`, 'info')
+        } else {
+          throw new Error(resultado.message)
+        }
+      } catch (err) {
+        console.error('❌ Error en búsqueda:', err)
+        mostrarToast('Error en la búsqueda de servicios', 'error')
+      } finally {
+        loadingServicios.value = false
+      }
+    }, 300)
+  }
 
   // Función para aplicar filtros locales
   const aplicarFiltros = () => {
@@ -657,19 +628,16 @@ const buscarServicios = async () => {
     aplicarFiltros()
   }
 
-  // Función para inicializar datos reactivos - MEJORADA
+  // Función para inicializar datos reactivos
   const inicializarDatos = () => {
     servicios.value.forEach(servicio => {
       const id = servicio.servicios_id
       if (!(id in cantidades)) {
         cantidades[id] = 0
         cantidadesEquipos[id] = 0
-        // ✅ ASEGURAR que siempre tenga un precio válido
         preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-        // ✅ NUEVO: Inicializar cantidades por categoría
         cantidadesPorCategoria[id] = {}
       } else {
-        // ✅ VERIFICAR precios existentes
         if (!preciosVenta[id] || preciosVenta[id] === 0) {
           preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
         }
@@ -683,7 +651,8 @@ const buscarServicios = async () => {
     cargarServicios()
   }
 
-  // ✅ NUEVO: Computed properties con tipo de unidad
+  // ✅ COMPUTED PROPERTIES ACTUALIZADOS =====
+
   const categoriasDisponibles = computed(() => {
     const categorias = [...new Set(servicios.value.map(s => s.categoria?.nombre || 'Sin categoría'))]
     return categorias.map(cat => ({
@@ -692,51 +661,137 @@ const buscarServicios = async () => {
     })).sort((a, b) => a.label.localeCompare(b.label))
   })
 
-  // Tipos de unidad disponibles
+  // ✅ ACTUALIZADO: Tipos de unidad dinámicos basados en servicios reales
   const tiposUnidadDisponibles = computed(() => {
-    const tipos = [...new Set(servicios.value.map(s => s.categoria?.unidad_medida?.tipo || 'cantidad'))]
+    const tiposSet = new Set()
     
+    servicios.value.forEach(servicio => {
+      // Verificar en categoría principal
+      if (servicio.categoria?.unidad_medida?.tipo) {
+        tiposSet.add(servicio.categoria.unidad_medida.tipo)
+      }
+      
+      // Verificar en categorías completas (múltiples categorías)
+      if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
+        servicio.categorias_completas.forEach(categoria => {
+          if (categoria.unidad_medida?.tipo) {
+            tiposSet.add(categoria.unidad_medida.tipo)
+          }
+        })
+      }
+    })
+    
+    // Mapear tipos a etiquetas descriptivas
     const etiquetas = {
       'cantidad': 'Cantidad/Equipos',
-      'capacidad': 'Capacidad (GB/TB)',
+      'capacidad': 'Capacidad (GB/TB)', 
       'usuarios': 'Usuarios',
       'sesiones': 'Sesiones',
-      'tiempo': 'Tiempo'
+      'tiempo': 'Tiempo (Horas/Días)',
+      'licencias': 'Licencias',
+      'conexiones': 'Conexiones',
+      'cuentas': 'Cuentas',
+      'dispositivos': 'Dispositivos',
+      'almacenamiento': 'Almacenamiento',
+      'ancho_banda': 'Ancho de Banda'
     }
     
-    return tipos.map(tipo => ({
-      value: tipo,
-      label: etiquetas[tipo] || tipo
-    })).sort((a, b) => a.label.localeCompare(b.label))
+    return Array.from(tiposSet)
+      .map(tipo => ({
+        value: tipo,
+        label: etiquetas[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1)
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  })
+
+  // ✅ NUEVO: Rangos de precio dinámicos basados en precios mínimos reales
+  const rangosPrecioDisponibles = computed(() => {
+    // Obtener todos los precios mínimos de servicios activos
+    const preciosMinimos = servicios.value
+      .filter(servicio => servicio.estado === 'activo')
+      .map(servicio => parseFloat(servicio.precio_minimo) || 0)
+      .filter(precio => precio > 0)
+      .sort((a, b) => a - b)
+    
+    if (preciosMinimos.length === 0) {
+      return []
+    }
+    
+    const min = preciosMinimos[0]
+    const max = preciosMinimos[preciosMinimos.length - 1]
+    
+    // Calcular cuartiles para rangos dinámicos
+    const q1 = preciosMinimos[Math.floor(preciosMinimos.length * 0.25)]
+    const q2 = preciosMinimos[Math.floor(preciosMinimos.length * 0.5)]
+    const q3 = preciosMinimos[Math.floor(preciosMinimos.length * 0.75)]
+    
+    return [
+      { 
+        value: 'economico', 
+        label: ` ($${min.toFixed(2)} - $${q1.toFixed(2)})`,
+        min: min,
+        max: q1
+      },
+      { 
+        value: 'medio_bajo', 
+        label: `($${q1.toFixed(2)} - $${q2.toFixed(2)})`,
+        min: q1,
+        max: q2
+      },
+      { 
+        value: 'medio_alto', 
+        label: ` ($${q2.toFixed(2)} - $${q3.toFixed(2)})`,
+        min: q2,
+        max: q3
+      },
+      { 
+        value: 'premium', 
+        label: ` ($${q3.toFixed(2)} - $${max.toFixed(2)})`,
+        min: q3,
+        max: max
+      }
+    ]
   })
 
   const serviciosFiltrados = computed(() => {
     let filtrados = [...servicios.value]
+    
     if (filtros.categoria) {
       filtrados = filtrados.filter(servicio => 
         (servicio.categoria?.nombre || 'Sin categoría') === filtros.categoria
       )
     }
+    
     if (filtros.tipoUnidad) {
-      filtrados = filtrados.filter(servicio => 
-        obtenerTipoUnidad(servicio) === filtros.tipoUnidad
-      )
-    }
-    if (filtros.rangoPrecio) {
       filtrados = filtrados.filter(servicio => {
-        const precio = servicio.precio_recomendado || servicio.precio_minimo || 0
-        switch (filtros.rangoPrecio) {
-          case 'economico':
-            return precio < 1000
-          case 'medio':
-            return precio >= 1000 && precio <= 5000
-          case 'premium':
-            return precio > 5000
-          default:
-            return true
+        // Verificar en categoría principal
+        if (servicio.categoria?.unidad_medida?.tipo === filtros.tipoUnidad) {
+          return true
         }
+        
+        // Verificar en categorías completas
+        if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
+          return servicio.categorias_completas.some(categoria => 
+            categoria.unidad_medida?.tipo === filtros.tipoUnidad
+          )
+        }
+        
+        return false
       })
     }
+    
+    // ✅ ACTUALIZADO: Filtro de precio dinámico
+    if (filtros.rangoPrecio) {
+      const rangoSeleccionado = rangosPrecioDisponibles.value.find(r => r.value === filtros.rangoPrecio)
+      
+      if (rangoSeleccionado) {
+        filtrados = filtrados.filter(servicio => {
+          const precio = parseFloat(servicio.precio_minimo) || 0
+          return precio >= rangoSeleccionado.min && precio <= rangoSeleccionado.max
+        })
+      }
+    }
+    
     return filtrados
   })
 
@@ -774,32 +829,27 @@ const buscarServicios = async () => {
     return filtros.busqueda || filtros.categoria || filtros.tipoUnidad || filtros.rangoPrecio
   })
 
-  // ✅ ACTUALIZADO: Verificar servicios usando cantidades por categoría y validación
+  // Verificar servicios usando cantidades por categoría y validación
   const hayServicios = computed(() => {
-    // Verificar si hay cantidades por categoría
     const cantidadesPorCategoriaTotales = Object.values(cantidadesPorCategoria).some(categoriasServicio => 
       Object.values(categoriasServicio).some(cantidad => cantidad > 0)
     )
     
-    // No permitir calcular si hay errores de límites
     return cantidadesPorCategoriaTotales && !tieneErroresGlobales.value
   })
 
-  // ✅ ACTUALIZADO: Método para actualizar cantidades por categoría con validación
+  // Método para actualizar cantidades por categoría con validación
   const actualizarCantidadesPorTipo = (datosActualizacion) => {
     const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle, validacion } = datosActualizacion
     
     console.log(`📊 Actualizando cantidades para servicio ${servicioId}:`, categorias)
     
-    // Actualizar cantidades por categoría
     cantidadesPorCategoria[servicioId] = { ...categorias }
     
-    // ✅ NUEVO: Guardar errores de validación
     if (validacion) {
       validacionErrores[servicioId] = validacion.errores || {}
     }
     
-    // ✅ NUEVO: Guardar detalles de categorías para el resultado
     if (!window.categoriasDetallePorServicio) {
       window.categoriasDetallePorServicio = {}
     }
@@ -838,21 +888,21 @@ const buscarServicios = async () => {
   }
 
   const limpiarBusqueda = () => {
-  filtros.busqueda = ''
-  servicios.value = [...serviciosOriginales.value]
-  aplicarFiltros()
-  mostrarToast('Búsqueda limpiada', 'info')
-}
+    filtros.busqueda = ''
+    servicios.value = [...serviciosOriginales.value]
+    aplicarFiltros()
+    mostrarToast('Búsqueda limpiada', 'info')
+  }
 
- const limpiarFiltros = () => {
-  filtros.busqueda = ''
-  filtros.categoria = ''
-  filtros.tipoUnidad = ''
-  filtros.rangoPrecio = ''
-  servicios.value = [...serviciosOriginales.value]
-  resetearPaginacion()
-  mostrarToast('Filtros limpiados', 'info')
-}
+  const limpiarFiltros = () => {
+    filtros.busqueda = ''
+    filtros.categoria = ''
+    filtros.tipoUnidad = ''
+    filtros.rangoPrecio = ''
+    servicios.value = [...serviciosOriginales.value]
+    resetearPaginacion()
+    mostrarToast('Filtros limpiados', 'info')
+  }
 
   const cambiarPagina = (pagina) => {
     if (pagina >= 1 && pagina <= totalPaginas.value) {
@@ -876,9 +926,8 @@ const buscarServicios = async () => {
     }
   }
 
-  // ✅ ACTUALIZADO: calcularCotizacion con validación de límites
+  // calcularCotizacion con validación de límites
   const calcularCotizacion = () => {
-    // Verificar errores de límites antes de proceder
     if (tieneErroresGlobales.value) {
       mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
       return
@@ -896,7 +945,6 @@ const buscarServicios = async () => {
         const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
         const categorias = cantidadesPorCategoria[id] || {}
         
-        // ✅ OBTENER DETALLES DE CATEGORÍAS
         const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
         
         console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
@@ -904,7 +952,6 @@ const buscarServicios = async () => {
           categoriasDetalle
         })
         
-        // ✅ CREAR OBJETO BASE CON CANTIDADES INICIALIZADAS
         const datosServicio = {
           servicio: {
             servicios_id: id,
@@ -919,7 +966,6 @@ const buscarServicios = async () => {
           añosContrato: añosContrato.value
         }
         
-        // ✅ INICIALIZAR CANTIDADES CON VALORES QUE SERÁN ACTUALIZADOS
         let cantidadServidores = 0
         let cantidadEquipos = 0
         let cantidadGb = 0
@@ -927,7 +973,6 @@ const buscarServicios = async () => {
         let cantidadSesiones = 0
         let cantidadTiempo = 0
         
-        // ✅ MAPEAR CATEGORÍAS A CAMPOS ESPECÍFICOS
         categoriasDetalle.forEach(categoria => {
           if (categoria.cantidad > 0) {
             console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
@@ -935,19 +980,19 @@ const buscarServicios = async () => {
             switch (categoria.unidad_tipo) {
               case 'capacidad':
                 cantidadGb = categoria.cantidad
-                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                cantidadServidores = categoria.cantidad
                 break
               case 'usuarios':
                 cantidadUsuarios = categoria.cantidad
-                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                cantidadServidores = categoria.cantidad
                 break
               case 'sesiones':
                 cantidadSesiones = categoria.cantidad
-                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                cantidadServidores = categoria.cantidad
                 break
               case 'tiempo':
                 cantidadTiempo = categoria.cantidad
-                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                cantidadServidores = categoria.cantidad
                 break
               case 'cantidad':
               default:
@@ -961,7 +1006,6 @@ const buscarServicios = async () => {
           }
         })
         
-        // ✅ ASIGNAR LAS CANTIDADES FINALES AL OBJETO
         datosServicio.cantidadServidores = cantidadServidores
         datosServicio.cantidadEquipos = cantidadEquipos
         datosServicio.cantidadGb = cantidadGb
@@ -969,7 +1013,6 @@ const buscarServicios = async () => {
         datosServicio.cantidadSesiones = cantidadSesiones
         datosServicio.cantidadTiempo = cantidadTiempo
         
-        // ✅ DATOS PARA EL FRONTEND
         datosServicio.cantidadesPorCategoria = categorias
         datosServicio.categoriasDetalle = categoriasDetalle
         datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
@@ -987,14 +1030,13 @@ const buscarServicios = async () => {
     }
   }
 
-  // ✅ MÉTODO CORREGIDO: limpiarFormulario con key reactivo
+  // limpiarFormulario con key reactivo
   const limpiarFormulario = () => {
     servicios.value.forEach(servicio => {
       const id = servicio.servicios_id
       cantidades[id] = 0
       cantidadesEquipos[id] = 0
       preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-      // ✅ LIMPIAR: Cantidades por categoría
       cantidadesPorCategoria[id] = {}
     })
     
@@ -1003,17 +1045,14 @@ const buscarServicios = async () => {
     esDuplicacion.value = false
     cotizacionOrigen.value = null
     
-    // ✅ LIMPIAR: Datos de categorías detalladas
     if (window.categoriasDetallePorServicio) {
       window.categoriasDetallePorServicio = {}
     }
     
-    // ✅ LIMPIAR: Errores de validación
     Object.keys(validacionErrores).forEach(key => {
       delete validacionErrores[key]
     })
     
-    // ✅ FORZAR RE-RENDER de todos los ServicioItem
     formularioKey.value++
     
     console.log('🧹 Formulario limpiado completamente')
@@ -1061,11 +1100,11 @@ const buscarServicios = async () => {
     serviciosPorPagina,
     paginaInput,
     
-    // ✅ NUEVOS: Estados de cantidades por categoría
+    // Estados de cantidades por categoría
     cantidadesPorCategoria,
     formularioKey,
     
-    // ✅ NUEVOS: Estados de validación
+    // Estados de validación
     validacionErrores,
     tieneErroresGlobales,
     
@@ -1079,59 +1118,59 @@ const buscarServicios = async () => {
     toastType,
     
     // Computed
-   categoriasDisponibles,
-   tiposUnidadDisponibles,
-   serviciosFiltrados,
-   totalPaginas,
-   serviciosPaginados,
-   paginasVisibles,
-   hayFiltrosActivos,
-   hayServicios,
-   toastIcon,
-   
-   // Funciones
-   cargarServicios,
-   buscarServicios,
-   aplicarFiltros,
-   filtrarPorCategoria,
-   filtrarPorTipoUnidad,
-   filtrarPorPrecio,
-   inicializarDatos,
-   recargarServicios,
-   resetearPaginacion,
-   // ✅ FUNCIÓN AGREGADA: reinicializarPrecios
-   reinicializarPrecios,
-   actualizarCantidadEquipos,
-   actualizarPrecioVenta,
-   incrementarAños,
-   decrementarAños,
-   validarAños,
-   limpiarBusqueda,
-   limpiarFiltros,
-   cambiarPagina,
-   irAPagina,
-   calcularCotizacion,
-   limpiarFormulario,
-   
-   // ✅ NUEVO: Función para manejar cantidades por categoría
-   actualizarCantidadesPorTipo,
-   
-   // Funciones de duplicación
-   verificarDuplicacion,
-   cargarDatosParaDuplicar,
-   precargarFormulario,
-   
-   // TOAST METHODS
-   mostrarToast,
-   hideToast,
-   
-   // ✅ NUEVOS: Funciones de validación
-   obtenerNombreServicio,
-   mostrarNotificacionHijo,
-   
-   // HELPERS
-   obtenerTipoUnidad
- }
+    categoriasDisponibles,
+    tiposUnidadDisponibles,
+    rangosPrecioDisponibles, // ✅ NUEVO
+    serviciosFiltrados,
+    totalPaginas,
+    serviciosPaginados,
+    paginasVisibles,
+    hayFiltrosActivos,
+    hayServicios,
+    toastIcon,
+    
+    // Funciones
+    cargarServicios,
+    buscarServicios,
+    aplicarFiltros,
+    filtrarPorCategoria,
+    filtrarPorTipoUnidad,
+    filtrarPorPrecio,
+    inicializarDatos,
+    recargarServicios,
+    resetearPaginacion,
+    reinicializarPrecios,
+    actualizarCantidadEquipos,
+    actualizarPrecioVenta,
+    incrementarAños,
+    decrementarAños,
+    validarAños,
+    limpiarBusqueda,
+    limpiarFiltros,
+    cambiarPagina,
+    irAPagina,
+    calcularCotizacion,
+    limpiarFormulario,
+    
+    // Función para manejar cantidades por categoría
+    actualizarCantidadesPorTipo,
+    
+    // Funciones de duplicación
+    verificarDuplicacion,
+    cargarDatosParaDuplicar,
+    precargarFormulario,
+    
+    // TOAST METHODS
+    mostrarToast,
+    hideToast,
+    
+    // Funciones de validación
+    obtenerNombreServicio,
+    mostrarNotificacionHijo,
+    
+    // HELPERS
+    obtenerTipoUnidad
+  }
 }
 }
 </script>
