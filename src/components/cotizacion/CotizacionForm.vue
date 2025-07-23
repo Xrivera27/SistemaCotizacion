@@ -420,6 +420,18 @@ setup() {
     return servicio.categoria?.unidad_medida?.tipo || 'cantidad'
   }
 
+  // ✅ NUEVA FUNCIÓN: Reinicializar precios correctamente
+  const reinicializarPrecios = () => {
+    servicios.value.forEach(servicio => {
+      const id = servicio.servicios_id
+      // Solo reinicializar si no existe o si está en 0
+      if (!preciosVenta[id] || preciosVenta[id] === 0) {
+        preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+        console.log(`💰 Precio reinicializado para ${servicio.nombre}: ${preciosVenta[id]}`)
+      }
+    })
+  }
+
   // ===== VERIFICACIÓN DE DUPLICACIÓN =====
   const verificarDuplicacion = async () => {
     console.log('🔍 Verificando si es duplicación...', route.query)
@@ -477,101 +489,54 @@ setup() {
   }
 
   // ✅ ACTUALIZADO: Precarga con manejo de categorías
- // ✅ ACTUALIZADO: Precarga con manejo correcto de categorías
-const precargarFormulario = async (datos) => {
-  console.log('🔄 Precargando formulario con datos:', datos)
-  
-  try {
-    // PASO 1: Configurar años del contrato
-    if (datos.servicios && datos.servicios.length > 0) {
-      añosContrato.value = datos.servicios[0].cantidadAnos || 1
-    }
+  const precargarFormulario = async (datos) => {
+    console.log('🔄 Precargando formulario con datos:', datos)
     
-    // PASO 2: Precargar servicios usando datos directos del controller
-    if (datos.servicios && datos.servicios.length > 0) {
-      for (const servicioData of datos.servicios) {
-        const servicioId = servicioData.id
-        
-        const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
-        
-        if (servicioExistente) {
-          console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
-          console.log(`📊 Datos del controller:`, servicioData)
+    try {
+      // PASO 1: Configurar años del contrato
+      if (datos.servicios && datos.servicios.length > 0) {
+        añosContrato.value = datos.servicios[0].cantidadAnos || 1
+      }
+      
+      // PASO 2: Precargar servicios usando datos directos
+      if (datos.servicios && datos.servicios.length > 0) {
+        for (const servicioData of datos.servicios) {
+          const servicioId = servicioData.id
           
-          // Configurar valores legacy para compatibilidad
-          cantidades[servicioId] = servicioData.cantidadServicios || 0
-          cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
-          preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
+          const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
           
-          // ✅ CORRECCIÓN PRINCIPAL: Mapear categoriaId y cantidadPorCategoria
-          if (servicioData.categoriaId && servicioData.cantidadPorCategoria > 0) {
-            // Inicializar objeto si no existe
-            if (!cantidadesPorCategoria[servicioId]) {
-              cantidadesPorCategoria[servicioId] = {}
+          if (servicioExistente) {
+            console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
+            
+            // Configurar cantidad principal (para compatibilidad)
+            cantidades[servicioId] = servicioData.cantidadServicios || 0
+            cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
+            preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
+            
+            // ✅ NUEVO: Configurar cantidades por categoría si están disponibles
+            if (servicioData.cantidadesPorCategoria) {
+              cantidadesPorCategoria[servicioId] = { ...servicioData.cantidadesPorCategoria }
             }
             
-            // Mapear la cantidad por categoría usando el categoriaId
-            cantidadesPorCategoria[servicioId][servicioData.categoriaId] = servicioData.cantidadPorCategoria
-            
-            console.log(`✅ Cantidad por categoría mapeada:`, {
-              servicioId,
-              categoriaId: servicioData.categoriaId,
-              cantidad: servicioData.cantidadPorCategoria,
+            console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
+              cantidadPrincipal: cantidades[servicioId],
+              cantidadEquipos: cantidadesEquipos[servicioId],
+              precioUsado: preciosVenta[servicioId],
               cantidadesPorCategoria: cantidadesPorCategoria[servicioId]
             })
-            
-            // ✅ NUEVO: Guardar los detalles de la categoría para el componente
-            if (!window.categoriasDetallePorServicio) {
-              window.categoriasDetallePorServicio = {}
-            }
-            
-            if (!window.categoriasDetallePorServicio[servicioId]) {
-              window.categoriasDetallePorServicio[servicioId] = []
-            }
-            
-            // Crear detalle de categoría con la información completa
-            const detalleCategoria = {
-              id: servicioData.categoriaId,
-              categorias_id: servicioData.categoriaId,
-              nombre: servicioExistente.categoria?.nombre || 'Categoría Principal',
-              unidad_id: servicioData.unidadMedida?.id,
-              unidad_nombre: servicioData.unidadMedida?.nombre || 'Unidad',
-              unidad_tipo: servicioData.unidadMedida?.tipo || 'cantidad',
-              unidad_abreviacion: servicioData.unidadMedida?.abreviacion || '',
-              cantidad: servicioData.cantidadPorCategoria
-            }
-            
-            window.categoriasDetallePorServicio[servicioId].push(detalleCategoria)
-            
-            console.log(`📋 Detalle de categoría guardado:`, detalleCategoria)
           }
-          
-          console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
-            cantidadPrincipal: cantidades[servicioId],
-            cantidadEquipos: cantidadesEquipos[servicioId],
-            precioUsado: preciosVenta[servicioId],
-            cantidadesPorCategoria: cantidadesPorCategoria[servicioId],
-            categoriasDetalle: window.categoriasDetallePorServicio?.[servicioId]
-          })
-        } else {
-          console.warn(`⚠️ Servicio con ID ${servicioId} no encontrado`)
         }
       }
+      
+      await nextTick()
+      console.log('✅ Formulario precargado exitosamente')
+      
+    } catch (error) {
+      console.error('❌ Error precargando formulario:', error)
+      mostrarToast('Error precargando formulario', 'error')
+      throw error
     }
-    
-    // ✅ PASO 3: Forzar re-render de los componentes ServicioItem
-    formularioKey.value++
-    
-    await nextTick()
-    console.log('✅ Formulario precargado exitosamente')
-    console.log('📊 Estado final de cantidadesPorCategoria:', cantidadesPorCategoria)
-    
-  } catch (error) {
-    console.error('❌ Error precargando formulario:', error)
-    mostrarToast('Error precargando formulario', 'error')
-    throw error
   }
-}
 
   // Función para resetear paginación
   const resetearPaginacion = () => {
@@ -607,46 +572,70 @@ const precargarFormulario = async (datos) => {
   }
 
   // ===== FUNCIÓN BUSCAR =====
-  const buscarServicios = async () => {
-    const termino = filtros.busqueda.trim()
-    
-    if (timeoutBusqueda.value) {
-      clearTimeout(timeoutBusqueda.value)
-    }
-    if (!termino) {
-      servicios.value = [...serviciosOriginales.value]
-      aplicarFiltros()
-      return
-    }
-    if (cacheResultados[termino]) {
-      servicios.value = cacheResultados[termino]
-      aplicarFiltros()
-      return
-    }
-    timeoutBusqueda.value = setTimeout(async () => {
-      try {
-        loadingServicios.value = true
-        
-        const resultado = await serviciosService.searchServicios(termino, 50)
-        
-        if (resultado.success) {
-          cacheResultados[termino] = resultado.servicios
-          servicios.value = resultado.servicios
-          aplicarFiltros()
-          console.log(`🔍 Búsqueda "${termino}": ${resultado.servicios.length} resultados`)
-          
-          mostrarToast(`${resultado.servicios.length} servicios encontrados para "${termino}"`, 'info')
-        } else {
-          throw new Error(resultado.message)
-        }
-      } catch (err) {
-        console.error('❌ Error en búsqueda:', err)
-        mostrarToast('Error en la búsqueda de servicios', 'error')
-      } finally {
-        loadingServicios.value = false
-      }
-    }, 300)
+const buscarServicios = async () => {
+  const termino = filtros.busqueda.trim()
+  
+  if (timeoutBusqueda.value) {
+    clearTimeout(timeoutBusqueda.value)
   }
+  
+  if (!termino) {
+    servicios.value = [...serviciosOriginales.value]
+    aplicarFiltros()
+    return
+  }
+  
+  if (cacheResultados[termino]) {
+    servicios.value = cacheResultados[termino]
+    aplicarFiltros()
+    return
+  }
+  
+  timeoutBusqueda.value = setTimeout(async () => {
+    try {
+      loadingServicios.value = true
+      
+      const resultado = await serviciosService.searchServicios(termino, 50)
+      
+      if (resultado.success) {
+        // ✅ SOLUCIÓN: Mezclar precios de servicios originales
+        const serviciosConPreciosCorrectos = resultado.servicios.map(servicioEncontrado => {
+          // Buscar el servicio original con precios correctos
+          const servicioOriginal = serviciosOriginales.value.find(
+            orig => orig.servicios_id === servicioEncontrado.servicios_id
+          )
+          
+          if (servicioOriginal) {
+            // Usar los precios del servicio original
+            return {
+              ...servicioEncontrado,
+              precio_minimo: servicioOriginal.precio_minimo,
+              precio_recomendado: servicioOriginal.precio_recomendado,
+              precioMinimo: servicioOriginal.precioMinimo || servicioOriginal.precio_minimo,
+              precioRecomendado: servicioOriginal.precioRecomendado || servicioOriginal.precio_recomendado
+            }
+          }
+          
+          return servicioEncontrado
+        })
+        
+        cacheResultados[termino] = serviciosConPreciosCorrectos
+        servicios.value = serviciosConPreciosCorrectos
+        aplicarFiltros()
+        console.log(`🔍 Búsqueda "${termino}": ${resultado.servicios.length} resultados con precios corregidos`)
+        
+        mostrarToast(`${resultado.servicios.length} servicios encontrados para "${termino}"`, 'info')
+      } else {
+        throw new Error(resultado.message)
+      }
+    } catch (err) {
+      console.error('❌ Error en búsqueda:', err)
+      mostrarToast('Error en la búsqueda de servicios', 'error')
+    } finally {
+      loadingServicios.value = false
+    }
+  }, 300)
+}
 
   // Función para aplicar filtros locales
   const aplicarFiltros = () => {
@@ -668,16 +657,22 @@ const precargarFormulario = async (datos) => {
     aplicarFiltros()
   }
 
-  // Función para inicializar datos reactivos
+  // Función para inicializar datos reactivos - MEJORADA
   const inicializarDatos = () => {
     servicios.value.forEach(servicio => {
       const id = servicio.servicios_id
       if (!(id in cantidades)) {
         cantidades[id] = 0
         cantidadesEquipos[id] = 0
+        // ✅ ASEGURAR que siempre tenga un precio válido
         preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
         // ✅ NUEVO: Inicializar cantidades por categoría
         cantidadesPorCategoria[id] = {}
+      } else {
+        // ✅ VERIFICAR precios existentes
+        if (!preciosVenta[id] || preciosVenta[id] === 0) {
+          preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+        }
       }
     })
   }
@@ -811,279 +806,279 @@ const precargarFormulario = async (datos) => {
     window.categoriasDetallePorServicio[servicioId] = categoriasDetalle || []
    
    console.log(`✅ Categorías detalladas guardadas:`, window.categoriasDetallePorServicio[servicioId])
- }
+  }
 
- // Métodos existentes
- const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
-   cantidadesEquipos[servicioId] = nuevaCantidad || 0
- }
- 
- const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
-   preciosVenta[servicioId] = nuevoPrecio || 0
- }
- 
- const incrementarAños = () => {
-   if (añosContrato.value < 10) {
-     añosContrato.value++
-   }
- }
- 
- const decrementarAños = () => {
-   if (añosContrato.value > 1) {
-     añosContrato.value--
-   }
- }
- 
- const validarAños = () => {
-   if (añosContrato.value < 1) {
-     añosContrato.value = 1
-   } else if (añosContrato.value > 10) {
-     añosContrato.value = 10
-   }
- }
+  // Métodos existentes
+  const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
+    cantidadesEquipos[servicioId] = nuevaCantidad || 0
+  }
+  
+  const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
+    preciosVenta[servicioId] = nuevoPrecio || 0
+  }
+  
+  const incrementarAños = () => {
+    if (añosContrato.value < 10) {
+      añosContrato.value++
+    }
+  }
+  
+  const decrementarAños = () => {
+    if (añosContrato.value > 1) {
+      añosContrato.value--
+    }
+  }
+  
+  const validarAños = () => {
+    if (añosContrato.value < 1) {
+      añosContrato.value = 1
+    } else if (añosContrato.value > 10) {
+      añosContrato.value = 10
+    }
+  }
 
- const limpiarBusqueda = () => {
-   filtros.busqueda = ''
-   servicios.value = [...serviciosOriginales.value]
-   aplicarFiltros()
-   mostrarToast('Búsqueda limpiada', 'info')
- }
+  const limpiarBusqueda = () => {
+  filtros.busqueda = ''
+  servicios.value = [...serviciosOriginales.value]
+  aplicarFiltros()
+  mostrarToast('Búsqueda limpiada', 'info')
+}
 
  const limpiarFiltros = () => {
-   filtros.busqueda = ''
-   filtros.categoria = ''
-   filtros.tipoUnidad = ''
-   filtros.rangoPrecio = ''
-   servicios.value = [...serviciosOriginales.value]
-   resetearPaginacion()
-   mostrarToast('Filtros limpiados', 'info')
- }
+  filtros.busqueda = ''
+  filtros.categoria = ''
+  filtros.tipoUnidad = ''
+  filtros.rangoPrecio = ''
+  servicios.value = [...serviciosOriginales.value]
+  resetearPaginacion()
+  mostrarToast('Filtros limpiados', 'info')
+}
 
- const cambiarPagina = (pagina) => {
-   if (pagina >= 1 && pagina <= totalPaginas.value) {
-     paginaActual.value = pagina
-     paginaInput.value = pagina
-     nextTick(() => {
-       const elemento = document.querySelector('.servicios-section')
-       if (elemento) {
-         elemento.scrollIntoView({ behavior: 'smooth', block: 'start' })
-       }
-     })
-   }
- }
+  const cambiarPagina = (pagina) => {
+    if (pagina >= 1 && pagina <= totalPaginas.value) {
+      paginaActual.value = pagina
+      paginaInput.value = pagina
+      nextTick(() => {
+        const elemento = document.querySelector('.servicios-section')
+        if (elemento) {
+          elemento.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      })
+    }
+  }
 
- const irAPagina = () => {
-   if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
-     cambiarPagina(paginaInput.value)
-   } else {
-     mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
-     paginaInput.value = paginaActual.value
-   }
- }
+  const irAPagina = () => {
+    if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
+      cambiarPagina(paginaInput.value)
+    } else {
+      mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
+      paginaInput.value = paginaActual.value
+    }
+  }
 
- // ✅ ACTUALIZADO: calcularCotizacion con validación de límites
- const calcularCotizacion = () => {
-   // Verificar errores de límites antes de proceder
-   if (tieneErroresGlobales.value) {
-     mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
-     return
-   }
+  // ✅ ACTUALIZADO: calcularCotizacion con validación de límites
+  const calcularCotizacion = () => {
+    // Verificar errores de límites antes de proceder
+    if (tieneErroresGlobales.value) {
+      mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
+      return
+    }
 
-   serviciosSeleccionados.value = servicios.value
-     .filter(servicio => {
-       const id = servicio.servicios_id
-       const categorias = cantidadesPorCategoria[id] || {}
-       const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
-       return tieneCantidades
-     })
-     .map(servicio => {
-       const id = servicio.servicios_id
-       const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
-       const categorias = cantidadesPorCategoria[id] || {}
-       
-       // ✅ OBTENER DETALLES DE CATEGORÍAS
-       const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
-       
-       console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
-         categorias,
-         categoriasDetalle
-       })
-       
-       // ✅ CREAR OBJETO BASE CON CANTIDADES INICIALIZADAS
-       const datosServicio = {
-         servicio: {
-           servicios_id: id,
-           nombre: servicio.nombre,
-           categoria: servicio.categoria?.nombre || 'Sin categoría',
-           precioMinimo: servicio.precio_minimo,
-           precio_recomendado: servicio.precio_recomendado,
-           descripcion: servicio.descripcion,
-           unidad_medida: servicio.categoria?.unidad_medida
-         },
-         precioVentaFinal,
-         añosContrato: añosContrato.value
-       }
-       
-       // ✅ INICIALIZAR CANTIDADES CON VALORES QUE SERÁN ACTUALIZADOS
-       let cantidadServidores = 0
-       let cantidadEquipos = 0
-       let cantidadGb = 0
-       let cantidadUsuarios = 0
-       let cantidadSesiones = 0
-       let cantidadTiempo = 0
-       
-       // ✅ MAPEAR CATEGORÍAS A CAMPOS ESPECÍFICOS
-       categoriasDetalle.forEach(categoria => {
-         if (categoria.cantidad > 0) {
-           console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
-           
-           switch (categoria.unidad_tipo) {
-             case 'capacidad':
-               cantidadGb = categoria.cantidad
-               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-               break
-             case 'usuarios':
-               cantidadUsuarios = categoria.cantidad
-               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-               break
-             case 'sesiones':
-               cantidadSesiones = categoria.cantidad
-               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-               break
-             case 'tiempo':
-               cantidadTiempo = categoria.cantidad
-               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-               break
-             case 'cantidad':
-             default:
-               if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
-                 cantidadEquipos = categoria.cantidad
-               } else {
-                 cantidadServidores = categoria.cantidad
-               }
-               break
-           }
-         }
-       })
-       
-       // ✅ ASIGNAR LAS CANTIDADES FINALES AL OBJETO
-       datosServicio.cantidadServidores = cantidadServidores
-       datosServicio.cantidadEquipos = cantidadEquipos
-       datosServicio.cantidadGb = cantidadGb
-       datosServicio.cantidadUsuarios = cantidadUsuarios
-       datosServicio.cantidadSesiones = cantidadSesiones
-       datosServicio.cantidadTiempo = cantidadTiempo
-       
-       // ✅ DATOS PARA EL FRONTEND
-       datosServicio.cantidadesPorCategoria = categorias
-       datosServicio.categoriasDetalle = categoriasDetalle
-       datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
-       
-       console.log(`🔥 SERVICIO FINAL PARA BACKEND:`, datosServicio)
-       return datosServicio
-     })
+    serviciosSeleccionados.value = servicios.value
+      .filter(servicio => {
+        const id = servicio.servicios_id
+        const categorias = cantidadesPorCategoria[id] || {}
+        const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
+        return tieneCantidades
+      })
+      .map(servicio => {
+        const id = servicio.servicios_id
+        const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
+        const categorias = cantidadesPorCategoria[id] || {}
+        
+        // ✅ OBTENER DETALLES DE CATEGORÍAS
+        const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
+        
+        console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
+          categorias,
+          categoriasDetalle
+        })
+        
+        // ✅ CREAR OBJETO BASE CON CANTIDADES INICIALIZADAS
+        const datosServicio = {
+          servicio: {
+            servicios_id: id,
+            nombre: servicio.nombre,
+            categoria: servicio.categoria?.nombre || 'Sin categoría',
+            precioMinimo: servicio.precio_minimo,
+            precio_recomendado: servicio.precio_recomendado,
+            descripcion: servicio.descripcion,
+            unidad_medida: servicio.categoria?.unidad_medida
+          },
+          precioVentaFinal,
+          añosContrato: añosContrato.value
+        }
+        
+        // ✅ INICIALIZAR CANTIDADES CON VALORES QUE SERÁN ACTUALIZADOS
+        let cantidadServidores = 0
+        let cantidadEquipos = 0
+        let cantidadGb = 0
+        let cantidadUsuarios = 0
+        let cantidadSesiones = 0
+        let cantidadTiempo = 0
+        
+        // ✅ MAPEAR CATEGORÍAS A CAMPOS ESPECÍFICOS
+        categoriasDetalle.forEach(categoria => {
+          if (categoria.cantidad > 0) {
+            console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
+            
+            switch (categoria.unidad_tipo) {
+              case 'capacidad':
+                cantidadGb = categoria.cantidad
+                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                break
+              case 'usuarios':
+                cantidadUsuarios = categoria.cantidad
+                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                break
+              case 'sesiones':
+                cantidadSesiones = categoria.cantidad
+                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                break
+              case 'tiempo':
+                cantidadTiempo = categoria.cantidad
+                cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+                break
+              case 'cantidad':
+              default:
+                if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
+                  cantidadEquipos = categoria.cantidad
+                } else {
+                  cantidadServidores = categoria.cantidad
+                }
+                break
+            }
+          }
+        })
+        
+        // ✅ ASIGNAR LAS CANTIDADES FINALES AL OBJETO
+        datosServicio.cantidadServidores = cantidadServidores
+        datosServicio.cantidadEquipos = cantidadEquipos
+        datosServicio.cantidadGb = cantidadGb
+        datosServicio.cantidadUsuarios = cantidadUsuarios
+        datosServicio.cantidadSesiones = cantidadSesiones
+        datosServicio.cantidadTiempo = cantidadTiempo
+        
+        // ✅ DATOS PARA EL FRONTEND
+        datosServicio.cantidadesPorCategoria = categorias
+        datosServicio.categoriasDetalle = categoriasDetalle
+        datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
+        
+        console.log(`🔥 SERVICIO FINAL PARA BACKEND:`, datosServicio)
+        return datosServicio
+      })
 
-   console.log('🔥 SERVICIOS FINALES PARA BACKEND:', serviciosSeleccionados.value)
-   
-   if (serviciosSeleccionados.value.length > 0) {
-     mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
-   } else {
-     mostrarToast('Debes seleccionar al menos un servicio', 'warning')
-   }
- }
+    console.log('🔥 SERVICIOS FINALES PARA BACKEND:', serviciosSeleccionados.value)
+    
+    if (serviciosSeleccionados.value.length > 0) {
+      mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
+    } else {
+      mostrarToast('Debes seleccionar al menos un servicio', 'warning')
+    }
+  }
 
- // ✅ MÉTODO CORREGIDO: limpiarFormulario con key reactivo
- const limpiarFormulario = () => {
-   servicios.value.forEach(servicio => {
-     const id = servicio.servicios_id
-     cantidades[id] = 0
-     cantidadesEquipos[id] = 0
-     preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-     // ✅ LIMPIAR: Cantidades por categoría
-     cantidadesPorCategoria[id] = {}
-   })
-   
-   serviciosSeleccionados.value = []
-   añosContrato.value = 1
-   esDuplicacion.value = false
-   cotizacionOrigen.value = null
-   
-   // ✅ LIMPIAR: Datos de categorías detalladas
-   if (window.categoriasDetallePorServicio) {
-     window.categoriasDetallePorServicio = {}
-   }
-   
-   // ✅ LIMPIAR: Errores de validación
-   Object.keys(validacionErrores).forEach(key => {
-     delete validacionErrores[key]
-   })
-   
-   // ✅ FORZAR RE-RENDER de todos los ServicioItem
-   formularioKey.value++
-   
-   console.log('🧹 Formulario limpiado completamente')
-   mostrarToast('Formulario limpiado correctamente', 'success')
- }
+  // ✅ MÉTODO CORREGIDO: limpiarFormulario con key reactivo
+  const limpiarFormulario = () => {
+    servicios.value.forEach(servicio => {
+      const id = servicio.servicios_id
+      cantidades[id] = 0
+      cantidadesEquipos[id] = 0
+      preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+      // ✅ LIMPIAR: Cantidades por categoría
+      cantidadesPorCategoria[id] = {}
+    })
+    
+    serviciosSeleccionados.value = []
+    añosContrato.value = 1
+    esDuplicacion.value = false
+    cotizacionOrigen.value = null
+    
+    // ✅ LIMPIAR: Datos de categorías detalladas
+    if (window.categoriasDetallePorServicio) {
+      window.categoriasDetallePorServicio = {}
+    }
+    
+    // ✅ LIMPIAR: Errores de validación
+    Object.keys(validacionErrores).forEach(key => {
+      delete validacionErrores[key]
+    })
+    
+    // ✅ FORZAR RE-RENDER de todos los ServicioItem
+    formularioKey.value++
+    
+    console.log('🧹 Formulario limpiado completamente')
+    mostrarToast('Formulario limpiado correctamente', 'success')
+  }
 
- // ===== CICLO DE VIDA =====
- onMounted(async () => {
-   console.log('🚀 Componente montado')
-   console.log('🔍 Query params:', route.query)
-   
-   await verificarDuplicacion()
- })
+  // ===== CICLO DE VIDA =====
+  onMounted(async () => {
+    console.log('🚀 Componente montado')
+    console.log('🔍 Query params:', route.query)
+    
+    await verificarDuplicacion()
+  })
 
- // Watchers
- watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
-   if (filtros.busqueda) {
-     const terminoBusqueda = filtros.busqueda
-     filtros.busqueda = ''
-     nextTick(() => {
-       filtros.busqueda = terminoBusqueda
-       buscarServicios()
-     })
-   }
- })
+  // Watchers
+  watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
+    if (filtros.busqueda) {
+      const terminoBusqueda = filtros.busqueda
+      filtros.busqueda = ''
+      nextTick(() => {
+        filtros.busqueda = terminoBusqueda
+        buscarServicios()
+      })
+    }
+  })
 
- watch(paginaActual, (newVal) => {
-   paginaInput.value = newVal
- })
+  watch(paginaActual, (newVal) => {
+    paginaInput.value = newVal
+  })
 
- return {
-   // Estados
-   servicios,
-   serviciosOriginales,
-   loading,
-   loadingServicios,
-   loadingMessage,
-   cantidades,
-   cantidadesEquipos,
-   preciosVenta,
-   serviciosSeleccionados,
-   añosContrato,
-   filtros,
-   paginaActual,
-   serviciosPorPagina,
-   paginaInput,
-   
-   // ✅ NUEVOS: Estados de cantidades por categoría
-   cantidadesPorCategoria,
-   formularioKey,
-   
-   // ✅ NUEVOS: Estados de validación
-   validacionErrores,
-   tieneErroresGlobales,
-   
-   // Estados de duplicación
-   esDuplicacion,
-   cotizacionOrigen,
-   
-   // TOAST STATES
-   showToast,
-   toastMessage,
-   toastType,
-   
-   // Computed
+  return {
+    // Estados
+    servicios,
+    serviciosOriginales,
+    loading,
+    loadingServicios,
+    loadingMessage,
+    cantidades,
+    cantidadesEquipos,
+    preciosVenta,
+    serviciosSeleccionados,
+    añosContrato,
+    filtros,
+    paginaActual,
+    serviciosPorPagina,
+    paginaInput,
+    
+    // ✅ NUEVOS: Estados de cantidades por categoría
+    cantidadesPorCategoria,
+    formularioKey,
+    
+    // ✅ NUEVOS: Estados de validación
+    validacionErrores,
+    tieneErroresGlobales,
+    
+    // Estados de duplicación
+    esDuplicacion,
+    cotizacionOrigen,
+    
+    // TOAST STATES
+    showToast,
+    toastMessage,
+    toastType,
+    
+    // Computed
    categoriasDisponibles,
    tiposUnidadDisponibles,
    serviciosFiltrados,
@@ -1104,6 +1099,8 @@ const precargarFormulario = async (datos) => {
    inicializarDatos,
    recargarServicios,
    resetearPaginacion,
+   // ✅ FUNCIÓN AGREGADA: reinicializarPrecios
+   reinicializarPrecios,
    actualizarCantidadEquipos,
    actualizarPrecioVenta,
    incrementarAños,
