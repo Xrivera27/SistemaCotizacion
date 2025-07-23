@@ -1,963 +1,1107 @@
 import api from './api';
 
 class ServiciosService {
-  
-  // ==================== MÉTODOS PRINCIPALES ====================
-  
-  // Obtener todos los servicios con paginación y filtros
-  async getServicios(params = {}) {
-    try {
-      console.log('📋 Obteniendo servicios con parámetros:', params);
-      
-      const response = await api.get('/servicios', { params });
-      
-      if (response.data.success) {
-        console.log('✅ Servicios obtenidos:', response.data.data);
-        return {
-          success: true,
-          servicios: response.data.data.servicios,
-          pagination: response.data.data.pagination
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo servicios'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicios:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // Obtener servicio por ID (con categorías expandidas)
-  async getServicioById(id) {
-    try {
-      console.log('🛠️ Obteniendo servicio ID:', id);
-      
-      const response = await api.get(`/servicios/${id}`);
-      
-      if (response.data.success) {
-        console.log('✅ Servicio obtenido:', response.data.data.servicio);
-        return {
-          success: true,
-          servicio: response.data.data.servicio
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Servicio no encontrado'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicio:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // 🆕 NUEVO: Obtener todas las categorías de un servicio
-  async getCategoriesForServicio(servicioId) {
-    try {
-      console.log('🏷️ Obteniendo categorías para servicio ID:', servicioId);
-      
-      const response = await api.get(`/servicios/${servicioId}/categories`);
-      
-      if (response.data.success) {
-        console.log('✅ Categorías obtenidas:', response.data.data.categorias);
-        return {
-          success: true,
-          categorias: response.data.data.categorias
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo categorías del servicio'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo categorías del servicio:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ 
+ // ==================== MÉTODOS PRINCIPALES ====================
+ 
+ // Obtener todos los servicios con paginación y filtros
+ async getServicios(params = {}) {
+   try {
+     console.log('📋 Obteniendo servicios con parámetros:', params);
+     
+     const response = await api.get('/servicios', { params });
+     
+     if (response.data.success) {
+       console.log('✅ Servicios obtenidos:', response.data.data);
+       return {
+         success: true,
+         servicios: response.data.data.servicios,
+         pagination: response.data.data.pagination
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Obtener servicio por ID (con categorías expandidas)
+ async getServicioById(id) {
+   try {
+     console.log('🛠️ Obteniendo servicio ID:', id);
+     
+     const response = await api.get(`/servicios/${id}`);
+     
+     if (response.data.success) {
+       console.log('✅ Servicio obtenido:', response.data.data.servicio);
+       return {
+         success: true,
+         servicio: response.data.data.servicio
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Servicio no encontrado'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicio:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // 🆕 NUEVO: Obtener todas las categorías de un servicio
+ async getCategoriesForServicio(servicioId) {
+   try {
+     console.log('🏷️ Obteniendo categorías para servicio ID:', servicioId);
+     
+     const response = await api.get(`/servicios/${servicioId}/categories`);
+     
+     if (response.data.success) {
+       console.log('✅ Categorías obtenidas:', response.data.data.categorias);
+       return {
+         success: true,
+         categorias: response.data.data.categorias
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo categorías del servicio'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo categorías del servicio:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Obtener servicios relacionados
-  async getRelatedServicios(servicioId, limit = 5) {
-    try {
-      console.log('🔗 Obteniendo servicios relacionados para ID:', servicioId);
-      
-      const response = await api.get(`/servicios/${servicioId}/related`, {
-        params: { limit }
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Servicios relacionados obtenidos:', response.data.data.servicios);
-        return {
-          success: true,
-          servicios: response.data.data.servicios
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo servicios relacionados'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicios relacionados:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Obtener servicios relacionados
+ async getRelatedServicios(servicioId, limit = 5) {
+   try {
+     console.log('🔗 Obteniendo servicios relacionados para ID:', servicioId);
+     
+     const response = await api.get(`/servicios/${servicioId}/related`, {
+       params: { limit }
+     });
+     
+     if (response.data.success) {
+       console.log('✅ Servicios relacionados obtenidos:', response.data.data.servicios);
+       return {
+         success: true,
+         servicios: response.data.data.servicios
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios relacionados'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios relacionados:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Obtener servicios con categorías expandidas
-  async getServiciosWithExpandedCategories(params = {}) {
-    try {
-      console.log('📋🏷️ Obteniendo servicios con categorías expandidas:', params);
-      
-      const response = await api.get('/servicios/expanded', { params });
-      
-      if (response.data.success) {
-        console.log('✅ Servicios con categorías expandidas obtenidos:', response.data.data);
-        return {
-          success: true,
-          servicios: response.data.data.servicios,
-          pagination: response.data.data.pagination
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo servicios expandidos'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicios expandidos:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // 🔧 ACTUALIZADO: Crear nuevo servicio (con soporte para múltiples categorías)
-  async createServicio(servicioData) {
-    try {
-      console.log('➕ Creando servicio:', servicioData);
-      
-      // 🆕 NUEVO: Preparar datos para múltiples categorías
-      const dataToSend = this.prepareServicioDataForAPI(servicioData);
-      
-      const response = await api.post('/servicios', dataToSend);
-      
-      if (response.data.success) {
-        console.log('✅ Servicio creado exitosamente:', response.data.data.servicio);
-        return {
-          success: true,
-          servicio: response.data.data.servicio,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error creando servicio'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error creando servicio:', error);
-      
-      if (error.response?.data?.errors) {
-        return {
-          success: false,
-          message: error.response.data.message,
-          errors: error.response.data.errors
-        };
-      }
-      
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // 🔧 ACTUALIZADO: Actualizar servicio (con soporte para múltiples categorías)
-  async updateServicio(id, servicioData) {
-    try {
-      console.log('✏️ Actualizando servicio ID:', id, 'con datos:', servicioData);
-      
-      // 🆕 NUEVO: Preparar datos para múltiples categorías
-      const dataToSend = this.prepareServicioDataForAPI(servicioData);
-      
-      const response = await api.put(`/servicios/${id}`, dataToSend);
-      
-      if (response.data.success) {
-        console.log('✅ Servicio actualizado exitosamente:', response.data.data.servicio);
-        return {
-          success: true,
-          servicio: response.data.data.servicio,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error actualizando servicio'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error actualizando servicio:', error);
-      
-      if (error.response?.data?.errors) {
-        return {
-          success: false,
-          message: error.response.data.message,
-          errors: error.response.data.errors
-        };
-      }
-      
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Obtener servicios con categorías expandidas
+ async getServiciosWithExpandedCategories(params = {}) {
+   try {
+     console.log('📋🏷️ Obteniendo servicios con categorías expandidas:', params);
+     
+     const response = await api.get('/servicios/expanded', { params });
+     
+     if (response.data.success) {
+       console.log('✅ Servicios con categorías expandidas obtenidos:', response.data.data);
+       return {
+         success: true,
+         servicios: response.data.data.servicios,
+         pagination: response.data.data.pagination
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios expandidos'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios expandidos:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // 🔧 ACTUALIZADO: Crear nuevo servicio (con soporte para múltiples categorías y límites)
+ async createServicio(servicioData) {
+   try {
+     console.log('➕ Creando servicio:', servicioData);
+     
+     // 🆕 NUEVO: Preparar datos para múltiples categorías y límites
+     const dataToSend = this.prepareServicioDataForAPI(servicioData);
+     
+     const response = await api.post('/servicios', dataToSend);
+     
+     if (response.data.success) {
+       console.log('✅ Servicio creado exitosamente:', response.data.data.servicio);
+       return {
+         success: true,
+         servicio: response.data.data.servicio,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error creando servicio'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error creando servicio:', error);
+     
+     if (error.response?.data?.errors) {
+       return {
+         success: false,
+         message: error.response.data.message,
+         errors: error.response.data.errors
+       };
+     }
+     
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // 🔧 ACTUALIZADO: Actualizar servicio (con soporte para múltiples categorías y límites)
+ async updateServicio(id, servicioData) {
+   try {
+     console.log('✏️ Actualizando servicio ID:', id, 'con datos:', servicioData);
+     
+     // 🆕 NUEVO: Preparar datos para múltiples categorías y límites
+     const dataToSend = this.prepareServicioDataForAPI(servicioData);
+     
+     const response = await api.put(`/servicios/${id}`, dataToSend);
+     
+     if (response.data.success) {
+       console.log('✅ Servicio actualizado exitosamente:', response.data.data.servicio);
+       return {
+         success: true,
+         servicio: response.data.data.servicio,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error actualizando servicio'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error actualizando servicio:', error);
+     
+     if (error.response?.data?.errors) {
+       return {
+         success: false,
+         message: error.response.data.message,
+         errors: error.response.data.errors
+       };
+     }
+     
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Asignar múltiples categorías a un servicio existente
-  async assignCategoriesToServicio(servicioId, categorias, categoriaPrincipal) {
-    try {
-      console.log('🏷️ Asignando categorías al servicio ID:', servicioId, 'categorías:', categorias);
-      
-      const response = await api.post(`/servicios/${servicioId}/assign-categories`, {
-        categorias,
-        categoria_principal: categoriaPrincipal,
-        replace_existing: true
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Categorías asignadas exitosamente');
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error asignando categorías'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error asignando categorías:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Asignar múltiples categorías a un servicio existente
+ async assignCategoriesToServicio(servicioId, categorias, categoriaPrincipal) {
+   try {
+     console.log('🏷️ Asignando categorías al servicio ID:', servicioId, 'categorías:', categorias);
+     
+     const response = await api.post(`/servicios/${servicioId}/assign-categories`, {
+       categorias,
+       categoria_principal: categoriaPrincipal,
+       replace_existing: true
+     });
+     
+     if (response.data.success) {
+       console.log('✅ Categorías asignadas exitosamente');
+       return {
+         success: true,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error asignando categorías'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error asignando categorías:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Verificar conflictos de nombres en múltiples categorías
-  async checkNameConflicts(nombre, categorias, excludeId = null) {
-    try {
-      console.log('🔍 Verificando conflictos de nombre:', nombre, 'en categorías:', categorias);
-      
-      const response = await api.post('/servicios/check-conflicts', {
-        nombre,
-        categorias,
-        excludeId
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Verificación de conflictos completada:', response.data.data);
-        return {
-          success: true,
-          hasConflicts: response.data.data.hasConflicts,
-          conflicts: response.data.data.conflicts || []
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error verificando conflictos'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error verificando conflictos:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // Eliminar servicio (soft delete)
-  async deleteServicio(id) {
-    try {
-      console.log('🗑️ Eliminando servicio ID:', id);
-      
-      const response = await api.delete(`/servicios/${id}`);
-      
-      if (response.data.success) {
-        console.log('✅ Servicio eliminado exitosamente');
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error eliminando servicio'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error eliminando servicio:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // Restaurar servicio
-  async restoreServicio(id) {
-    try {
-      console.log('🔄 Restaurando servicio ID:', id);
-      
-      const response = await api.patch(`/servicios/${id}/restore`);
-      
-      if (response.data.success) {
-        console.log('✅ Servicio restaurado exitosamente');
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error restaurando servicio'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error restaurando servicio:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // Obtener estadísticas de servicios
-  async getEstadisticas() {
-    try {
-      console.log('📊 Obteniendo estadísticas de servicios...');
-      
-      const response = await api.get('/servicios/admin/estadisticas');
-      
-      if (response.data.success) {
-        console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
-        return {
-          success: true,
-          estadisticas: response.data.data.estadisticas
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo estadísticas'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo estadísticas:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Verificar conflictos de nombres en múltiples categorías
+ async checkNameConflicts(nombre, categorias, excludeId = null) {
+   try {
+     console.log('🔍 Verificando conflictos de nombre:', nombre, 'en categorías:', categorias);
+     
+     const response = await api.post('/servicios/check-conflicts', {
+       nombre,
+       categorias,
+       excludeId
+     });
+     
+     if (response.data.success) {
+       console.log('✅ Verificación de conflictos completada:', response.data.data);
+       return {
+         success: true,
+         hasConflicts: response.data.data.hasConflicts,
+         conflicts: response.data.data.conflicts || []
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error verificando conflictos'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error verificando conflictos:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Obtener estadísticas avanzadas por categoría
-  async getAdvancedCategoryStats() {
-    try {
-      console.log('📊 Obteniendo estadísticas avanzadas por categoría...');
-      
-      const response = await api.get('/servicios/admin/stats/categories');
-      
-      if (response.data.success) {
-        console.log('✅ Estadísticas avanzadas obtenidas:', response.data.data.estadisticas);
-        return {
-          success: true,
-          estadisticas: response.data.data.estadisticas
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo estadísticas avanzadas'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo estadísticas avanzadas:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Validar cantidad contra límites del servicio
+ async validateCantidad(servicioId, cantidad) {
+   try {
+     console.log('🔍 Validando cantidad:', cantidad, 'para servicio ID:', servicioId);
+     
+     const response = await api.post('/servicios/validate-cantidad', {
+       servicios_id: servicioId,
+       cantidad
+     });
+     
+     if (response.data.success) {
+       console.log('✅ Validación de cantidad completada:', response.data.data);
+       return {
+         success: true,
+         valid: response.data.data.valid,
+         message: response.data.data.message,
+         servicio: response.data.data.servicio
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error validando cantidad'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error validando cantidad:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Migrar servicios a múltiples categorías
-  async migrateToMultipleCategories() {
-    try {
-      console.log('🔄 Iniciando migración a múltiples categorías...');
-      
-      const response = await api.post('/servicios/admin/migrate');
-      
-      if (response.data.success) {
-        console.log('✅ Migración completada:', response.data.message);
-        return {
-          success: true,
-          message: response.data.message
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error en la migración'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error en migración:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Obtener límites de un servicio
+ async getLimitesServicio(servicioId) {
+   try {
+     console.log('📏 Obteniendo límites para servicio ID:', servicioId);
+     
+     const response = await api.get(`/servicios/${servicioId}/limites`);
+     
+     if (response.data.success) {
+       console.log('✅ Límites obtenidos:', response.data.data);
+       return {
+         success: true,
+         limites: response.data.data
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo límites'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo límites:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Eliminar servicio (soft delete)
+ async deleteServicio(id) {
+   try {
+     console.log('🗑️ Eliminando servicio ID:', id);
+     
+     const response = await api.delete(`/servicios/${id}`);
+     
+     if (response.data.success) {
+       console.log('✅ Servicio eliminado exitosamente');
+       return {
+         success: true,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error eliminando servicio'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error eliminando servicio:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Restaurar servicio
+ async restoreServicio(id) {
+   try {
+     console.log('🔄 Restaurando servicio ID:', id);
+     
+     const response = await api.patch(`/servicios/${id}/restore`);
+     
+     if (response.data.success) {
+       console.log('✅ Servicio restaurado exitosamente');
+       return {
+         success: true,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error restaurando servicio'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error restaurando servicio:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Obtener estadísticas de servicios
+ async getEstadisticas() {
+   try {
+     console.log('📊 Obteniendo estadísticas de servicios...');
+     
+     const response = await api.get('/servicios/admin/estadisticas');
+     
+     if (response.data.success) {
+       console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
+       return {
+         success: true,
+         estadisticas: response.data.data.estadisticas
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo estadísticas'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo estadísticas:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Validar integridad de datos
-  async validateDataIntegrity() {
-    try {
-      console.log('🔍 Validando integridad de datos...');
-      
-      const response = await api.get('/servicios/admin/validate');
-      
-      if (response.data.success) {
-        console.log('✅ Validación completada:', response.data);
-        return {
-          success: true,
-          issues: response.data.issues || [],
-          summary: response.data.summary || {}
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error validando integridad'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error validando integridad:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
+ // 🆕 NUEVO: Obtener estadísticas avanzadas por categoría
+ async getAdvancedCategoryStats() {
+   try {
+     console.log('📊 Obteniendo estadísticas avanzadas por categoría...');
+     
+     const response = await api.get('/servicios/admin/stats/categories');
+     
+     if (response.data.success) {
+       console.log('✅ Estadísticas avanzadas obtenidas:', response.data.data.estadisticas);
+       return {
+         success: true,
+         estadisticas: response.data.data.estadisticas
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo estadísticas avanzadas'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo estadísticas avanzadas:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // 🆕 NUEVO: Migrar servicios a múltiples categorías
+ async migrateToMultipleCategories() {
+   try {
+     console.log('🔄 Iniciando migración a múltiples categorías...');
+     
+     const response = await api.post('/servicios/admin/migrate');
+     
+     if (response.data.success) {
+       console.log('✅ Migración completada:', response.data.message);
+       return {
+         success: true,
+         message: response.data.message
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error en la migración'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error en migración:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // 🆕 NUEVO: Validar integridad de datos
+ async validateDataIntegrity() {
+   try {
+     console.log('🔍 Validando integridad de datos...');
+     
+     const response = await api.get('/servicios/admin/validate');
+     
+     if (response.data.success) {
+       console.log('✅ Validación completada:', response.data);
+       return {
+         success: true,
+         issues: response.data.issues || [],
+         summary: response.data.summary || {}
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error validando integridad'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error validando integridad:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Buscar servicios (método helper para autocompletado)
+ async searchServicios(searchTerm, limit = 10) {
+   try {
+     console.log('🔍 Buscando servicios:', searchTerm);
+     
+     const response = await api.get('/servicios/search', {
+       params: {
+         q: searchTerm,
+         limit
+       }
+     });
+     
+     if (response.data.success) {
+       console.log('✅ Servicios encontrados:', response.data.data.servicios);
+       return {
+         success: true,
+         servicios: response.data.data.servicios
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error en la búsqueda'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error buscando servicios:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Obtener servicios activos (para selects/dropdowns)
+ async getServiciosActivos() {
+   try {
+     console.log('📝 Obteniendo servicios activos para select...');
+     
+     const response = await api.get('/servicios/activos');
+     
+     if (response.data.success) {
+       console.log('✅ Servicios activos obtenidos:', response.data.data.servicios);
+       return {
+         success: true,
+         servicios: response.data.data.servicios
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios activos'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios activos:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+ 
+ // 🔧 ACTUALIZADO: Obtener servicios por categoría (ahora considera múltiples categorías)
+ async getServiciosPorCategoria(categoriaId) {
+   try {
+     console.log('🏷️ Obteniendo servicios por categoría ID:', categoriaId);
+     
+     const response = await api.get(`/servicios/categoria/${categoriaId}`);
+     
+     if (response.data.success) {
+       console.log('✅ Servicios por categoría obtenidos:', response.data.data.servicios);
+       return {
+         success: true,
+         servicios: response.data.data.servicios
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios por categoría'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios por categoría:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // ==================== MÉTODOS HELPER ACTUALIZADOS ====================
+
+// 🔧 CORREGIDO: En serviciosService.js (frontend)
+prepareServicioDataForAPI(servicioData) {
+  const data = { ...servicioData };
   
-  // Buscar servicios (método helper para autocompletado)
-  async searchServicios(searchTerm, limit = 10) {
-    try {
-      console.log('🔍 Buscando servicios:', searchTerm);
-      
-      const response = await api.get('/servicios/search', {
-        params: {
-          q: searchTerm,
-          limit
-        }
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Servicios encontrados:', response.data.data.servicios);
-        return {
-          success: true,
-          servicios: response.data.data.servicios
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error en la búsqueda'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error buscando servicios:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // Obtener servicios activos (para selects/dropdowns)
-  async getServiciosActivos() {
-    try {
-      console.log('📝 Obteniendo servicios activos para select...');
-      
-      const response = await api.get('/servicios/activos');
-      
-      if (response.data.success) {
-        console.log('✅ Servicios activos obtenidos:', response.data.data.servicios);
-        return {
-          success: true,
-          servicios: response.data.data.servicios
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo servicios activos'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicios activos:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-  
-  // 🔧 ACTUALIZADO: Obtener servicios por categoría (ahora considera múltiples categorías)
-  async getServiciosPorCategoria(categoriaId) {
-    try {
-      console.log('🏷️ Obteniendo servicios por categoría ID:', categoriaId);
-      
-      const response = await api.get(`/servicios/categoria/${categoriaId}`);
-      
-      if (response.data.success) {
-        console.log('✅ Servicios por categoría obtenidos:', response.data.data.servicios);
-        return {
-          success: true,
-          servicios: response.data.data.servicios
-        };
-      }
-      
-      return {
-        success: false,
-        message: response.data.message || 'Error obteniendo servicios por categoría'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error obteniendo servicios por categoría:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Error de conexión'
-      };
-    }
-  }
-
-  // ==================== MÉTODOS HELPER ACTUALIZADOS ====================
-
-  // 🆕 NUEVO: Preparar datos de servicio para el API (maneja múltiples categorías)
-  prepareServicioDataForAPI(servicioData) {
-    const data = { ...servicioData };
+  // Si tenemos un array de categorías seleccionadas
+  if (data.categoriasSeleccionadas && Array.isArray(data.categoriasSeleccionadas)) {
+    data.categorias = data.categoriasSeleccionadas;
     
-    // Si tenemos un array de categorías seleccionadas
-    if (data.categoriasSeleccionadas && Array.isArray(data.categoriasSeleccionadas)) {
-      data.categorias = data.categoriasSeleccionadas;
-      
-      // Si hay una categoría principal específica, usarla, sino usar la primera
-      if (data.categoriaPrincipal) {
-        data.categoria_principal = data.categoriaPrincipal;
-        data.categorias_id = data.categoriaPrincipal; // Para compatibilidad
-      } else if (data.categoriasSeleccionadas.length > 0) {
-        data.categoria_principal = data.categoriasSeleccionadas[0];
-        data.categorias_id = data.categoriasSeleccionadas[0]; // Para compatibilidad
-      }
-      
-      // Limpiar campos del frontend
-      delete data.categoriasSeleccionadas;
-      delete data.categoriaPrincipal;
+    // Si hay una categoría principal específica, usarla, sino usar la primera
+    if (data.categoriaPrincipal) {
+      data.categoria_principal = data.categoriaPrincipal;
+      data.categorias_id = data.categoriaPrincipal; // Para compatibilidad
+    } else if (data.categoriasSeleccionadas.length > 0) {
+      data.categoria_principal = data.categoriasSeleccionadas[0];
+      data.categorias_id = data.categoriasSeleccionadas[0]; // Para compatibilidad
     }
     
-    // Si solo hay categorias_id (modo de compatibilidad)
-    if (data.categorias_id && !data.categorias) {
-      data.categorias = [data.categorias_id];
-      data.categoria_principal = data.categorias_id;
-    }
-    
-    return data;
-  }
-
-  // 🔧 ACTUALIZADO: Validar disponibilidad de nombre (ahora considera múltiples categorías)
-  async checkNombreDisponible(nombre, categorias, excludeId = null) {
-    try {
-      console.log('🔍 Verificando disponibilidad de nombre:', nombre, 'en categorías:', categorias);
-      
-      // Si es un solo ID, convertir a array
-      const categoriasArray = Array.isArray(categorias) ? categorias : [categorias];
-      
-      const result = await this.checkNameConflicts(nombre, categoriasArray, excludeId);
-      
-      if (result.success) {
-        console.log(`Nombre "${nombre}" ${result.hasConflicts ? 'tiene conflictos' : 'está disponible'}`);
-        
-        return {
-          success: true,
-          available: !result.hasConflicts,
-          conflicts: result.conflicts || []
-        };
-      }
-      
-      return {
-        success: false,
-        message: result.message || 'Error verificando disponibilidad'
-      };
-      
-    } catch (error) {
-      console.error('❌ Error verificando disponibilidad:', error);
-      return {
-        success: false,
-        message: 'Error de conexión'
-      };
-    }
+    // Limpiar campos del frontend
+    delete data.categoriasSeleccionadas;
+    delete data.categoriaPrincipal;
   }
   
-  // Obtener estados disponibles
-  getEstados() {
-    return [
-      { value: 'activo', label: 'Activo', color: 'success' },
-      { value: 'inactivo', label: 'Inactivo', color: 'danger' }
-    ];
+  // Si solo hay categorias_id (modo de compatibilidad)
+  if (data.categorias_id && !data.categorias) {
+    data.categorias = [data.categorias_id];
+    data.categoria_principal = data.categorias_id;
   }
   
- // 🔧 CORREGIDO: Método formatServicioDisplay
-
-formatServicioDisplay(servicio) {
-  if (!servicio) return null;
-  
-  // 🆕 PARSEAR múltiples categorías del JSON
-  let categoriasArray = [];
-  try {
-    if (servicio.categorias_ids && servicio.categorias_ids !== 'null') {
-      console.log('📋 Parseando categorias_ids:', servicio.categorias_ids);
-      categoriasArray = JSON.parse(servicio.categorias_ids);
-      
-      // Asegurar que es un array de números
-      if (Array.isArray(categoriasArray)) {
-        categoriasArray = categoriasArray.map(id => parseInt(id)).filter(id => !isNaN(id));
-      } else {
-        categoriasArray = [];
-      }
-    } else if (servicio.categorias_id) {
-      // Fallback a categoría única
-      categoriasArray = [parseInt(servicio.categorias_id)];
-    }
-  } catch (error) {
-    console.error('❌ Error parseando categorias_ids:', error, 'Valor:', servicio.categorias_ids);
-    if (servicio.categorias_id) {
-      categoriasArray = [parseInt(servicio.categorias_id)];
-    }
+  // 🆕 NUEVO: Procesar límites CORRECTAMENTE
+  if (data.limite_minimo !== undefined && data.limite_minimo !== '') {
+    data.limite_minimo = parseFloat(data.limite_minimo) || 1.00;
+  } else {
+    data.limite_minimo = 1.00; // Valor por defecto
   }
   
-  console.log('📋 Categorías parseadas para servicio', servicio.servicios_id, ':', categoriasArray);
+  if (data.limite_maximo !== undefined && data.limite_maximo !== '') {
+    data.limite_maximo = parseFloat(data.limite_maximo);
+  } else {
+    data.limite_maximo = null; // Sin límite máximo
+  }
   
-  // Obtener información de la categoría principal (para compatibilidad)
-  const categoriaPrincipal = servicio.categoria ? {
-    categorias_id: servicio.categoria.categorias_id,
-    nombre: servicio.categoria.nombre,
-    descripcion: servicio.categoria.descripcion,
-    unidad_medida: servicio.categoria.unidad_medida ? {
-      id: servicio.categoria.unidad_medida.unidades_medida_id,
-      nombre: servicio.categoria.unidad_medida.nombre,
-      abreviacion: servicio.categoria.unidad_medida.abreviacion,
-      tipo: servicio.categoria.unidad_medida.tipo,
-      descripcion: servicio.categoria.unidad_medida.descripcion
-    } : null
-  } : null;
+  console.log('🔧 Datos preparados para API:', data); // Para debug
   
-  return {
-    servicios_id: servicio.servicios_id,
-    nombre: servicio.nombre,
-    descripcion: servicio.descripcion,
-    precio_minimo: parseFloat(servicio.precio_minimo) || 0,
-    precio_recomendado: parseFloat(servicio.precio_recomendado) || 0,
-    categorias_id: servicio.categorias_id, // 🔧 Mantener compatibilidad
-    categorias_ids: categoriasArray, // 🆕 Array de IDs de categorías
-    categoria: categoriaPrincipal, // 🔧 Categoría principal para compatibilidad
-    estado: servicio.estado,
-    created_at: servicio.created_at,
-    updated_at: servicio.updated_at
-  };
+  return data;
 }
 
-// Agregar este método al servicio:
-async getServiciosParaCotizacion(params = {}) {
-  try {
-    console.log('📋 Obteniendo servicios para cotización con categorías expandidas:', params);
-    
-    // Usar endpoint expandido
-    const response = await api.get('/servicios/expanded', { params });
-    
-    if (response.data.success) {
-      console.log('✅ Servicios expandidos obtenidos:', response.data.data);
-      
-      // Formatear cada servicio con sus categorías completas
-      const serviciosFormateados = response.data.data.servicios.map(servicio => {
-        return this.formatServicioParaCotizacion(servicio);
-      });
-      
-      return {
-        success: true,
-        servicios: serviciosFormateados,
-        pagination: response.data.data.pagination
-      };
-    }
-    
-    return {
-      success: false,
-      message: response.data.message || 'Error obteniendo servicios expandidos'
-    };
-    
-  } catch (error) {
-    console.error('❌ Error obteniendo servicios para cotización:', error);
-    return {
-      success: false,
-      message: error.response?.data?.message || 'Error de conexión'
-    };
-  }
-}
+ // 🔧 ACTUALIZADO: Validar disponibilidad de nombre (ahora considera múltiples categorías)
+ async checkNombreDisponible(nombre, categorias, excludeId = null) {
+   try {
+     console.log('🔍 Verificando disponibilidad de nombre:', nombre, 'en categorías:', categorias);
+     
+     // Si es un solo ID, convertir a array
+     const categoriasArray = Array.isArray(categorias) ? categorias : [categorias];
+     
+     const result = await this.checkNameConflicts(nombre, categoriasArray, excludeId);
+     
+     if (result.success) {
+       console.log(`Nombre "${nombre}" ${result.hasConflicts ? 'tiene conflictos' : 'está disponible'}`);
+       
+       return {
+         success: true,
+         available: !result.hasConflicts,
+         conflicts: result.conflicts || []
+       };
+     }
+     
+     return {
+       success: false,
+       message: result.message || 'Error verificando disponibilidad'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error verificando disponibilidad:', error);
+     return {
+       success: false,
+       message: 'Error de conexión'
+     };
+   }
+ }
+ 
+ // Obtener estados disponibles
+ getEstados() {
+   return [
+     { value: 'activo', label: 'Activo', color: 'success' },
+     { value: 'inactivo', label: 'Inactivo', color: 'danger' }
+   ];
+ }
+ 
+ // 🔧 ACTUALIZADO: Método formatServicioDisplay (con límites)
+ formatServicioDisplay(servicio) {
+   if (!servicio) return null;
+   
+   // 🆕 PARSEAR múltiples categorías del JSON
+   let categoriasArray = [];
+   try {
+     if (servicio.categorias_ids && servicio.categorias_ids !== 'null') {
+       console.log('📋 Parseando categorias_ids:', servicio.categorias_ids);
+       categoriasArray = JSON.parse(servicio.categorias_ids);
+       
+       // Asegurar que es un array de números
+       if (Array.isArray(categoriasArray)) {
+         categoriasArray = categoriasArray.map(id => parseInt(id)).filter(id => !isNaN(id));
+       } else {
+         categoriasArray = [];
+       }
+     } else if (servicio.categorias_id) {
+       // Fallback a categoría única
+       categoriasArray = [parseInt(servicio.categorias_id)];
+     }
+   } catch (error) {
+     console.error('❌ Error parseando categorias_ids:', error, 'Valor:', servicio.categorias_ids);
+     if (servicio.categorias_id) {
+       categoriasArray = [parseInt(servicio.categorias_id)];
+     }
+   }
+   
+   console.log('📋 Categorías parseadas para servicio', servicio.servicios_id, ':', categoriasArray);
+   
+   // Obtener información de la categoría principal (para compatibilidad)
+   const categoriaPrincipal = servicio.categoria ? {
+     categorias_id: servicio.categoria.categorias_id,
+     nombre: servicio.categoria.nombre,
+     descripcion: servicio.categoria.descripcion,
+     unidad_medida: servicio.categoria.unidad_medida ? {
+       id: servicio.categoria.unidad_medida.unidades_medida_id,
+       nombre: servicio.categoria.unidad_medida.nombre,
+       abreviacion: servicio.categoria.unidad_medida.abreviacion,
+       tipo: servicio.categoria.unidad_medida.tipo,
+       descripcion: servicio.categoria.unidad_medida.descripcion
+     } : null
+   } : null;
+   
+   return {
+     servicios_id: servicio.servicios_id,
+     nombre: servicio.nombre,
+     descripcion: servicio.descripcion,
+     precio_minimo: parseFloat(servicio.precio_minimo) || 0,
+     precio_recomendado: parseFloat(servicio.precio_recomendado) || 0,
+     limite_minimo: parseFloat(servicio.limite_minimo) || 1.00, // 🆕 NUEVO
+     limite_maximo: servicio.limite_maximo ? parseFloat(servicio.limite_maximo) : null, // 🆕 NUEVO
+     categorias_id: servicio.categorias_id, // 🔧 Mantener compatibilidad
+     categorias_ids: categoriasArray, // 🆕 Array de IDs de categorías
+     categoria: categoriaPrincipal, // 🔧 Categoría principal para compatibilidad
+     estado: servicio.estado,
+     created_at: servicio.created_at,
+     updated_at: servicio.updated_at
+   };
+ }
 
-// Agregar este método de formateo específico:
-formatServicioParaCotizacion(servicio) {
-  const servicioBase = this.formatServicioDisplay(servicio);
-  
-  // ✅ PROCESAR categorias_ids del backend
-  let categoriasCompletas = [];
-  
-  if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
-    categoriasCompletas = servicio.categorias_completas;
-  } else if (servicio.categoria) {
-    categoriasCompletas = [servicio.categoria];
-  }
-  
-  return {
-    ...servicioBase,
-    categorias_completas: categoriasCompletas
-  };
-}
+ // Agregar este método al servicio:
+ async getServiciosParaCotizacion(params = {}) {
+   try {
+     console.log('📋 Obteniendo servicios para cotización con categorías expandidas:', params);
+     
+     // Usar endpoint expandido
+     const response = await api.get('/servicios/expanded', { params });
+     
+     if (response.data.success) {
+       console.log('✅ Servicios expandidos obtenidos:', response.data.data);
+       
+       // Formatear cada servicio con sus categorías completas
+       const serviciosFormateados = response.data.data.servicios.map(servicio => {
+         return this.formatServicioParaCotizacion(servicio);
+       });
+       
+       return {
+         success: true,
+         servicios: serviciosFormateados,
+         pagination: response.data.data.pagination
+       };
+     }
+     
+     return {
+       success: false,
+       message: response.data.message || 'Error obteniendo servicios expandidos'
+     };
+     
+   } catch (error) {
+     console.error('❌ Error obteniendo servicios para cotización:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
 
-  // 🆕 NUEVO: Helper para formatear múltiples categorías como texto
-  formatMultipleCategories(categorias, maxVisible = 2) {
-    if (!categorias || categorias.length === 0) return 'Sin categorías';
-    
-    if (categorias.length === 1) {
-      return categorias[0].nombre || categorias[0];
-    }
-    
-    const visible = categorias.slice(0, maxVisible);
-    const remaining = categorias.length - maxVisible;
-    
-    let result = visible.map(cat => cat.nombre || cat).join(', ');
-    
-    if (remaining > 0) {
-      result += ` +${remaining} más`;
-    }
-    
-    return result;
-  }
+ // Agregar este método de formateo específico:
+ formatServicioParaCotizacion(servicio) {
+   const servicioBase = this.formatServicioDisplay(servicio);
+   
+   // ✅ PROCESAR categorias_ids del backend
+   let categoriasCompletas = [];
+   
+   if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
+     categoriasCompletas = servicio.categorias_completas;
+   } else if (servicio.categoria) {
+     categoriasCompletas = [servicio.categoria];
+   }
+   
+   return {
+     ...servicioBase,
+     categorias_completas: categoriasCompletas
+   };
+ }
 
-  // 🆕 NUEVO: Helper para validar categorías múltiples
-  validateMultipleCategories(categorias) {
-    if (!categorias || !Array.isArray(categorias)) {
-      return { valid: false, message: 'Debe seleccionar al menos una categoría' };
-    }
-    
-    if (categorias.length === 0) {
-      return { valid: false, message: 'Debe seleccionar al menos una categoría' };
-    }
-    
-    if (categorias.length > 10) {
-      return { valid: false, message: 'No puede seleccionar más de 10 categorías' };
-    }
-    
-    // Verificar duplicados
-    const unique = [...new Set(categorias)];
-    if (unique.length !== categorias.length) {
-      return { valid: false, message: 'No puede repetir categorías' };
-    }
-    
-    return { valid: true, message: '' };
-  }
+ // 🆕 NUEVO: Helper para formatear múltiples categorías como texto
+ formatMultipleCategories(categorias, maxVisible = 2) {
+   if (!categorias || categorias.length === 0) return 'Sin categorías';
+   
+   if (categorias.length === 1) {
+     return categorias[0].nombre || categorias[0];
+   }
+   
+   const visible = categorias.slice(0, maxVisible);
+   const remaining = categorias.length - maxVisible;
+   
+   let result = visible.map(cat => cat.nombre || cat).join(', ');
+   
+   if (remaining > 0) {
+     result += ` +${remaining} más`;
+   }
+   
+   return result;
+ }
 
-  // 🆕 NUEVO: Helper para obtener la categoría principal de un servicio
-  getPrimaryCategory(servicio) {
-    if (servicio.categoria) {
-      return servicio.categoria;
-    }
-    
-    if (servicio.categorias_completas && servicio.categorias_completas.length > 0) {
-      // Buscar la que coincide con categorias_id
-      const principal = servicio.categorias_completas.find(
-        cat => cat.categorias_id === servicio.categorias_id
-      );
-      return principal || servicio.categorias_completas[0];
-    }
-    
-    return { nombre: 'Sin categoría', categorias_id: null };
-  }
+ // 🆕 NUEVO: Helper para validar categorías múltiples
+ validateMultipleCategories(categorias) {
+   if (!categorias || !Array.isArray(categorias)) {
+     return { valid: false, message: 'Debe seleccionar al menos una categoría' };
+   }
+   
+   if (categorias.length === 0) {
+     return { valid: false, message: 'Debe seleccionar al menos una categoría' };
+   }
+   
+   if (categorias.length > 10) {
+     return { valid: false, message: 'No puede seleccionar más de 10 categorías' };
+   }
+   
+   // Verificar duplicados
+   const unique = [...new Set(categorias)];
+   if (unique.length !== categorias.length) {
+     return { valid: false, message: 'No puede repetir categorías' };
+   }
+   
+   return { valid: true, message: '' };
+ }
 
-  // 🆕 NUEVO: Helper para verificar si un servicio pertenece a una categoría
-  belongsToCategory(servicio, categoriaId) {
-    // Verificar categoría principal
-    if (servicio.categorias_id === categoriaId) return true;
-    
-    // Verificar en array de IDs
-    if (servicio.categorias_ids && Array.isArray(servicio.categorias_ids)) {
-      return servicio.categorias_ids.includes(categoriaId);
-    }
-    
-    // Verificar en categorías completas
-    if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
-      return servicio.categorias_completas.some(cat => cat.categorias_id === categoriaId);
-    }
-    
-    return false;
-  }
-  
-  // Helper para generar iniciales del servicio
-  generateInitials(nombre) {
-    if (!nombre) return 'S';
-    
-    const palabras = nombre.trim().split(' ');
-    
-    if (palabras.length >= 2) {
-      return (palabras[0][0] + palabras[1][0]).toUpperCase();
-    } else {
-      return palabras[0].substring(0, 2).toUpperCase();
-    }
-  }
-  
-  // Helper para formatear fechas
-  formatDate(dateString) {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return dateString;
-    }
-  }
-  
-  // Helper para truncar texto
-  truncateText(text, maxLength = 100) {
-    if (!text) return '';
-    
-    if (text.length <= maxLength) {
-      return text;
-    }
-    
-    return text.substring(0, maxLength).trim() + '...';
-  }
-  
-  // Helper para formatear precios
-  formatPrice(price) {
-    if (!price) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  }
-  
-  // Helper para obtener rango de precio
-  getPriceRange(price) {
-    if (!price) return 'unknown';
-    
-    if (price < 500) return 'bajo';
-    if (price <= 2000) return 'medio';
-    return 'alto';
-  }
-  
-  // Helper para validar nombre de servicio
-  validateNombre(nombre) {
-    if (!nombre || nombre.trim().length === 0) {
-      return { valid: false, message: 'El nombre es requerido' };
-    }
-    
-    if (nombre.trim().length < 2) {
-      return { valid: false, message: 'El nombre debe tener al menos 2 caracteres' };
-    }
-    
-    if (nombre.trim().length > 255) {
-      return { valid: false, message: 'El nombre no puede exceder 255 caracteres' };
-    }
-    
-    return { valid: true, message: '' };
-  }
-  
-  // Helper para validar descripción
-  validateDescripcion(descripcion) {
-    if (!descripcion) {
-      return { valid: true, message: '' }; // Descripción es opcional
-    }
-    
-    if (descripcion.trim().length > 1000) {
-      return { valid: false, message: 'La descripción no puede exceder 1000 caracteres' };
-    }
-    
-    return { valid: true, message: '' };
-  }
-  
-  // Helper para validar precios
-  validatePrecios(precioMinimo, precioRecomendado) {
-    const errors = [];
-    
-    if (!precioMinimo || precioMinimo <= 0) {
-      errors.push({ field: 'precio_minimo', message: 'El precio mínimo es requerido y debe ser mayor a 0' });
-    }
-    
-    if (!precioRecomendado || precioRecomendado <= 0) {
-      errors.push({ field: 'precio_recomendado', message: 'El precio recomendado es requerido y debe ser mayor a 0' });
-    }
-    
-    if (precioMinimo && precioRecomendado && parseFloat(precioRecomendado) < parseFloat(precioMinimo)) {
-      errors.push({ field: 'precio_recomendado', message: 'El precio recomendado no puede ser menor al precio mínimo' });
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
-  // 🔧 ACTUALIZADO: Helper para obtener servicios formateados para selects (con info de múltiples categorías)
+ // 🆕 NUEVO: Helper para validar límites
+ validateLimites(limiteMinimo, limiteMaximo) {
+   // Validar límite mínimo
+   if (limiteMinimo !== undefined && limiteMinimo !== null && limiteMinimo !== '') {
+     const min = parseFloat(limiteMinimo);
+     if (isNaN(min) || min <= 0) {
+       return {
+         valid: false,
+         message: 'El límite mínimo debe ser un número mayor a 0'
+       };
+     }
+   }
+   
+   // Validar límite máximo
+   if (limiteMaximo !== undefined && limiteMaximo !== null && limiteMaximo !== '') {
+     const max = parseFloat(limiteMaximo);
+     if (isNaN(max) || max <= 0) {
+       return {
+         valid: false,
+         message: 'El límite máximo debe ser un número mayor a 0'
+       };
+     }
+     
+     // Validar que máximo sea mayor o igual que mínimo
+     const min = parseFloat(limiteMinimo || 1.00);
+     if (max < min) {
+       return {
+         valid: false,
+         message: 'El límite máximo debe ser mayor o igual al límite mínimo'
+       };
+     }
+   }
+   
+   return { valid: true };
+ }
+
+ // 🆕 NUEVO: Helper para formatear límites como texto
+ formatLimitesTexto(servicio) {
+   if (!servicio) return 'Sin límites definidos';
+   
+   const limiteMin = servicio.limite_minimo || servicio.limites?.limite_minimo;
+   const limiteMax = servicio.limite_maximo || servicio.limites?.limite_maximo;
+   
+   if (!limiteMin && !limiteMax) {
+     return 'Sin límites definidos';
+   }
+   
+   if (limiteMin && limiteMax) {
+     return `${limiteMin} - ${limiteMax}`;
+   }
+   
+   if (limiteMin) {
+     return `Mínimo: ${limiteMin}`;
+   }
+   
+   if (limiteMax) {
+     return `Máximo: ${limiteMax}`;
+   }
+   
+   return 'Sin límites definidos';
+ }
+
+ // 🆕 NUEVO: Helper para obtener la categoría principal de un servicio
+ getPrimaryCategory(servicio) {
+   if (servicio.categoria) {
+     return servicio.categoria;
+   }
+   
+   if (servicio.categorias_completas && servicio.categorias_completas.length > 0) {
+     // Buscar la que coincide con categorias_id
+     const principal = servicio.categorias_completas.find(
+       cat => cat.categorias_id === servicio.categorias_id
+     );
+     return principal || servicio.categorias_completas[0];
+   }
+   
+   return { nombre: 'Sin categoría', categorias_id: null };
+ }
+
+ // 🆕 NUEVO: Helper para verificar si un servicio pertenece a una categoría
+ belongsToCategory(servicio, categoriaId) {
+   // Verificar categoría principal
+   if (servicio.categorias_id === categoriaId) return true;
+   
+   // Verificar en array de IDs
+   if (servicio.categorias_ids && Array.isArray(servicio.categorias_ids)) {
+     return servicio.categorias_ids.includes(categoriaId);
+   }
+   
+   // Verificar en categorías completas
+   if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
+     return servicio.categorias_completas.some(cat => cat.categorias_id === categoriaId);
+   }
+   
+   return false;
+ }
+ 
+ // Helper para generar iniciales del servicio
+ generateInitials(nombre) {
+   if (!nombre) return 'S';
+   
+   const palabras = nombre.trim().split(' ');
+   
+   if (palabras.length >= 2) {
+     return (palabras[0][0] + palabras[1][0]).toUpperCase();
+   } else {
+     return palabras[0].substring(0, 2).toUpperCase();
+   }
+ }
+ 
+ // Helper para formatear fechas
+ formatDate(dateString) {
+   if (!dateString) return '';
+   
+   try {
+     const date = new Date(dateString);
+     return date.toLocaleDateString('en-US', {
+       year: 'numeric',
+       month: 'short',
+       day: 'numeric',
+       hour: '2-digit',
+       minute: '2-digit'
+     });
+   } catch (error) {
+     return dateString;
+   }
+ }
+ 
+ // Helper para truncar texto
+ truncateText(text, maxLength = 100) {
+   if (!text) return '';
+   
+   if (text.length <= maxLength) {
+     return text;
+   }
+   
+   return text.substring(0, maxLength).trim() + '...';
+ }
+ 
+ // Helper para formatear precios
+ formatPrice(price) {
+   if (!price) return '$0.00';
+   return new Intl.NumberFormat('en-US', {
+     style: 'currency',
+     currency: 'USD'
+   }).format(price);
+ }
+ 
+ // Helper para obtener rango de precio
+ getPriceRange(price) {
+   if (!price) return 'unknown';
+   
+   if (price < 500) return 'bajo';
+   if (price <= 2000) return 'medio';
+   return 'alto';
+ }
+ 
+ // Helper para validar nombre de servicio
+ validateNombre(nombre) {
+   if (!nombre || nombre.trim().length === 0) {
+     return { valid: false, message: 'El nombre es requerido' };
+   }
+   
+   if (nombre.trim().length < 2) {
+     return { valid: false, message: 'El nombre debe tener al menos 2 caracteres' };
+   }
+   
+   if (nombre.trim().length > 255) {
+     return { valid: false, message: 'El nombre no puede exceder 255 caracteres' };
+   }
+   
+   return { valid: true, message: '' };
+ }
+ 
+ // Helper para validar descripción
+ validateDescripcion(descripcion) {
+   if (!descripcion) {
+     return { valid: true, message: '' }; // Descripción es opcional
+   }
+   
+   if (descripcion.trim().length > 1000) {
+     return { valid: false, message: 'La descripción no puede exceder 1000 caracteres' };
+   }
+   
+   return { valid: true, message: '' };
+ }
+ 
+ // Helper para validar precios
+ validatePrecios(precioMinimo, precioRecomendado) {
+   const errors = [];
+   
+   if (!precioMinimo || precioMinimo <= 0) {
+     errors.push({ field: 'precio_minimo', message: 'El precio mínimo es requerido y debe ser mayor a 0' });
+   }
+   
+   if (!precioRecomendado || precioRecomendado <= 0) {
+     errors.push({ field: 'precio_recomendado', message: 'El precio recomendado es requerido y debe ser mayor a 0' });
+   }
+   
+   if (precioMinimo && precioRecomendado && parseFloat(precioRecomendado) < parseFloat(precioMinimo)) {
+     errors.push({ field: 'precio_recomendado', message: 'El precio recomendado no puede ser menor al precio mínimo' });
+   }
+   
+   return {
+     valid: errors.length === 0,
+     errors
+   };
+ }
+
+ // 🔧 ACTUALIZADO: Helper para obtener servicios formateados para selects (con info de múltiples categorías y límites)
  formatServiciosForSelect(servicios) {
    return servicios.map(servicio => {
      const categorias_info = this.formatMultipleCategories(
        servicio.categorias_completas || [servicio.categoria], 
        2
      );
+     
+     const limites_info = this.formatLimitesTexto(servicio);
      
      return {
        value: servicio.servicios_id,
@@ -969,11 +1113,15 @@ formatServicioParaCotizacion(servicio) {
        precio_minimo: servicio.precio_minimo,
        precio_recomendado: servicio.precio_recomendado,
        precio_formatted: this.formatPrice(servicio.precio_recomendado),
+       limite_minimo: servicio.limite_minimo, // 🆕 NUEVO
+       limite_maximo: servicio.limite_maximo, // 🆕 NUEVO
+       limites_info: limites_info, // 🆕 NUEVO
+       has_limits: !!(servicio.limite_minimo || servicio.limite_maximo), // 🆕 NUEVO
        unidad_medida: servicio.categoria?.unidad_medida
      };
    });
  }
- 
+
  // 🔧 ACTUALIZADO: Helper para filtrar servicios por texto (incluye múltiples categorías)
  filterServiciosByText(servicios, searchText) {
    if (!searchText || searchText.trim().length === 0) {
@@ -1051,7 +1199,7 @@ formatServicioParaCotizacion(servicio) {
    
    return Object.values(grupos);
  }
- 
+
  // Helper para ordenar servicios
  sortServicios(servicios, sortBy = 'nombre', sortOrder = 'asc') {
    return [...servicios].sort((a, b) => {
@@ -1074,6 +1222,12 @@ formatServicioParaCotizacion(servicio) {
        bValue = parseFloat(bValue) || 0;
      }
      
+     // 🆕 NUEVO: Ordenamiento por límites
+     if (sortBy === 'limite_minimo' || sortBy === 'limite_maximo') {
+       aValue = parseFloat(aValue) || 0;
+       bValue = parseFloat(bValue) || 0;
+     }
+     
      // 🆕 NUEVO: Ordenamiento por número de categorías
      if (sortBy === 'categorias_count') {
        aValue = a.categorias_completas?.length || (a.categoria ? 1 : 0);
@@ -1090,8 +1244,8 @@ formatServicioParaCotizacion(servicio) {
      return 0;
    });
  }
- 
- // 🔧 ACTUALIZADO: Helper para obtener estadísticas básicas (considera múltiples categorías)
+
+ // 🔧 ACTUALIZADO: Helper para obtener estadísticas básicas (considera múltiples categorías y límites)
  getStatsFromList(servicios) {
    const total = servicios.length;
    const activos = servicios.filter(s => s.estado === 'activo').length;
@@ -1101,9 +1255,13 @@ formatServicioParaCotizacion(servicio) {
    let precioMin = Infinity;
    let precioMax = 0;
    
-   // 🆕 NUEVO: Estadísticas de categorías
+   // 🆕 NUEVO: Estadísticas de categorías y límites
    const categoriasSet = new Set();
    let serviciosConMultiplesCategorias = 0;
+   let serviciosConLimites = 0;
+   let sumaLimiteMin = 0;
+   let sumaLimiteMax = 0;
+   let serviciosConLimiteMax = 0;
    
    servicios.forEach(servicio => {
      if (servicio.estado === 'activo' && servicio.precio_recomendado) {
@@ -1122,9 +1280,25 @@ formatServicioParaCotizacion(servicio) {
      } else if (servicio.categoria) {
        categoriasSet.add(servicio.categoria.categorias_id);
      }
+     
+     // 🆕 NUEVO: Estadísticas de límites
+     if (servicio.limite_minimo || servicio.limite_maximo) {
+       serviciosConLimites++;
+       
+       if (servicio.limite_minimo) {
+         sumaLimiteMin += parseFloat(servicio.limite_minimo);
+       }
+       
+       if (servicio.limite_maximo) {
+         sumaLimiteMax += parseFloat(servicio.limite_maximo);
+         serviciosConLimiteMax++;
+       }
+     }
    });
    
    const precioPromedio = activos > 0 ? sumaPrecios / activos : 0;
+   const limiteMinPromedio = serviciosConLimites > 0 ? sumaLimiteMin / serviciosConLimites : 0;
+   const limiteMaxPromedio = serviciosConLimiteMax > 0 ? sumaLimiteMax / serviciosConLimiteMax : 0;
    
    return {
      total,
@@ -1137,13 +1311,17 @@ formatServicioParaCotizacion(servicio) {
      // 🆕 NUEVAS estadísticas
      categorias_unicas: categoriasSet.size,
      servicios_con_multiples_categorias: serviciosConMultiplesCategorias,
-     porcentaje_multiples_categorias: total > 0 ? Math.round((serviciosConMultiplesCategorias / total) * 100) : 0
+     porcentaje_multiples_categorias: total > 0 ? Math.round((serviciosConMultiplesCategorias / total) * 100) : 0,
+     servicios_con_limites: serviciosConLimites, // 🆕 NUEVO
+     porcentaje_con_limites: total > 0 ? Math.round((serviciosConLimites / total) * 100) : 0, // 🆕 NUEVO
+     limite_minimo_promedio: limiteMinPromedio.toFixed(2), // 🆕 NUEVO
+     limite_maximo_promedio: limiteMaxPromedio.toFixed(2) // 🆕 NUEVO
    };
  }
 
  // ==================== MÉTODOS HELPER ADICIONALES ====================
 
- // 🆕 NUEVO: Helper para preparar datos del formulario
+ // 🔧 ACTUALIZADO: Helper para preparar datos del formulario (con límites)
  prepareFormData(formData) {
    const data = { ...formData };
    
@@ -1153,6 +1331,18 @@ formatServicioParaCotizacion(servicio) {
    }
    if (data.precio_recomendado) {
      data.precio_recomendado = parseFloat(data.precio_recomendado);
+   }
+   
+   // 🆕 NUEVO: Convertir límites a números
+   if (data.limite_minimo) {
+     data.limite_minimo = parseFloat(data.limite_minimo);
+   }
+   if (data.limite_maximo) {
+     if (data.limite_maximo === '' || data.limite_maximo === null) {
+       data.limite_maximo = null;
+     } else {
+       data.limite_maximo = parseFloat(data.limite_maximo);
+     }
    }
    
    // Limpiar descripción
@@ -1168,7 +1358,7 @@ formatServicioParaCotizacion(servicio) {
    return data;
  }
 
- // 🆕 NUEVO: Helper para validar formulario completo
+ // 🔧 ACTUALIZADO: Helper para validar formulario completo (con límites)
  validateFormData(formData) {
    const errors = [];
    
@@ -1190,6 +1380,12 @@ formatServicioParaCotizacion(servicio) {
      errors.push(...preciosValidation.errors);
    }
    
+   // 🆕 NUEVO: Validar límites
+   const limitesValidation = this.validateLimites(formData.limite_minimo, formData.limite_maximo);
+   if (!limitesValidation.valid) {
+     errors.push({ field: 'limites', message: limitesValidation.message });
+   }
+   
    // Validar categorías (si están presentes)
    if (formData.categoriasSeleccionadas) {
      const categoriasValidation = this.validateMultipleCategories(formData.categoriasSeleccionadas);
@@ -1206,7 +1402,7 @@ formatServicioParaCotizacion(servicio) {
    };
  }
 
- // 🆕 NUEVO: Helper para crear estructura de datos vacía
+ // 🔧 ACTUALIZADO: Helper para crear estructura de datos vacía (con límites)
  createEmptyServicio() {
    return {
      nombre: '',
@@ -1216,11 +1412,13 @@ formatServicioParaCotizacion(servicio) {
      categoriaPrincipal: null,
      precio_minimo: '',
      precio_recomendado: '',
+     limite_minimo: '', // 🆕 NUEVO
+     limite_maximo: '', // 🆕 NUEVO
      estado: 'activo'
    };
  }
 
- // 🆕 NUEVO: Helper para clonar servicio (para edición)
+ // 🔧 ACTUALIZADO: Helper para clonar servicio (para edición con límites)
  cloneServicioForEdit(servicio) {
    const cloned = {
      nombre: servicio.nombre || '',
@@ -1228,6 +1426,8 @@ formatServicioParaCotizacion(servicio) {
      categorias_id: servicio.categorias_id,
      precio_minimo: servicio.precio_minimo || '',
      precio_recomendado: servicio.precio_recomendado || '',
+     limite_minimo: servicio.limite_minimo || '', // 🆕 NUEVO
+     limite_maximo: servicio.limite_maximo || '', // 🆕 NUEVO
      estado: servicio.estado || 'activo'
    };
    
@@ -1246,7 +1446,7 @@ formatServicioParaCotizacion(servicio) {
    return cloned;
  }
 
- // 🆕 NUEVO: Helper para generar reporte de servicios
+ // 🔧 ACTUALIZADO: Helper para generar reporte de servicios (con límites)
  generateServicesReport(servicios) {
    const stats = this.getStatsFromList(servicios);
    const grupos = this.groupServiciosByCategory(servicios);
@@ -1260,15 +1460,17 @@ formatServicioParaCotizacion(servicio) {
        mas_barato: servicios.reduce((min, s) => 
          (s.precio_recomendado < (min?.precio_recomendado || Infinity)) ? s : min, null),
        mas_categorias: servicios.reduce((max, s) => 
-         ((s.categorias_completas?.length || 0) > (max?.categorias_completas?.length || 0)) ? s : max, null)
+         ((s.categorias_completas?.length || 0) > (max?.categorias_completas?.length || 0)) ? s : max, null),
+       limite_mayor: servicios.reduce((max, s) => // 🆕 NUEVO
+         ((s.limite_maximo || 0) > (max?.limite_maximo || 0)) ? s : max, null)
      },
      fecha_generacion: new Date().toISOString(),
      total_servicios: servicios.length
    };
  }
 
- // 🆕 NUEVO: Helper para exportar servicios a CSV
- exportToCSV(servicios, includeCategories = true) {
+ // 🔧 ACTUALIZADO: Helper para exportar servicios a CSV (con límites)
+ exportToCSV(servicios, includeCategories = true, includeLimits = true) {
    const headers = [
      'ID',
      'Nombre',
@@ -1277,6 +1479,7 @@ formatServicioParaCotizacion(servicio) {
      ...(includeCategories ? ['Todas las Categorías', 'Número de Categorías'] : []),
      'Precio Mínimo',
      'Precio Recomendado',
+     ...(includeLimits ? ['Límite Mínimo', 'Límite Máximo'] : []), // 🆕 NUEVO
      'Estado',
      'Fecha Creación'
    ];
@@ -1293,6 +1496,10 @@ formatServicioParaCotizacion(servicio) {
        ] : []),
        servicio.precio_minimo,
        servicio.precio_recomendado,
+       ...(includeLimits ? [
+         servicio.limite_minimo || 'Sin límite',
+         servicio.limite_maximo || 'Sin límite'
+       ] : []), // 🆕 NUEVO
        servicio.estado,
        this.formatDate(servicio.created_at)
      ];

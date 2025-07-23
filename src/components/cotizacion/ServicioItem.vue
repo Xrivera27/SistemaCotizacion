@@ -1,93 +1,145 @@
 <template>
-<div class="servicio-card">
+<div class="servicio-card" :class="{ 'tiene-errores': tieneErroresLimites }">
   <div class="servicio-header">
     <span class="servicio-icon">
       <i class="fas fa-cloud"></i>
     </span>
     <h3>{{ servicio.nombre }}</h3>
   </div>
-  
-  <p class="servicio-descripcion">{{ servicio.descripcion || 'Servicio cloud empresarial' }}</p>
 
-  <!-- ✅ Mostrar TODAS las unidades de medida del servicio -->
-  <div v-if="unidadesMedida.length > 0" class="unidades-info">
-    <div v-for="unidad in unidadesMedida" :key="unidad.id" class="unidad-badge" :class="`tipo-${unidad.tipo}`">
-      <i :class="obtenerIconoTipo(unidad.tipo)"></i>
-      {{ unidad.nombre }}
+  <!-- ✅ NUEVO: Información de límites y unidades en fila -->
+  <div class="info-horizontal">
+    <div class="limites-info">
+      <div class="limites-badge">
+        <i class="fas fa-ruler-horizontal"></i>
+        <span>{{ infoLimites }}</span>
+      </div>
+    </div>
+
+    <!-- ✅ Mostrar TODAS las unidades de medida del servicio -->
+    <div v-if="unidadesMedida.length > 0" class="unidades-info">
+      <div v-for="unidad in unidadesMedida" :key="unidad.id" class="unidad-badge" :class="`tipo-${unidad.tipo}`">
+        <i :class="obtenerIconoTipo(unidad.tipo)"></i>
+        {{ unidad.nombre }}
+      </div>
     </div>
   </div>
 
-  <!-- Precios del backend -->
+  <!-- ✅ CORREGIDO: Precios del backend con /mes -->
   <div class="precios-servicio">
     <div class="precio-item">
       <span class="precio-label">Mínimo:</span>
-      <span class="precio-valor minimo">{{ formatCurrency(servicio.precio_minimo || servicio.precioMinimo) }}</span>
+      <span class="precio-valor minimo">{{ formatCurrency(servicio.precio_minimo || servicio.precioMinimo) }}/mes</span>
     </div>
     <div class="precio-item">
       <span class="precio-label">Recomendado:</span>
-      <span class="precio-valor recomendado">{{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}</span>
+      <span class="precio-valor recomendado">{{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}/mes</span>
     </div>
     <div class="precio-item">
       <span class="precio-label">Venta:</span>
-      <span class="precio-valor venta">{{ formatCurrency(precioVentaLocal || servicio.precio_recomendado || servicio.precioRecomendado) }}</span>
+      <span class="precio-valor venta">{{ formatCurrency(precioVentaLocal || servicio.precio_recomendado || servicio.precioRecomendado) }}/mes</span>
     </div>
   </div>
 
-  <!-- Información del contrato -->
+  <!-- ✅ NUEVA: Información del contrato con precios mensuales y anuales -->
   <div class="contrato-info">
     <div class="contrato-años">
       <i class="fas fa-calendar-alt"></i>
       <span class="años-valor">{{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</span>
     </div>
-    <div class="precio-total">
-      <span class="total-label">Total contrato:</span>
-      <span class="total-valor">{{ formatCurrency(calcularTotalContrato()) }}</span>
+    <div class="precios-calculados">
+      <div class="precio-mensual-total">
+        <span class="precio-label">Mensual:</span>
+        <span class="precio-valor">{{ formatCurrency(calcularSubtotalMensual()) }}/mes</span>
+      </div>
+      <div class="precio-anual-total">
+        <span class="precio-label">Anual:</span>
+        <span class="precio-valor">{{ formatCurrency(calcularSubtotalAnual()) }}/año</span>
+      </div>
+      <div class="precio-total">
+        <span class="total-label">Total contrato:</span>
+        <span class="total-valor">{{ formatCurrency(calcularTotalContrato()) }}</span>
+      </div>
     </div>
   </div>
 
   <div class="precio-venta-container">
-    <label>Precio de Venta Anual (opcional):</label>
+    <label>Precio de Venta Mensual (opcional):</label>
     <input 
       v-model.number="precioVentaLocal" 
       type="number" 
       :min="servicio.precio_minimo || servicio.precioMinimo || 0" 
       step="0.01"
-      :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}`"
+      :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}/mes`"
       class="input-precio-venta"
       :class="{ 'precio-bajo-minimo': esPrecioBajoMinimo }"
       @input="actualizarPrecioVenta"
       @blur="validarPrecioMinimo"
     >
     <small v-if="!precioVentaLocal || precioVentaLocal === 0" class="precio-defecto">
-      Se usará precio recomendado: {{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}
+      Se usará precio recomendado: {{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}/mes
     </small>
     <small v-if="esPrecioBajoMinimo" class="precio-advertencia">
       ⚠️ Precio por debajo del mínimo. Requerirá aprobación administrativa.
     </small>
   </div>
   
-  <!-- ✅ CORREGIDO: Un control por cada CATEGORÍA con layout horizontal -->
-  <div class="cantidades-container" :data-categorias="categoriasDelServicio.length">
+  <!-- ✅ ACTUALIZADO: Controles en fila horizontal -->
+  <div class="cantidades-container-horizontal" :data-categorias="categoriasDelServicio.length">
     
-    <!-- ✅ NUEVO: Un input por cada CATEGORÍA del servicio -->
-    <div v-for="categoria in categoriasDelServicio" :key="categoria.id" class="servicio-controls" :class="`control-${categoria.unidad_tipo}`">
+    <div v-for="categoria in categoriasDelServicio" :key="categoria.id" 
+         class="servicio-controls-horizontal" 
+         :class="[
+           `control-${categoria.unidad_tipo}`,
+           validacionLimites[categoria.id]?.tipo === 'error' ? 'error' : '',
+           validacionLimites[categoria.id]?.tipo === 'warning' ? 'warning' : '',
+           validacionLimites[categoria.id]?.tipo === 'success' && cantidadesPorCategoria[categoria.id] > 0 ? 'success' : ''
+         ]">
+      
       <label>{{ categoria.etiqueta }}:</label>
+      
       <div class="cantidad-controls">
-        <button @click="decrementarCantidad(categoria.id)" :disabled="cantidadesPorCategoria[categoria.id] <= 0" class="btn-cantidad">
+        <button @click="decrementarCantidad(categoria.id)" 
+                :disabled="cantidadesPorCategoria[categoria.id] <= 0" 
+                class="btn-cantidad">
           <i class="fas fa-minus"></i>
         </button>
+        
         <input 
           v-model.number="cantidadesPorCategoria[categoria.id]" 
           type="number" 
-          min="0" 
+          :min="0"
+          :max="servicio.limite_maximo || 999999"
           :step="obtenerStepTipo(categoria.unidad_tipo)"
-          :class="['input-cantidad', `input-${categoria.unidad_tipo}`]"
+          :class="[
+            'input-cantidad', 
+            `input-${categoria.unidad_tipo}`,
+            validacionLimites[categoria.id]?.tipo === 'error' ? 'error' : '',
+            validacionLimites[categoria.id]?.tipo === 'warning' ? 'warning' : '',
+            validacionLimites[categoria.id]?.tipo === 'success' && cantidadesPorCategoria[categoria.id] > 0 ? 'success' : ''
+          ]"
           @input="actualizarCantidad(categoria.id)"
           :placeholder="categoria.placeholder"
         >
-        <button @click="incrementarCantidad(categoria.id)" class="btn-cantidad">
+        
+        <button @click="incrementarCantidad(categoria.id)" 
+                :disabled="servicio.limite_maximo && cantidadesPorCategoria[categoria.id] >= servicio.limite_maximo"
+                class="btn-cantidad"
+                :class="{ 'limite-alcanzado': servicio.limite_maximo && cantidadesPorCategoria[categoria.id] >= servicio.limite_maximo }">
           <i class="fas fa-plus"></i>
         </button>
+      </div>
+      
+      <!-- ✅ NUEVO: Mensaje de validación por categoría -->
+      <div v-if="validacionLimites[categoria.id]?.mensaje" 
+           class="validacion-mensaje"
+           :class="validacionLimites[categoria.id]?.tipo">
+        <i :class="[
+          validacionLimites[categoria.id]?.tipo === 'error' ? 'fas fa-exclamation-circle' : '',
+          validacionLimites[categoria.id]?.tipo === 'warning' ? 'fas fa-exclamation-triangle' : '',
+          validacionLimites[categoria.id]?.tipo === 'success' ? 'fas fa-check-circle' : ''
+        ]"></i>
+        <span>{{ validacionLimites[categoria.id].mensaje }}</span>
       </div>
     </div>
 
@@ -122,7 +174,7 @@ props: {
     default: 1
   }
 },
-emits: ['update:modelValue', 'update:cantidadEquipos', 'update:precioVenta', 'update:cantidadesPorTipo'],
+emits: ['update:modelValue', 'update:cantidadEquipos', 'update:precioVenta', 'update:cantidadesPorTipo', 'mostrar-notificacion'],
 setup(props, { emit }) {
   const { servicio, precioVenta, añosContrato } = toRefs(props)
   
@@ -135,11 +187,6 @@ setup(props, { emit }) {
   // ✅ CORREGIDO: Computed para obtener TODAS las categorías del servicio
   const categoriasDelServicio = computed(() => {
     const categorias = []
-    
-    // 🔥 DEBUG TEMPORAL - AGREGAR ESTO
-    console.log('🔥 SERVICIO COMPLETO:', servicio.value)
-    console.log('🔥 CATEGORIAS_COMPLETAS:', servicio.value.categorias_completas)
-    console.log('🔥 CATEGORIA SIMPLE:', servicio.value.categoria)
     
     // Obtener todas las categorías del servicio
     let categoriasData = []
@@ -155,7 +202,6 @@ setup(props, { emit }) {
     // Mapear cada categoría individual
     categoriasData.forEach((categoria, index) => {
       console.log(`🔥 CATEGORIA ${index}:`, categoria)
-      console.log(`🔥 KEYS DISPONIBLES:`, Object.keys(categoria))
       
       if (categoria.unidad_medida) {
         const categoriaInfo = {
@@ -204,6 +250,62 @@ setup(props, { emit }) {
     })
     
     return unidades
+  })
+
+  // ✅ NUEVO: Computed para validar límites por categoría
+  const validacionLimites = computed(() => {
+    const errores = {}
+    
+    categoriasDelServicio.value.forEach(categoria => {
+      const cantidad = cantidadesPorCategoria[categoria.id] || 0
+      const limiteMin = servicio.value.limite_minimo || 1
+      const limiteMax = servicio.value.limite_maximo
+      
+      const validacion = {
+        esValido: true,
+        mensaje: '',
+        tipo: 'success' // success, warning, error
+      }
+      
+      // Validar límite mínimo
+      if (cantidad > 0 && cantidad < limiteMin) {
+        validacion.esValido = false
+        validacion.tipo = 'error'
+      }
+      // Validar límite máximo
+      else if (limiteMax && cantidad > limiteMax) {
+        validacion.esValido = false
+        validacion.tipo = 'error'
+      }
+      // Advertencia si está cerca del límite máximo
+      else if (limiteMax && cantidad > 0 && cantidad > (limiteMax * 0.8)) {
+        validacion.tipo = 'warning'
+      }
+      // Éxito
+      else if (cantidad > 0) {
+        validacion.tipo = 'success'
+      }
+      
+      errores[categoria.id] = validacion
+    })
+    
+    return errores
+  })
+
+  // ✅ NUEVO: Computed para saber si hay errores de validación
+  const tieneErroresLimites = computed(() => {
+    return Object.values(validacionLimites.value).some(val => !val.esValido)
+  })
+
+  // ✅ NUEVO: Computed para mostrar info de límites del servicio
+  const infoLimites = computed(() => {
+    const limiteMin = servicio.value.limite_minimo || 1
+    const limiteMax = servicio.value.limite_maximo
+    
+    if (!limiteMax) {
+      return `Mínimo: ${limiteMin}`
+    }
+    return `Límites: ${limiteMin} - ${limiteMax}`
   })
 
   // ✅ CORREGIDO: Funciones helper para categorías
@@ -309,6 +411,20 @@ setup(props, { emit }) {
     return cantidades
   })
 
+  // ✅ NUEVAS: Funciones para calcular precios mensuales y anuales
+  const calcularSubtotalMensual = () => {
+    const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
+    return precio * totalUnidadesPorTipo.value
+  }
+
+  const calcularSubtotalAnual = () => {
+    return calcularSubtotalMensual() * 12
+  }
+
+  const calcularTotalContrato = () => {
+    return calcularSubtotalAnual() * añosContrato.value
+  }
+
   // Función de formateo
   const formatCurrency = (amount) => {
     const valor = amount || 0
@@ -316,15 +432,6 @@ setup(props, { emit }) {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`
-  }
-
-  const calcularSubtotalAnual = () => {
-    const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
-    return precio * totalUnidadesPorTipo.value
-  }
-
-  const calcularTotalContrato = () => {
-    return calcularSubtotalAnual() * añosContrato.value
   }
 
   const validarPrecioMinimo = () => {
@@ -336,11 +443,25 @@ setup(props, { emit }) {
     }
   }
 
-  // ✅ CORREGIDO: Métodos para manejar cantidades POR CATEGORÍA
+  // ✅ NUEVO: Función para mostrar notificaciones
+  const mostrarNotificacion = (mensaje, tipo = 'info') => {
+    // Emitir evento para mostrar toast en el componente padre
+    emit('mostrar-notificacion', { mensaje, tipo })
+  }
+
+  // ✅ CORREGIDO: Métodos para manejar cantidades POR CATEGORÍA con validación
   const incrementarCantidad = (categoriaId) => {
     const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
     if (categoria) {
       const step = obtenerStepTipo(categoria.unidad_tipo)
+      const limiteMax = servicio.value.limite_maximo
+      
+      // Verificar límite máximo antes de incrementar
+      if (limiteMax && cantidadesPorCategoria[categoriaId] >= limiteMax) {
+        mostrarNotificacion(`Cantidad máxima alcanzada: ${limiteMax}`, 'warning')
+        return
+      }
+      
       cantidadesPorCategoria[categoriaId] = (cantidadesPorCategoria[categoriaId] || 0) + step
       actualizarCantidad(categoriaId)
     }
@@ -357,10 +478,20 @@ setup(props, { emit }) {
     }
   }
 
-  // ✅ CORREGIDO: Método actualizarCantidad con datos estructurados
+  // ✅ CORREGIDO: Método actualizarCantidad SIN variable no usada
   const actualizarCantidad = (categoriaId) => {
     if (cantidadesPorCategoria[categoriaId] < 0) {
       cantidadesPorCategoria[categoriaId] = 0
+    }
+    
+    // ✅ VALIDAR LÍMITES EN TIEMPO REAL
+    const cantidad = cantidadesPorCategoria[categoriaId]
+    const limiteMax = servicio.value.limite_maximo
+    
+    // Corregir automáticamente si excede límites
+    if (cantidad > 0 && limiteMax && cantidad > limiteMax) {
+      cantidadesPorCategoria[categoriaId] = limiteMax
+      mostrarNotificacion(`Cantidad ajustada al límite máximo: ${limiteMax}`, 'warning')
     }
     
     // ✅ ENVIAR DATOS ESTRUCTURADOS CORRECTAMENTE
@@ -379,10 +510,15 @@ setup(props, { emit }) {
         unidad_tipo: cat.unidad_tipo,
         unidad_abreviacion: cat.unidad_abreviacion,
         cantidad: cantidadesPorCategoria[cat.id] || 0
-      }))
+      })),
+      // ✅ NUEVO: Agregar información de validación
+      validacion: {
+        tieneErrores: tieneErroresLimites.value,
+        errores: validacionLimites.value
+      }
     }
     
-    console.log('📤 EMITIENDO DATOS:', datosParaEmitir)
+    console.log('📤 EMITIENDO DATOS CON VALIDACIÓN:', datosParaEmitir)
     emit('update:cantidadesPorTipo', datosParaEmitir)
     
     const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
@@ -424,6 +560,11 @@ setup(props, { emit }) {
     unidadesMedida,
     cantidadesPorTipo,
     
+    // ✅ NUEVOS: Validación de límites
+    validacionLimites,
+    tieneErroresLimites,
+    infoLimites,
+    
     // Computed existentes
     esPrecioBajoMinimo,
     totalUnidadesPorTipo,
@@ -434,31 +575,224 @@ setup(props, { emit }) {
     obtenerIconoTipo,
     obtenerStepTipo,
     
-    // Métodos
-    formatCurrency,
+    // ✅ NUEVAS: Funciones de cálculo
+    calcularSubtotalMensual,
     calcularSubtotalAnual,
     calcularTotalContrato,
+    
+    // Métodos
+    formatCurrency,
     validarPrecioMinimo,
     
-    // ✅ CORREGIDO: Métodos para múltiples categorías
+    // ✅ CORREGIDO: Métodos para múltiples categorías con validación
     incrementarCantidad,
     decrementarCantidad,
     actualizarCantidad,
     actualizarPrecioVenta,
-    inicializarCantidades
+    inicializarCantidades,
+    
+    // ✅ NUEVO
+    mostrarNotificacion
   }
 }
 }
 </script>
 
 <style scoped>
+/* ✅ NUEVOS ESTILOS para validación de límites */
+
+/* Información de límites */
+.limites-info {
+ margin-bottom: 0;
+}
+
+.limites-badge {
+ display: inline-flex;
+ align-items: center;
+ gap: 0.25rem;
+ padding: 0.25rem 0.5rem;
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+ border: 1px solid #ced4da;
+ border-radius: 10px;
+ font-size: 0.7rem;
+ font-weight: 600;
+ color: #495057;
+}
+
+.limites-badge i {
+ color: #6c757d;
+}
+
+/* ✅ NUEVO: Contenedor horizontal para límites y unidades */
+.info-horizontal {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 0.75rem;
+ gap: 0.5rem;
+ flex-wrap: wrap;
+}
+
+/* Estados de validación para controles */
+.servicio-controls-horizontal.error {
+ background: rgba(220, 53, 69, 0.1);
+ border-radius: 4px;
+ padding: 0.25rem;
+ margin: -0.25rem;
+ border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.servicio-controls-horizontal.warning {
+ background: rgba(255, 193, 7, 0.1);
+ border-radius: 4px;
+ padding: 0.25rem;
+ margin: -0.25rem;
+ border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.servicio-controls-horizontal.success {
+ background: rgba(40, 167, 69, 0.1);
+ border-radius: 4px;
+ padding: 0.25rem;
+ margin: -0.25rem;
+ border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+/* Estados de validación para inputs */
+.input-cantidad.error {
+ border-color: #dc3545 !important;
+ background: #fff5f5;
+ box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+}
+
+.input-cantidad.warning {
+ border-color: #ffc107 !important;
+ background: #fffbf0;
+ box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+}
+
+.input-cantidad.success {
+ border-color: #28a745 !important;
+ background: #f8fff8;
+ box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+/* Mensajes de validación */
+.validacion-mensaje {
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
+ font-size: 0.6rem;
+ margin-top: 0.25rem;
+ padding: 0.15rem 0.3rem;
+ border-radius: 4px;
+ font-weight: 600;
+ text-align: center;
+ justify-content: center;
+}
+
+.validacion-mensaje.error {
+ background: rgba(220, 53, 69, 0.1);
+ color: #721c24;
+ border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.validacion-mensaje.warning {
+ background: rgba(255, 193, 7, 0.1);
+ color: #856404;
+ border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.validacion-mensaje.success {
+ background: rgba(40, 167, 69, 0.1);
+ color: #155724;
+ border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.validacion-mensaje i {
+ font-size: 0.55rem;
+}
+
+/* Estado de error general para la tarjeta */
+.servicio-card.tiene-errores {
+ border-color: #dc3545;
+ box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+}
+
+.servicio-card.tiene-errores .servicio-header h3 {
+ color: #dc3545;
+}
+
+/* Botones deshabilitados por límites */
+.btn-cantidad:disabled.limite-alcanzado {
+ background: #f8d7da;
+ border-color: #dc3545;
+ color: #721c24;
+ cursor: not-allowed;
+}
+
+.btn-cantidad.limite-alcanzado {
+ background: #f8d7da;
+ border-color: #dc3545;
+ color: #721c24;
+ cursor: not-allowed;
+}
+
+/* ✅ MANTENER todos los estilos existentes pero con ALTURAS CORREGIDAS */
+.servicio-card {
+ border: 1px solid #dee2e6;
+ border-radius: 8px;
+ padding: 1rem;
+ background: white;
+ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+ transition: all 0.2s ease;
+ height: 100%;
+ display: flex;
+ flex-direction: column;
+ box-sizing: border-box;
+ /* ✅ CAMBIO PRINCIPAL: Aumentar alturas para evitar cortes */
+ min-height: 520px; /* Aumentado de 380px */
+ max-height: 580px; /* Aumentado de 420px */
+}
+
+.servicio-card:hover {
+ transform: translateY(-2px);
+ box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+ border-color: #007bff;
+}
+
+.servicio-header {
+ display: flex;
+ align-items: center;
+ margin-bottom: 0.75rem;
+ gap: 0.5rem;
+ padding-bottom: 0.5rem;
+ border-bottom: 1px solid #e9ecef;
+ flex-shrink: 0; /* ✅ No permitir que el header se comprima */
+}
+
+.servicio-icon {
+ font-size: 1.2rem;
+ flex-shrink: 0;
+ color: #495057;
+}
+
+.servicio-header h3 {
+ margin: 0;
+ color: #495057;
+ font-size: 1rem;
+ line-height: 1.2;
+ flex: 1;
+ min-width: 0;
+ font-weight: 600;
+}
+
 /* ✅ NUEVOS ESTILOS para múltiples unidades */
 .unidades-info {
- margin-bottom: 0.75rem;
- text-align: center;
+ margin-bottom: 0;
  display: flex;
  flex-wrap: wrap;
- gap: 0.25rem;
+ gap: 0.2rem;
  justify-content: center;
 }
 
@@ -504,229 +838,12 @@ setup(props, { emit }) {
  border: 1px solid #ced4da;
 }
 
-/* ✅ CORREGIDO: Layout horizontal más compacto */
-.cantidades-container {
- margin-top: auto;
- background: #f8f9fa;
- padding: 0.5rem;
- border-radius: 6px;
- border: 1px solid #ced4da;
- display: grid;
- grid-template-columns: 1fr 1fr;
- gap: 0.3rem;
- align-items: start;
-}
-
-/* ✅ NUEVO: Para 3+ categorías, elementos más pequeños */
-.cantidades-container[data-categorias="3"] .servicio-controls,
-.cantidades-container[data-categorias="4"] .servicio-controls {
- transform: scale(0.9);
-}
-
-.cantidades-container[data-categorias="5"] .servicio-controls,
-.cantidades-container[data-categorias="6"] .servicio-controls {
- transform: scale(0.8);
-}
-
-.servicio-controls {
- display: flex;
- flex-direction: column;
- align-items: center;
- min-width: 80px;
-}
-
-.servicio-controls label {
- font-weight: 600;
- color: #495057;
- font-size: 0.7rem;
- margin-bottom: 0.15rem;
- text-align: center;
- line-height: 1.1;
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
- max-width: 100%;
-}
-
-/* ✅ ESTILOS específicos por tipo de control */
-.control-capacidad label {
- color: #1565c0;
-}
-
-.control-usuarios label {
- color: #7b1fa2;
-}
-
-.control-sesiones label {
- color: #2e7d32;
-}
-
-.control-tiempo label {
- color: #ef6c00;
-}
-
-.cantidad-controls {
- display: flex;
- align-items: center;
- gap: 0.2rem;
- justify-content: center;
-}
-
-.btn-cantidad {
- width: 1.3rem;
- height: 1.3rem;
- border: 1px solid #007bff;
- background: white;
- color: #007bff;
- border-radius: 3px;
- cursor: pointer;
- font-size: 0.65rem;
- font-weight: 700;
- display: flex;
- align-items: center;
- justify-content: center;
- transition: all 0.2s ease;
- flex-shrink: 0;
-}
-
-.btn-cantidad:hover:not(:disabled) {
- background: #007bff;
- color: white;
-}
-
-.btn-cantidad:disabled {
- opacity: 0.4;
- cursor: not-allowed;
- color: #6c757d;
- border-color: #ced4da;
-}
-
-.input-cantidad {
- width: 2rem;
- height: 1.3rem;
- text-align: center;
- border: 1px solid #007bff;
- border-radius: 3px;
- font-size: 0.7rem;
- font-weight: 600;
- flex-shrink: 0;
- background: white;
- color: #495057;
-}
-
-.input-cantidad:focus {
- outline: none;
- border-color: #0056b3;
- box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
-}
-
-/* ✅ NUEVOS: Estilos específicos por tipo de input */
-.input-capacidad {
- border-color: #1565c0 !important;
- width: 2.2rem !important;
-}
-
-.input-usuarios {
- border-color: #7b1fa2 !important;
- width: 2.2rem !important;
-}
-
-.input-sesiones {
- border-color: #2e7d32 !important;
- width: 2.2rem !important;
-}
-
-.input-tiempo {
- border-color: #ef6c00 !important;
- width: 2.2rem !important;
-}
-
-/* ✅ NUEVO: Info múltiple abajo de todo */
-.info-multiple {
- grid-column: 1 / -1;
- text-align: center;
- margin-top: 0.3rem;
- padding-top: 0.3rem;
- border-top: 1px solid #dee2e6;
-}
-
-.info-multiple small {
- color: #6c757d;
- font-size: 0.6rem;
- font-style: italic;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 0.25rem;
-}
-
-.info-multiple i {
- color: #007bff;
-}
-
-/* ✅ MANTENER todos los estilos existentes */
-.servicio-card {
- border: 1px solid #dee2e6;
- border-radius: 8px;
- padding: 1rem;
- background: white;
- box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
- transition: all 0.2s ease;
- height: 100%;
- display: flex;
- flex-direction: column;
- box-sizing: border-box;
- min-height: 400px;
- max-height: 460px;
-}
-
-.servicio-card:hover {
- transform: translateY(-2px);
- box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
- border-color: #007bff;
-}
-
-.servicio-header {
- display: flex;
- align-items: center;
- margin-bottom: 0.75rem;
- gap: 0.5rem;
- padding-bottom: 0.5rem;
- border-bottom: 1px solid #e9ecef;
-}
-
-.servicio-icon {
- font-size: 1.2rem;
- flex-shrink: 0;
- color: #495057;
-}
-
-.servicio-header h3 {
- margin: 0;
- color: #495057;
- font-size: 1rem;
- line-height: 1.2;
- flex: 1;
- min-width: 0;
- font-weight: 600;
-}
-
-.servicio-descripcion {
- color: #6c757d;
- margin-bottom: 0.75rem;
- font-size: 0.85rem;
- line-height: 1.4;
- overflow: hidden;
- display: -webkit-box;
- -webkit-line-clamp: 2;
- -webkit-box-orient: vertical;
-}
-
 .precios-servicio {
  display: flex;
  gap: 0.25rem;
  margin-bottom: 0.75rem;
  flex-wrap: wrap;
+ flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .precio-item {
@@ -735,7 +852,7 @@ setup(props, { emit }) {
  display: flex;
  flex-direction: column;
  align-items: center;
- padding: 0.25rem;
+ padding: 0.3rem; /* ✅ Aumentado para más espacio */
  border-radius: 4px;
  border: 1px solid;
  background: white;
@@ -775,14 +892,15 @@ setup(props, { emit }) {
 .precio-venta-container {
  margin-bottom: 0.75rem;
  background: #f8f9fa;
- padding: 0.5rem;
+ padding: 0.6rem; /* ✅ Aumentado para más espacio */
  border-radius: 6px;
  border: 1px solid #ced4da;
+ flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .precio-venta-container label {
  display: block;
- margin-bottom: 0.25rem;
+ margin-bottom: 0.3rem; /* ✅ Más espacio */
  font-weight: 600;
  color: #495057;
  font-size: 0.8rem;
@@ -790,8 +908,8 @@ setup(props, { emit }) {
 
 .input-precio-venta {
  width: 100%;
- height: 2rem;
- padding: 0.25rem 0.5rem;
+ height: 2.2rem; /* ✅ Aumentado de 2rem */
+ padding: 0.3rem 0.5rem; /* ✅ Más padding */
  border: 1px solid #ced4da;
  border-radius: 4px;
  font-size: 0.85rem;
@@ -813,7 +931,7 @@ setup(props, { emit }) {
 
 .precio-defecto {
  display: block;
- margin-top: 0.25rem;
+ margin-top: 0.3rem; /* ✅ Más espacio */
  color: #6c757d;
  font-size: 0.7rem;
  font-weight: 500;
@@ -822,7 +940,7 @@ setup(props, { emit }) {
 
 .precio-advertencia {
  display: block;
- margin-top: 0.25rem;
+ margin-top: 0.3rem; /* ✅ Más espacio */
  color: #dc3545;
  font-size: 0.7rem;
  font-weight: 600;
@@ -831,18 +949,19 @@ setup(props, { emit }) {
 
 .contrato-info {
  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- padding: 0.5rem;
+ padding: 0.6rem; /* ✅ Aumentado para más espacio */
  border-radius: 6px;
  margin-bottom: 0.75rem;
  border: 1px solid #ced4da;
  border-left: 3px solid #007bff;
+ flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .contrato-años {
  display: flex;
  justify-content: space-between;
  align-items: center;
- margin-bottom: 0.25rem;
+ margin-bottom: 0.3rem; /* ✅ Más espacio */
 }
 
 .contrato-años i {
@@ -855,15 +974,31 @@ setup(props, { emit }) {
  color: #495057;
  font-weight: 600;
  background: white;
- padding: 0.15rem 0.35rem;
+ padding: 0.2rem 0.4rem; /* ✅ Más padding */
  border-radius: 4px;
  border: 1px solid #ced4da;
+}
+
+.precios-calculados {
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem; /* ✅ Espacio entre elementos */
+}
+
+.precio-mensual-total,
+.precio-anual-total {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
 }
 
 .precio-total {
  display: flex;
  justify-content: space-between;
  align-items: center;
+ border-top: 1px solid #ced4da;
+ padding-top: 0.25rem;
+ margin-top: 0.25rem;
 }
 
 .total-label {
@@ -877,112 +1012,271 @@ setup(props, { emit }) {
  color: #495057;
  font-weight: 700;
  background: white;
- padding: 0.15rem 0.35rem;
+ padding: 0.2rem 0.4rem; /* ✅ Más padding */
  border-radius: 4px;
  border: 1px solid #ced4da;
 }
 
-/* Responsive */
+/* ✅ NUEVO: Controles en fila horizontal con MÁS ESPACIO */
+.cantidades-container-horizontal {
+ margin-top: auto;
+ background: #f8f9fa;
+ padding: 0.7rem; /* ✅ Aumentado para más espacio */
+ border-radius: 6px;
+ border: 1px solid #ced4da;
+ display: flex;
+ flex-direction: row;
+ gap: 0.6rem; /* ✅ Más gap */
+ align-items: flex-start; /* ✅ Cambio para mejor alineación */
+ flex-wrap: wrap;
+ justify-content: space-around;
+ min-height: 80px; /* ✅ Altura mínima para evitar cortes */
+}
+
+.servicio-controls-horizontal {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ min-width: 110px; /* ✅ Aumentado */
+ flex: 1;
+ padding: 0.3rem; /* ✅ Padding interno */
+}
+
+.servicio-controls-horizontal label {
+ font-weight: 600;
+ color: #495057;
+ font-size: 0.75rem; /* ✅ Ligeramente más grande */
+ margin-bottom: 0.3rem; /* ✅ Más margen */
+ text-align: center;
+ line-height: 1.2; /* ✅ Mejor line-height */
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ max-width: 100%;
+}
+
+/* ✅ ESTILOS específicos por tipo de control */
+.control-capacidad label {
+ color: #1565c0;
+}
+
+.control-usuarios label {
+ color: #7b1fa2;
+}
+
+.control-sesiones label {
+ color: #2e7d32;
+}
+
+.control-tiempo label {
+ color: #ef6c00;
+}
+
+.cantidad-controls {
+ display: flex;
+ align-items: center;
+ gap: 0.3rem; /* ✅ Más gap */
+ justify-content: center;
+ margin-bottom: 0.25rem; /* ✅ Margen para mensajes de validación */
+}
+
+.btn-cantidad {
+ width: 1.4rem; /* ✅ Ligeramente más grande */
+ height: 1.4rem; /* ✅ Ligeramente más grande */
+ border: 1px solid #007bff;
+ background: white;
+ color: #007bff;
+ border-radius: 3px;
+ cursor: pointer;
+ font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
+ font-weight: 700;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ transition: all 0.2s ease;
+ flex-shrink: 0;
+}
+
+.btn-cantidad:hover:not(:disabled) {
+ background: #007bff;
+ color: white;
+}
+
+.btn-cantidad:disabled {
+ opacity: 0.4;
+ cursor: not-allowed;
+ color: #6c757d;
+ border-color: #ced4da;
+}
+
+.input-cantidad {
+ width: 2.2rem; /* ✅ Ligeramente más ancho */
+ height: 1.4rem; /* ✅ Ligeramente más alto */
+ text-align: center;
+ border: 1px solid #007bff;
+ border-radius: 3px;
+ font-size: 0.75rem; /* ✅ Fuente ligeramente más grande */
+ font-weight: 600;
+ flex-shrink: 0;
+ background: white;
+ color: #495057;
+}
+
+.input-cantidad:focus {
+ outline: none;
+ border-color: #0056b3;
+ box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
+}
+
+/* ✅ NUEVOS: Estilos específicos por tipo de input */
+.input-capacidad {
+ border-color: #1565c0 !important;
+ width: 2.4rem !important; /* ✅ Más ancho */
+}
+
+.input-usuarios {
+ border-color: #7b1fa2 !important;
+ width: 2.4rem !important; /* ✅ Más ancho */
+}
+
+.input-sesiones {
+ border-color: #2e7d32 !important;
+ width: 2.4rem !important; /* ✅ Más ancho */
+}
+
+.input-tiempo {
+ border-color: #ef6c00 !important;
+ width: 2.4rem !important; /* ✅ Más ancho */
+}
+
+/* ✅ Responsive MEJORADO para diseño horizontal */
 @media (max-width: 768px) {
  .servicio-card {
-   min-height: 380px;
-   max-height: 440px;
+   min-height: 500px; /* ✅ Aumentado para móvil */
+   max-height: 560px; /* ✅ Aumentado para móvil */
+   padding: 0.9rem; /* ✅ Más padding en móvil */
  }
  
- .cantidades-container {
-   gap: 0.25rem;
-   padding: 0.4rem;
-   grid-template-columns: 1fr;
+ .cantidades-container-horizontal {
+   flex-direction: column;
+   gap: 0.5rem;
+   padding: 0.8rem; /* ✅ Más padding */
+   min-height: 120px; /* ✅ Más altura en móvil */
  }
  
- .servicio-controls {
+ .servicio-controls-horizontal {
    min-width: auto;
+   width: 100%;
+   padding: 0.4rem; /* ✅ Más padding */
  }
  
- .servicio-controls label {
-   font-size: 0.65rem;
+ .servicio-controls-horizontal label {
+   font-size: 0.7rem;
    white-space: normal;
+   margin-bottom: 0.4rem; /* ✅ Más margen */
  }
  
- .cantidades-container[data-categorias="3"] .servicio-controls,
- .cantidades-container[data-categorias="4"] .servicio-controls,
- .cantidades-container[data-categorias="5"] .servicio-controls,
- .cantidades-container[data-categorias="6"] .servicio-controls {
-   transform: none;
+ .info-horizontal {
+   flex-direction: column;
+   align-items: stretch;
+   gap: 0.6rem; /* ✅ Más gap */
+ }
+ 
+ .unidades-info {
+   justify-content: center;
+ }
+ 
+ .validacion-mensaje {
+   font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
+   padding: 0.2rem 0.3rem; /* ✅ Más padding */
+ }
+ 
+ .limites-badge {
+   font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
+   padding: 0.3rem 0.5rem; /* ✅ Más padding */
  }
 }
 
 @media (max-width: 480px) {
  .servicio-card {
-   padding: 0.75rem;
-   min-height: 360px;
-   max-height: 420px;
+   padding: 0.8rem;
+   min-height: 480px; /* ✅ Aumentado para móvil pequeño */
+   max-height: 540px; /* ✅ Aumentado para móvil pequeño */
  }
  
  .precios-servicio {
    flex-direction: column;
-   gap: 0.25rem;
+   gap: 0.3rem; /* ✅ Más gap */
  }
  
  .precio-item {
    flex-direction: row;
    justify-content: space-between;
-   padding: 0.25rem 0.5rem;
+   padding: 0.3rem 0.6rem; /* ✅ Más padding */
  }
  
- .cantidades-container {
-   padding: 0.4rem;
-   gap: 0.2rem;
+ .servicio-controls-horizontal {
+   flex-direction: row;
+   justify-content: space-between;
+   align-items: center;
+   padding: 0.5rem; /* ✅ Más padding */
  }
  
- .servicio-controls label {
-   font-size: 0.6rem;
-   margin-bottom: 0.1rem;
+ .servicio-controls-horizontal label {
+   margin-bottom: 0;
+   margin-right: 0.6rem; /* ✅ Más margen */
+   font-size: 0.65rem;
  }
  
  .unidades-info {
-   gap: 0.2rem;
+   gap: 0.3rem; /* ✅ Más gap */
  }
  
  .unidad-badge {
-   font-size: 0.55rem;
-   padding: 0.15rem 0.3rem;
+   font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
+   padding: 0.2rem 0.4rem; /* ✅ Más padding */
  }
  
  .cantidad-controls {
-   gap: 0.15rem;
+   gap: 0.2rem;
  }
  
  .btn-cantidad {
-   width: 1.1rem;
-   height: 1.1rem;
-   font-size: 0.6rem;
+   width: 1.2rem;
+   height: 1.2rem;
+   font-size: 0.65rem;
  }
  
  .input-cantidad {
-   width: 1.8rem;
-   height: 1.1rem;
-   font-size: 0.65rem;
+   width: 2rem;
+   height: 1.2rem;
+   font-size: 0.7rem;
  }
  
  .input-capacidad,
  .input-usuarios,
  .input-sesiones,
  .input-tiempo {
-   width: 2rem !important;
+   width: 2.2rem !important; /* ✅ Más ancho en móvil */
  }
  
- .info-multiple small {
-   font-size: 0.55rem;
+ .validacion-mensaje {
+   font-size: 0.6rem;
+   padding: 0.2rem 0.3rem; /* ✅ Más padding */
+ }
+ 
+ .cantidades-container-horizontal {
+   min-height: 140px; /* ✅ Más altura en móvil pequeño */
+   padding: 0.9rem; /* ✅ Más padding */
  }
 }
 
 /* Animaciones suaves */
-.cantidades-container {
+.cantidades-container-horizontal {
  transition: all 0.3s ease;
 }
 
-.servicio-controls {
+.servicio-controls-horizontal {
  transition: all 0.2s ease;
 }
 
@@ -994,26 +1288,8 @@ setup(props, { emit }) {
  transform: scale(1.05);
 }
 
-/* Separadores visuales entre controles solo en móvil */
-@media (max-width: 768px) {
- .servicio-controls:not(:last-child) {
-   padding-bottom: 0.2rem;
-   margin-bottom: 0.2rem;
-   border-bottom: 1px solid #e9ecef;
- }
-}
-
-/* Quitar separadores en desktop */
-@media (min-width: 769px) {
- .servicio-controls:not(:last-child) {
-   padding-bottom: 0;
-   margin-bottom: 0;
-   border-bottom: none;
- }
-}
-
 /* Mejoras visuales para focus */
-.servicio-controls:focus-within label {
+.servicio-controls-horizontal:focus-within label {
  color: #007bff;
  font-weight: 700;
 }
@@ -1034,23 +1310,12 @@ setup(props, { emit }) {
  color: #ef6c00;
 }
 
-/* Estados de validación */
-.input-cantidad.error {
- border-color: #dc3545 !important;
- background: #fff5f5;
-}
-
-.input-cantidad.success {
- border-color: #28a745 !important;
- background: #f8fff8;
-}
-
 /* Hover effects mejorados */
-.servicio-controls:hover {
+.servicio-controls-horizontal:hover {
  background: rgba(0, 123, 255, 0.05);
  border-radius: 4px;
- padding: 0.2rem;
- margin: -0.2rem;
+ padding: 0.3rem; /* ✅ Más padding en hover */
+ margin: -0.3rem; /* ✅ Compensar el padding */
 }
 
 .control-capacidad:hover {
@@ -1067,5 +1332,39 @@ setup(props, { emit }) {
 
 .control-tiempo:hover {
  background: rgba(239, 108, 0, 0.05);
+}
+
+/* ✅ NUEVO: Asegurar que el contenido no se desborde */
+.servicio-card > * {
+ flex-shrink: 0;
+}
+
+.cantidades-container-horizontal {
+ flex-shrink: 1; /* ✅ Permitir que se ajuste si es necesario */
+ overflow: visible; /* ✅ Asegurar que el contenido sea visible */
+}
+
+/* ✅ NUEVO: Mejorar el scroll si es necesario */
+.servicio-card {
+ overflow-y: auto;
+ overflow-x: hidden;
+}
+
+.servicio-card::-webkit-scrollbar {
+ width: 4px;
+}
+
+.servicio-card::-webkit-scrollbar-track {
+ background: #f1f1f1;
+ border-radius: 2px;
+}
+
+.servicio-card::-webkit-scrollbar-thumb {
+ background: #c1c1c1;
+ border-radius: 2px;
+}
+
+.servicio-card::-webkit-scrollbar-thumb:hover {
+ background: #a8a8a8;
 }
 </style>

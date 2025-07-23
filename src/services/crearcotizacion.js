@@ -1,4 +1,4 @@
-// services/crearcotizacion.js - COMPLETO ACTUALIZADO
+// services/crearcotizacion.js - ACTUALIZADO CON CÁLCULOS CORREGIDOS
 import api from './api';
 
 class CrearCotizacionService {
@@ -267,9 +267,9 @@ class CrearCotizacionService {
     }
   }
   
-  // ✅ ACTUALIZADO COMPLETO: Helper para formatear datos de cotización
+  // ✅ ACTUALIZADO COMPLETO: Helper para formatear datos de cotización CON CÁLCULOS CORREGIDOS
   formatCotizacionParaFormulario(serviciosSeleccionados, cliente, añosContrato, tipoPrecio, configuracionPDF, comentario) {
-    console.log('📝 Formateando datos para envío (NUEVA ESTRUCTURA):', {
+    console.log('📝 Formateando datos para envío (CÁLCULOS CORREGIDOS):', {
       serviciosSeleccionados,
       cliente,
       añosContrato,
@@ -330,12 +330,16 @@ class CrearCotizacionService {
     
     console.log('✅ Servicios formateados con nueva estructura:', serviciosFormateados);
     
-    // ✅ CALCULAR PRECIO TOTAL DINÁMICAMENTE
+    // ✅ CALCULAR PRECIO TOTAL CORREGIDO: MENSUAL × 12 × AÑOS
     const precioTotal = serviciosSeleccionados.reduce((total, item) => {
       if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
         // Usar categorías detalladas
         const totalCategorias = item.categoriasDetalle.reduce((subtotal, cat) => {
-          return subtotal + (cat.cantidad * item.precioVentaFinal * añosContrato);
+          // ✅ CORREGIDO: precio mensual × cantidad × 12 meses × años
+          const costoMensual = cat.cantidad * item.precioVentaFinal;
+          const costoAnual = costoMensual * 12;
+          const costoTotal = costoAnual * añosContrato;
+          return subtotal + costoTotal;
         }, 0);
         return total + totalCategorias;
       } else {
@@ -343,7 +347,11 @@ class CrearCotizacionService {
         const cantidadTotal = (item.cantidadServidores || 0) + (item.cantidadEquipos || 0) + 
                              (item.cantidadGB || 0) + (item.cantidadUsuarios || 0) + 
                              (item.cantidadSesiones || 0) + (item.cantidadTiempo || 0);
-        return total + (item.precioVentaFinal * cantidadTotal * añosContrato);
+        // ✅ CORREGIDO: precio mensual × cantidad × 12 meses × años                     
+        const costoMensual = item.precioVentaFinal * cantidadTotal;
+        const costoAnual = costoMensual * 12;
+        const costoTotal = costoAnual * añosContrato;
+        return total + costoTotal;
       }
     }, 0);
     
@@ -363,7 +371,8 @@ class CrearCotizacionService {
       comentario: comentario || ''
     };
     
-    console.log('✅ Datos formateados finales (NUEVA ESTRUCTURA):', cotizacionData);
+    console.log('✅ Datos formateados finales (CÁLCULOS CORREGIDOS):', cotizacionData);
+    console.log('💰 Precio total calculado:', precioTotal);
     return cotizacionData;
   }
   

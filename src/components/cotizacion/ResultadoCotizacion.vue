@@ -82,157 +82,182 @@
               </div>
             </div>
             
+            <!-- ✅ CORREGIDO: Precios con /mes -->
             <div class="precios-detalle">
-              <span class="precio-minimo">Mín: {{ formatCurrency(item.servicio.precioMinimo) }}/año</span>
-              <span class="precio-venta-usado">Venta: {{ formatCurrency(item.precioVentaFinal) }}/año</span>
-            </div>
-            <div class="calculo-detalle">
-              <!-- ✅ ACTUALIZADO: Cálculo dinámico con todas las cantidades -->
-              <small>
-                {{ formatearCalculoDetalleCompleto(item) }}
-              </small>
-            </div>
-          </div>
-        </div>
-        <div class="servicio-subtotal">
-          <div class="subtotal-anual">{{ formatCurrency(calcularSubtotalAnual(item)) }}/año</div>
-          <div class="subtotal-total">{{ formatCurrency(calcularSubtotalTotal(item)) }} total</div>
-        </div>
-      </div>
-    </div>
+              <span class="precio-minimo">Mín: {{ formatCurrency(item.servicio.precioMinimo) }}/mes</span>
+              <span class="precio-venta-usado">Venta: {{ formatCurrency(item.precioVentaFinal) }}/mes</span>
+           </div>
+           
+           <!-- ✅ ACTUALIZADO: Cálculo detallado con precios mensuales y anuales -->
+           <div class="calculo-detalle">
+             <div class="calculo-mensual">
+               <small>
+                 <strong>Mensual:</strong> {{ formatearCalculoMensual(item) }}
+               </small>
+             </div>
+             <div class="calculo-anual">
+               <small>
+                 <strong>Anual:</strong> {{ formatearCalculoAnual(item) }}
+               </small>
+             </div>
+             <div class="calculo-total">
+               <small>
+                 <strong>Total contrato:</strong> {{ formatearCalculoTotal(item) }}
+               </small>
+             </div>
+           </div>
+         </div>
+       </div>
+       <div class="servicio-subtotal">
+         <div class="subtotal-mensual">{{ formatCurrency(calcularSubtotalMensual(item)) }}/mes</div>
+         <div class="subtotal-anual">{{ formatCurrency(calcularSubtotalAnual(item)) }}/año</div>
+         <div class="subtotal-total">{{ formatCurrency(calcularSubtotalTotal(item)) }} total</div>
+       </div>
+     </div>
+   </div>
 
-    <div class="opciones-precio">
-      <div class="precio-option minimo">
-        <h4>
-          <i class="fas fa-circle text-danger"></i>
-          Precio Mínimo
-        </h4>
-        <div class="precio-valor">{{ formatCurrency(precioMinimoAnual) }}/año</div>
-        <div class="precio-total-contrato">{{ formatCurrency(precioMinimoTotal) }} total</div>
-        <p>Precio mínimo para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
-      </div>
+   <!-- ✅ ACTUALIZADO: Opciones de precio con mensual/anual -->
+   <div class="opciones-precio">
+     <div class="precio-option minimo">
+       <h4>
+         <i class="fas fa-circle text-danger"></i>
+         Precio Mínimo
+       </h4>
+       <div class="precio-mensual">{{ formatCurrency(precioMinimoMensual) }}/mes</div>
+       <div class="precio-anual">{{ formatCurrency(precioMinimoAnual) }}/año</div>
+       <div class="precio-total-contrato">{{ formatCurrency(precioMinimoTotal) }} total</div>
+       <p>Precio mínimo para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
+     </div>
 
-      <div class="precio-option venta">
-        <h4>
-          <i class="fas fa-circle text-success"></i>
-          Precio de Venta
-        </h4>
-        <div class="precio-valor">{{ formatCurrency(precioVentaAnual) }}/año</div>
-        <div class="precio-total-contrato">{{ formatCurrency(precioVentaTotal) }} total</div>
-        <p>Precio final para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
-        <small>Ganancia: {{ formatCurrency(gananciaPotencial) }} total</small>
-      </div>
-    </div>
+     <div class="precio-option venta">
+       <h4>
+         <i class="fas fa-circle text-success"></i>
+         Precio de Venta
+       </h4>
+       <div class="precio-mensual">{{ formatCurrency(precioVentaMensual) }}/mes</div>
+       <div class="precio-anual">{{ formatCurrency(precioVentaAnual) }}/año</div>
+       <div class="precio-total-contrato">{{ formatCurrency(precioVentaTotal) }} total</div>
+       <p>Precio final para {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</p>
+       <small>Ganancia: {{ formatCurrency(gananciaPotencial) }} total</small>
+     </div>
+   </div>
 
-    <!-- ✅ ACTUALIZADO: Resumen financiero dinámico -->
-    <div class="resumen-financiero">
-      <h3>
-        <i class="fas fa-chart-bar"></i>
-        Resumen Financiero ({{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }})
-      </h3>
-      <div class="metricas">
-        <!-- ✅ NUEVO: Métricas dinámicas por tipo de unidad -->
-        <div v-for="metrica in metricasUnidades" :key="metrica.tipo" class="metrica">
-          <span class="metrica-label">{{ metrica.label }}:</span>
-          <span class="metrica-valor">{{ metrica.valor }} {{ metrica.unidad }}</span>
-        </div>
-        
-        <div class="metrica">
-          <span class="metrica-label">Margen vs Mínimo:</span>
-          <span class="metrica-valor ganancia">+{{ formatCurrency(precioVentaTotal - precioMinimoTotal) }} ({{ porcentajeMargenMinimo }}%)</span>
-        </div>
-        <div class="metrica">
-          <span class="metrica-label">Ingreso anual:</span>
-          <span class="metrica-valor destacado">{{ formatCurrency(precioVentaAnual) }}/año</span>
-        </div>
-        <div class="metrica">
-          <span class="metrica-label">Valor total del contrato:</span>
-          <span class="metrica-valor destacado-total">{{ formatCurrency(precioVentaTotal) }}</span>
-        </div>
-      </div>
-    </div>
+   <!-- ✅ ACTUALIZADO: Resumen financiero con precios mensuales/anuales -->
+   <div class="resumen-financiero">
+     <h3>
+       <i class="fas fa-chart-bar"></i>
+       Resumen Financiero ({{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }})
+     </h3>
+     <div class="metricas">
+       <!-- ✅ NUEVO: Métricas dinámicas por tipo de unidad -->
+       <div v-for="metrica in metricasUnidades" :key="metrica.tipo" class="metrica">
+         <span class="metrica-label">{{ metrica.label }}:</span>
+         <span class="metrica-valor">{{ metrica.valor }} {{ metrica.unidad }}</span>
+       </div>
+       
+       <div class="metrica">
+         <span class="metrica-label">Costo mensual total:</span>
+         <span class="metrica-valor destacado">{{ formatCurrency(precioVentaMensual) }}/mes</span>
+       </div>
+       
+       <div class="metrica">
+         <span class="metrica-label">Margen vs Mínimo:</span>
+         <span class="metrica-valor ganancia">+{{ formatCurrency(precioVentaTotal - precioMinimoTotal) }} ({{ porcentajeMargenMinimo }}%)</span>
+       </div>
+       
+       <div class="metrica">
+         <span class="metrica-label">Ingreso anual:</span>
+         <span class="metrica-valor destacado">{{ formatCurrency(precioVentaAnual) }}/año</span>
+       </div>
+       
+       <div class="metrica">
+         <span class="metrica-label">Valor total del contrato:</span>
+         <span class="metrica-valor destacado-total">{{ formatCurrency(precioVentaTotal) }}</span>
+       </div>
+     </div>
+   </div>
 
-    <div class="selector-precio-pdf">
-      <h3>
-        <i class="fas fa-file-pdf"></i>
-        Precio para la cotización del cliente
-      </h3>
-      <div class="opciones-precio-pdf">
-        <label class="precio-radio-option">
-          <input 
-            type="radio" 
-            v-model="precioSeleccionadoPDF" 
-            value="minimo"
-            name="precio-pdf"
-          >
-          <span class="radio-custom"></span>
-          <div class="precio-info">
-            <strong>Precio Mínimo</strong>
-            <span class="precio-cantidad">{{ formatCurrency(precioMinimoTotal) }} total</span>
-            <small>Precio competitivo especial</small>
-          </div>
-        </label>
+   <div class="selector-precio-pdf">
+     <h3>
+       <i class="fas fa-file-pdf"></i>
+       Precio para la cotización del cliente
+     </h3>
+     <div class="opciones-precio-pdf">
+       <label class="precio-radio-option">
+         <input 
+           type="radio" 
+           v-model="precioSeleccionadoPDF" 
+           value="minimo"
+           name="precio-pdf"
+         >
+         <span class="radio-custom"></span>
+         <div class="precio-info">
+           <strong>Precio Mínimo</strong>
+           <span class="precio-cantidad">{{ formatCurrency(precioMinimoTotal) }} total</span>
+           <small>Precio competitivo especial</small>
+         </div>
+       </label>
 
-        <label class="precio-radio-option">
-          <input 
-            type="radio" 
-            v-model="precioSeleccionadoPDF" 
-            value="venta"
-            name="precio-pdf"
-          >
-          <span class="radio-custom"></span>
-          <div class="precio-info">
-            <strong>Precio de Venta</strong>
-            <span class="precio-cantidad">{{ formatCurrency(precioVentaTotal) }} total</span>
-            <small>Precio estándar recomendado</small>
-          </div>
-        </label>
-      </div>
-      
-      <!-- Advertencia si hay precios por debajo del mínimo -->
-      <div v-if="hayPreciosPorDebajoMinimo" class="advertencia-precios">
-        <i class="fas fa-exclamation-triangle"></i>
-        <strong>Atención:</strong> Algunos servicios tienen precios por debajo del mínimo. 
-        La cotización requerirá aprobación administrativa.
-      </div>
-    </div>
+       <label class="precio-radio-option">
+         <input 
+           type="radio" 
+           v-model="precioSeleccionadoPDF" 
+           value="venta"
+           name="precio-pdf"
+         >
+         <span class="radio-custom"></span>
+         <div class="precio-info">
+           <strong>Precio de Venta</strong>
+           <span class="precio-cantidad">{{ formatCurrency(precioVentaTotal) }} total</span>
+           <small>Precio estándar recomendado</small>
+         </div>
+       </label>
+     </div>
+     
+     <!-- Advertencia si hay precios por debajo del mínimo -->
+     <div v-if="hayPreciosPorDebajoMinimo" class="advertencia-precios">
+       <i class="fas fa-exclamation-triangle"></i>
+       <strong>Atención:</strong> Algunos servicios tienen precios por debajo del mínimo. 
+       La cotización requerirá aprobación administrativa.
+     </div>
+   </div>
 
-    <div class="acciones">
-      <button 
-        @click="exportarPDF" 
-        class="btn-exportar" 
-        :disabled="!precioSeleccionadoPDF || loading"
-      >
-        <i class="fas fa-file-pdf"></i>
-        Generar PDF para Cliente
-      </button>
-      
-      <button @click="reiniciar" class="btn-reiniciar" :disabled="loading">
-        <i class="fas fa-redo-alt"></i>
-        Nueva Cotización
-      </button>
-    </div>
+   <div class="acciones">
+     <button 
+       @click="exportarPDF" 
+       class="btn-exportar" 
+       :disabled="!precioSeleccionadoPDF || loading"
+     >
+       <i class="fas fa-file-pdf"></i>
+       Generar PDF para Cliente
+     </button>
+     
+     <button @click="reiniciar" class="btn-reiniciar" :disabled="loading">
+       <i class="fas fa-redo-alt"></i>
+       Nueva Cotización
+     </button>
+   </div>
 
-    <!-- Modal de Confirmación PDF -->
-    <ConfirmacionPDFModal
-      :mostrar="mostrarModalConfirmacion"
-      :servicios-seleccionados="serviciosSeleccionados"
-      :años-contrato="añosContrato"
-      :precio-total="precioSeleccionadoPDF === 'minimo' ? precioMinimoTotal : precioVentaTotal"
-      :tipo-precio="precioSeleccionadoPDF"
-      @cerrar="cerrarModalConfirmacion"
-      @generar-pdf="onGenerarPDF"
-      @guardar-cotizacion="onGuardarCotizacion"
-      @limpiar-formulario="onLimpiarFormulario"
-    />
+   <!-- Modal de Confirmación PDF -->
+   <ConfirmacionPDFModal
+     :mostrar="mostrarModalConfirmacion"
+     :servicios-seleccionados="serviciosSeleccionados"
+     :años-contrato="añosContrato"
+     :precio-total="precioSeleccionadoPDF === 'minimo' ? precioMinimoTotal : precioVentaTotal"
+     :tipo-precio="precioSeleccionadoPDF"
+     @cerrar="cerrarModalConfirmacion"
+     @generar-pdf="onGenerarPDF"
+     @guardar-cotizacion="onGuardarCotizacion"
+     @limpiar-formulario="onLimpiarFormulario"
+   />
 
-    <!-- ✅ TOAST DE NOTIFICACIONES -->
-    <div v-if="showToast" class="toast-notification" :class="toastType">
-      <i :class="toastIcon"></i>
-      <span>{{ toastMessage }}</span>
-      <button @click="hideToast" class="toast-close">×</button>
-    </div>
-  </div>
+   <!-- ✅ TOAST DE NOTIFICACIONES -->
+   <div v-if="showToast" class="toast-notification" :class="toastType">
+     <i :class="toastIcon"></i>
+     <span>{{ toastMessage }}</span>
+     <button @click="hideToast" class="toast-close">×</button>
+   </div>
+ </div>
 </template>
 
 <script>
@@ -241,537 +266,535 @@ import ConfirmacionPDFModal from './ConfirmacionPDFModal.vue'
 import crearcotizacionService from '@/services/crearcotizacion'
 
 export default {
-  name: 'ResultadoCotizacion',
-  components: {
-    ConfirmacionPDFModal
-  },
-  props: {
-    serviciosSeleccionados: {
-      type: Array,
-      required: true
-    },
-    añosContrato: {
-      type: Number,
-      default: 1
-    }
-  },
-  emits: ['reiniciar', 'limpiar-formulario'],
-  setup(props, { emit }) {
-    // Estados reactivos
-    const precioSeleccionadoPDF = ref('venta')
-    const mostrarModalConfirmacion = ref(false)
-    const loading = ref(false)
-    const loadingMessage = ref('')
-    
-    // ✅ TOAST SYSTEM - Estados
-    const showToast = ref(false)
-    const toastMessage = ref('')
-    const toastType = ref('success') // success, error, warning, info
+ name: 'ResultadoCotizacion',
+ components: {
+   ConfirmacionPDFModal
+ },
+ props: {
+   serviciosSeleccionados: {
+     type: Array,
+     required: true
+   },
+   añosContrato: {
+     type: Number,
+     default: 1
+   }
+ },
+ emits: ['reiniciar', 'limpiar-formulario'],
+ setup(props, { emit }) {
+   // Estados reactivos
+   const precioSeleccionadoPDF = ref('venta')
+   const mostrarModalConfirmacion = ref(false)
+   const loading = ref(false)
+   const loadingMessage = ref('')
+   
+   // ✅ TOAST SYSTEM - Estados
+   const showToast = ref(false)
+   const toastMessage = ref('')
+   const toastType = ref('success') // success, error, warning, info
 
-    // ✅ MÉTODOS HELPER PARA MOSTRAR CATEGORÍAS CORRECTAMENTE
-    const obtenerUnidadesUnicasDelServicio = (item) => {
-      if (!item.categoriasDetalle) return []
-      
-      const unidadesVistas = new Set()
-      const unidades = []
-      
-      item.categoriasDetalle.forEach(categoria => {
-        if (!unidadesVistas.has(categoria.unidad_nombre)) {
-          unidades.push({
-            id: categoria.id,
-            nombre: categoria.unidad_nombre,
-            tipo: categoria.unidad_tipo
-          })
-          unidadesVistas.add(categoria.unidad_nombre)
-        }
-      })
-      
-      return unidades
-    }
+   // ✅ MÉTODOS HELPER PARA MOSTRAR CATEGORÍAS CORRECTAMENTE
+   const obtenerUnidadesUnicasDelServicio = (item) => {
+     if (!item.categoriasDetalle) return []
+     
+     const unidadesVistas = new Set()
+     const unidades = []
+     
+     item.categoriasDetalle.forEach(categoria => {
+       if (!unidadesVistas.has(categoria.unidad_nombre)) {
+         unidades.push({
+           id: categoria.id,
+           nombre: categoria.unidad_nombre,
+           tipo: categoria.unidad_tipo
+         })
+         unidadesVistas.add(categoria.unidad_nombre)
+       }
+     })
+     
+     return unidades
+   }
 
-    // ✅ REEMPLAZAR MÉTODO COMPLETO:
-    const obtenerCantidadesPorCategoria = (item) => {
-      // ✅ USAR LOS DETALLES DE CATEGORÍAS DIRECTAMENTE
-      if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
-        return item.categoriasDetalle
-          .filter(cat => cat.cantidad > 0)
-          .map(cat => ({
-            id: cat.id,
-            nombre: cat.unidad_nombre, // Nombre de la unidad de medida
-            abreviacion: cat.unidad_abreviacion,
-            tipo: cat.unidad_tipo,
-            cantidad: cat.cantidad
-          }))
-      }
-      
-      return []
-    }
+   // ✅ REEMPLAZAR MÉTODO COMPLETO:
+   const obtenerCantidadesPorCategoria = (item) => {
+     // ✅ USAR LOS DETALLES DE CATEGORÍAS DIRECTAMENTE
+     if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
+       return item.categoriasDetalle
+         .filter(cat => cat.cantidad > 0)
+         .map(cat => ({
+           id: cat.id,
+           nombre: cat.unidad_nombre, // Nombre de la unidad de medida
+           abreviacion: cat.unidad_abreviacion,
+           tipo: cat.unidad_tipo,
+           cantidad: cat.cantidad
+         }))
+     }
+     
+     return []
+   }
 
-    const formatearCantidadCategoria = (categoria) => {
-      switch (categoria.tipo) {
-        case 'capacidad': {
-          return `${categoria.cantidad} ${categoria.abreviacion || 'GB'}`
-        }
-        case 'usuarios': {
-          return `${categoria.cantidad} usuarios`
-        }
-        case 'sesiones': {
-          return `${categoria.cantidad} sesiones`
-        }
-        case 'tiempo': {
-          return `${categoria.cantidad} ${categoria.abreviacion || 'h'}`
-        }
-        case 'cantidad':
-        default: {
-          return `${categoria.cantidad}`
-        }
-      }
-    }
+   const formatearCantidadCategoria = (categoria) => {
+     switch (categoria.tipo) {
+       case 'capacidad': {
+         return `${categoria.cantidad} ${categoria.abreviacion || 'GB'}`
+       }
+       case 'usuarios': {
+         return `${categoria.cantidad} usuarios`
+       }
+       case 'sesiones': {
+         return `${categoria.cantidad} sesiones`
+       }
+       case 'tiempo': {
+         return `${categoria.cantidad} ${categoria.abreviacion || 'h'}`
+       }
+       case 'cantidad':
+       default: {
+         return `${categoria.cantidad}`
+       }
+     }
+   }
 
-    const obtenerIconoTipo = (tipo) => {
-      switch (tipo) {
-        case 'capacidad':
-          return 'fas fa-hdd'
-        case 'usuarios':
-          return 'fas fa-users'
-        case 'sesiones':
-          return 'fas fa-link'
-        case 'tiempo':
-          return 'fas fa-clock'
-        case 'cantidad':
-        default:
-          return 'fas fa-boxes'
-      }
-    }
+   const obtenerIconoTipo = (tipo) => {
+     switch (tipo) {
+       case 'capacidad':
+         return 'fas fa-hdd'
+       case 'usuarios':
+         return 'fas fa-users'
+       case 'sesiones':
+         return 'fas fa-link'
+       case 'tiempo':
+         return 'fas fa-clock'
+       case 'cantidad':
+       default:
+         return 'fas fa-boxes'
+     }
+   }
 
-    // ✅ REEMPLAZAR MÉTODO COMPLETO:
-    const formatearCalculoDetalleCompleto = (item) => {
-      const categorias = obtenerCantidadesPorCategoria(item)
-      const precio = item.precioVentaFinal || 0
-      const años = props.añosContrato
-      
-      if (categorias.length > 0) {
-        // ✅ MOSTRAR CADA CATEGORÍA POR SEPARADO
-        const descripcionCategorias = categorias.map(cat => {
-          switch (cat.tipo) {
-            case 'capacidad':
-              return `${cat.cantidad} ${cat.abreviacion || 'GB'}`
-            case 'usuarios':
-              return `${cat.cantidad} usuarios`
-            case 'sesiones':
-              return `${cat.cantidad} sesiones`
-            case 'tiempo':
-              return `${cat.cantidad} ${cat.abreviacion || 'h'}`
-            default:
-              return `${cat.cantidad} ${cat.nombre.toLowerCase()}`
-          }
-        }).join(' + ')
-        
-        const totalUnidades = categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
-        
-        return `(${descripcionCategorias}) = ${totalUnidades} unidades × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-      }
-      
-      return formatearCalculoDetalleTradicional(item)
-    }
+   // ✅ NUEVOS: Métodos de formateo de cálculos
+   const formatearCalculoMensual = (item) => {
+     const categorias = obtenerCantidadesPorCategoria(item)
+     const precio = item.precioVentaFinal || 0
+     
+     if (categorias.length > 0) {
+       const descripcionCategorias = categorias.map(cat => {
+         return formatearCantidadCategoria(cat)
+       }).join(' + ')
+       
+       const totalUnidades = categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
+       
+       return `${descripcionCategorias} × ${formatCurrency(precio)}/mes = ${formatCurrency(totalUnidades * precio)}/mes`
+     }
+     
+     return formatearCalculoMensualTradicional(item)
+   }
 
-    // ✅ MÉTODOS TRADICIONALES COMO FALLBACK
-    const obtenerTipoUnidadTradicional = (item) => {
-      return item.servicio.unidad_medida?.tipo || item.tipoUnidad || 'cantidad'
-    }
+   const formatearCalculoAnual = (item) => {
+     const costoMensual = calcularSubtotalMensual(item)
+     return `${formatCurrency(costoMensual)}/mes × 12 meses = ${formatCurrency(costoMensual * 12)}/año`
+   }
 
-    const obtenerIconoUnidadTradicional = (item) => {
-      const tipo = obtenerTipoUnidadTradicional(item)
-      return obtenerIconoTipo(tipo)
-    }
+   const formatearCalculoTotal = (item) => {
+     const costoAnual = calcularSubtotalAnual(item)
+     const años = props.añosContrato
+     
+     if (años > 1) {
+       return `${formatCurrency(costoAnual)}/año × ${años} años = ${formatCurrency(costoAnual * años)}`
+     } else {
+       return `${formatCurrency(costoAnual)}/año`
+     }
+   }
 
-    const obtenerEtiquetaPrincipalTradicional = (item) => {
-      const tipo = obtenerTipoUnidadTradicional(item)
-      const unidad = item.servicio.unidad_medida
-      
-      switch (tipo) {
-        case 'capacidad': {
-          return `Almacenamiento (${unidad?.abreviacion || 'GB'})`
-        }
-        case 'usuarios': {
-          return 'Usuarios'
-        }
-        case 'sesiones': {
-          return 'Sesiones Simultáneas'
-        }
-        case 'tiempo': {
-          return `Tiempo (${unidad?.abreviacion || 'h'})`
-        }
-        case 'cantidad':
-        default: {
-          return 'Servidores'
-        }
-      }
-    }
+   // ✅ MÉTODOS TRADICIONALES COMO FALLBACK
+   const obtenerTipoUnidadTradicional = (item) => {
+     return item.servicio.unidad_medida?.tipo || item.tipoUnidad || 'cantidad'
+   }
 
-    const formatearCantidadPrincipalTradicional = (item) => {
-      const tipo = obtenerTipoUnidadTradicional(item)
-      const unidad = item.servicio.unidad_medida
-      
-      switch (tipo) {
-        case 'capacidad': {
-          const cantidadGB = item.cantidadGB || item.cantidadServidores || 0
-          return `${cantidadGB} ${unidad?.abreviacion || 'GB'}`
-        }
-        case 'usuarios': {
-          const cantidadUsuarios = item.cantidadUsuarios || item.cantidadServidores || 0
-          return `${cantidadUsuarios} usuarios`
-        }
-        case 'sesiones': {
-          const cantidadSesiones = item.cantidadSesiones || item.cantidadServidores || 0
-          return `${cantidadSesiones} sesiones`
-        }
-        case 'tiempo': {
-          const cantidadTiempo = item.cantidadTiempo || item.cantidadServidores || 0
-          return `${cantidadTiempo} ${unidad?.abreviacion || 'h'}`
-        }
-        case 'cantidad':
-        default: {
-          return `${item.cantidadServidores || 0} servidores`
-        }
-      }
-    }
+   const obtenerIconoUnidadTradicional = (item) => {
+     const tipo = obtenerTipoUnidadTradicional(item)
+     return obtenerIconoTipo(tipo)
+   }
 
-    const formatearCalculoDetalleTradicional = (item) => {
-      const tipo = obtenerTipoUnidadTradicional(item)
-      const totalUnidadesItem = calcularTotalUnidades(item)
-      const precio = item.precioVentaFinal || 0
-      const años = props.añosContrato
-      
-      switch (tipo) {
-        case 'capacidad': {
-          const cantidadGB = item.cantidadGB || item.cantidadServidores || 0
-          return `${cantidadGB} GB × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-        }
-        case 'usuarios': {
-          const cantidadUsuarios = item.cantidadUsuarios || item.cantidadServidores || 0
-          return `${cantidadUsuarios} usuarios × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-        }
-        case 'sesiones': {
-          const cantidadSesiones = item.cantidadSesiones || item.cantidadServidores || 0
-          return `${cantidadSesiones} sesiones × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-        }
-        case 'tiempo': {
-          const cantidadTiempo = item.cantidadTiempo || item.cantidadServidores || 0
-          const unidad = item.servicio.unidad_medida?.abreviacion || 'h'
-          return `${cantidadTiempo} ${unidad} × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-        }
-        case 'cantidad':
-        default: {
-          return `${totalUnidadesItem} unidad(es) × ${formatCurrency(precio)}/año × ${años} año${años > 1 ? 's' : ''}`
-        }
-      }
-    }
+   const obtenerEtiquetaPrincipalTradicional = (item) => {
+     const tipo = obtenerTipoUnidadTradicional(item)
+     const unidad = item.servicio.unidad_medida
+     
+     switch (tipo) {
+       case 'capacidad': {
+         return `Almacenamiento (${unidad?.abreviacion || 'GB'})`
+       }
+       case 'usuarios': {
+         return 'Usuarios'
+       }
+       case 'sesiones': {
+         return 'Sesiones Simultáneas'
+       }
+       case 'tiempo': {
+         return `Tiempo (${unidad?.abreviacion || 'h'})`
+       }
+       case 'cantidad':
+       default: {
+         return 'Servidores'
+       }
+     }
+   }
 
-    // ✅ REEMPLAZAR MÉTODO COMPLETO:
-    const calcularTotalUnidades = (item) => {
-      // ✅ USAR EL TOTAL CALCULADO PARA PRECIO
-      if (item.totalUnidadesParaPrecio) {
-        return item.totalUnidadesParaPrecio
-      }
-      
-      // Fallback: si hay categorías detalladas, sumarlas
-      const categorias = obtenerCantidadesPorCategoria(item)
-      if (categorias.length > 0) {
-        return categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
-      }
-      
-      // Fallback final
-      return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
-    }
+   const formatearCantidadPrincipalTradicional = (item) => {
+     const tipo = obtenerTipoUnidadTradicional(item)
+     const unidad = item.servicio.unidad_medida
+     
+     switch (tipo) {
+       case 'capacidad': {
+         const cantidadGB = item.cantidadGB || item.cantidadServidores || 0
+         return `${cantidadGB} ${unidad?.abreviacion || 'GB'}`
+       }
+       case 'usuarios': {
+         const cantidadUsuarios = item.cantidadUsuarios || item.cantidadServidores || 0
+         return `${cantidadUsuarios} usuarios`
+       }
+       case 'sesiones': {
+         const cantidadSesiones = item.cantidadSesiones || item.cantidadServidores || 0
+         return `${cantidadSesiones} sesiones`
+       }
+       case 'tiempo': {
+         const cantidadTiempo = item.cantidadTiempo || item.cantidadServidores || 0
+         return `${cantidadTiempo} ${unidad?.abreviacion || 'h'}`
+       }
+       case 'cantidad':
+       default: {
+         return `${item.cantidadServidores || 0} servidores`
+       }
+     }
+   }
 
-    // ✅ MÉTODOS HELPER EXISTENTES ACTUALIZADOS
-    const calcularSubtotalAnual = (item) => {
-      const totalUnidadesItem = calcularTotalUnidades(item)
-      return totalUnidadesItem * (item.precioVentaFinal || 0)
-    }
+   const formatearCalculoMensualTradicional = (item) => {
+     const totalUnidadesItem = calcularTotalUnidades(item)
+     const precio = item.precioVentaFinal || 0
+     
+     return `${totalUnidadesItem} unidad(es) × ${formatCurrency(precio)}/mes = ${formatCurrency(totalUnidadesItem * precio)}/mes`
+   }
 
-    const calcularSubtotalTotal = (item) => {
-      return calcularSubtotalAnual(item) * props.añosContrato
-    }
+   // ✅ REEMPLAZAR MÉTODO COMPLETO:
+   const calcularTotalUnidades = (item) => {
+     // ✅ USAR EL TOTAL CALCULADO PARA PRECIO
+     if (item.totalUnidadesParaPrecio) {
+       return item.totalUnidadesParaPrecio
+     }
+     
+     // Fallback: si hay categorías detalladas, sumarlas
+     const categorias = obtenerCantidadesPorCategoria(item)
+     if (categorias.length > 0) {
+       return categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
+     }
+     
+     // Fallback final
+     return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
+   }
 
-    const formatCurrency = (amount) => {
-      return crearcotizacionService.formatCurrency(amount || 0)
-    }
+   // ✅ NUEVOS: Métodos de cálculo corregidos
+   const calcularSubtotalMensual = (item) => {
+     const totalUnidadesItem = calcularTotalUnidades(item)
+     return totalUnidadesItem * (item.precioVentaFinal || 0) // Precio mensual
+   }
 
-    // ✅ COMPUTED PARA TOAST
-    const toastIcon = computed(() => {
-      const iconos = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
-      };
-      return iconos[toastType.value] || 'fas fa-info-circle';
-    })
+   const calcularSubtotalAnual = (item) => {
+     return calcularSubtotalMensual(item) * 12 // × 12 meses
+   }
 
-    // ✅ MÉTODOS DE TOAST
-    const mostrarToast = (mensaje, tipo = 'info') => {
-      toastMessage.value = mensaje
-      toastType.value = tipo
-      showToast.value = true
-      
-      // Auto-ocultar después de 5 segundos
-      setTimeout(() => {
-        hideToast()
-      }, 5000)
-    }
+   const calcularSubtotalTotal = (item) => {
+     return calcularSubtotalAnual(item) * props.añosContrato // × años
+   }
 
-    const hideToast = () => {
-      showToast.value = false
-    }
+   const formatCurrency = (amount) => {
+     const valor = amount || 0
+     return `$${valor.toLocaleString('en-US', {
+       minimumFractionDigits: 2,
+       maximumFractionDigits: 2
+     })}`
+   }
 
-    // ✅ COMPUTED PROPERTIES DESPUÉS DE LOS MÉTODOS
-    const mostrarResultados = computed(() => {
-      return props.serviciosSeleccionados.length > 0
-    })
+   // ✅ COMPUTED PARA TOAST
+   const toastIcon = computed(() => {
+     const iconos = {
+       success: 'fas fa-check-circle',
+       error: 'fas fa-exclamation-circle',
+       warning: 'fas fa-exclamation-triangle',
+       info: 'fas fa-info-circle'
+     };
+     return iconos[toastType.value] || 'fas fa-info-circle';
+   })
 
-    const fechaActual = computed(() => {
-      return new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    })
+   // ✅ MÉTODOS DE TOAST
+   const mostrarToast = (mensaje, tipo = 'info') => {
+     toastMessage.value = mensaje
+     toastType.value = tipo
+     showToast.value = true
+     
+     // Auto-ocultar después de 5 segundos
+     setTimeout(() => {
+       hideToast()
+     }, 5000)
+   }
 
-    // ✅ ACTUALIZADO: Métricas dinámicas por tipo de unidad usando categorías
-    const metricasUnidades = computed(() => {
-      const metricas = new Map()
-      
-      props.serviciosSeleccionados.forEach(item => {
-        const categorias = obtenerCantidadesPorCategoria(item)
-        
-        if (categorias.length > 0) {
-          // Usar categorías si están disponibles
-          categorias.forEach(categoria => {
-            const tipoKey = categoria.tipo
-            const actual = metricas.get(tipoKey) || { total: 0, unidad: categoria.abreviacion || 'unidades' }
-            
-            metricas.set(tipoKey, {
-              tipo: tipoKey,
-              label: `Total de ${categoria.nombre}`,
-              valor: actual.total + categoria.cantidad,
-              unidad: categoria.abreviacion || (categoria.tipo === 'usuarios' ? 'usuarios' : 'unidades')
-            })
-          })
-        } else {
-          // Fallback al método tradicional
-          const tipo = obtenerTipoUnidadTradicional(item)
-          const unidad = item.servicio.unidad_medida
-          
-          switch (tipo) {
-            case 'capacidad': {
-              const totalGB = (item.cantidadGB || item.cantidadServidores || 0)
-              if (totalGB > 0) {
-                const actual = metricas.get('capacidad') || { total: 0, unidad: 'GB' }
-                metricas.set('capacidad', {
-                  tipo: 'capacidad',
-                  label: 'Total de Almacenamiento',
-                  valor: actual.total + totalGB,
-                  unidad: unidad?.abreviacion || 'GB'
-                })
-              }
-              break
-            }
-            case 'usuarios': {
-              const totalUsuarios = (item.cantidadUsuarios || item.cantidadServidores || 0)
-              if (totalUsuarios > 0) {
-                const actual = metricas.get('usuarios') || { total: 0, unidad: 'usuarios' }
-                metricas.set('usuarios', {
-                  tipo: 'usuarios',
-                  label: 'Total de Usuarios',
-                  valor: actual.total + totalUsuarios,
-                  unidad: 'usuarios'
-                })
-              }
-              break
-            }
-            case 'sesiones': {
-              const totalSesiones = (item.cantidadSesiones || item.cantidadServidores || 0)
-              if (totalSesiones > 0) {
-                const actual = metricas.get('sesiones') || { total: 0, unidad: 'sesiones' }
-                metricas.set('sesiones', {
-                  tipo: 'sesiones',
-                  label: 'Total de Sesiones',
-                  valor: actual.total + totalSesiones,
-                  unidad: 'sesiones'
-                })
-              }
-              break
-            }
-            case 'tiempo': {
-              const totalTiempo = (item.cantidadTiempo || item.cantidadServidores || 0)
-              if (totalTiempo > 0) {
-                const actual = metricas.get('tiempo') || { total: 0, unidad: 'h' }
-                metricas.set('tiempo', {
-                  tipo: 'tiempo',
-                  label: 'Total de Tiempo',
-                  valor: actual.total + totalTiempo,
-                  unidad: unidad?.abreviacion || 'h'
-                })
-              }
-              break
-            }
-            case 'cantidad':
-            default: {
-              const servidores = item.cantidadServidores || 0
-              const equipos = item.cantidadEquipos || 0
-              
-              if (servidores > 0) {
-                const actualServidores = metricas.get('servidores') || { total: 0, unidad: 'unidades' }
-                metricas.set('servidores', {
-                  tipo: 'servidores',
-                  label: 'Total de Servidores',
-                  valor: actualServidores.total + servidores,
-                  unidad: 'unidades'
-                })
-              }
-              
-              if (equipos > 0) {
-                const actualEquipos = metricas.get('equipos') || { total: 0, unidad: 'unidades' }
-                metricas.set('equipos', {
-                  tipo: 'equipos',
-                  label: 'Total de Equipos',
-                  valor: actualEquipos.total + equipos,
-                  unidad: 'unidades'
-                })
-              }
-              break
-            }
-          }
-        }
-      })
-      
-      return Array.from(metricas.values())
-    })
+   const hideToast = () => {
+     showToast.value = false
+   }
 
-    const precioMinimoAnual = computed(() => {
-      return props.serviciosSeleccionados.reduce((total, item) => {
-        const totalUnidadesItem = calcularTotalUnidades(item)
-        return total + (totalUnidadesItem * (item.servicio.precioMinimo || item.servicio.precio_minimo || 0))
-      }, 0)
-    })
+   // ✅ COMPUTED PROPERTIES CORREGIDOS
+   const mostrarResultados = computed(() => {
+     return props.serviciosSeleccionados.length > 0
+   })
 
-    const precioMinimoTotal = computed(() => {
-      return precioMinimoAnual.value * props.añosContrato
-    })
+   const fechaActual = computed(() => {
+     return new Date().toLocaleDateString('es-ES', {
+       year: 'numeric',
+       month: 'long',
+       day: 'numeric'
+     })
+   })
 
-    const precioVentaAnual = computed(() => {
-      return props.serviciosSeleccionados.reduce((total, item) => {
-        return total + calcularSubtotalAnual(item)
-      }, 0)
-    })
+   // ✅ ACTUALIZADO: Métricas dinámicas por tipo de unidad usando categorías
+   const metricasUnidades = computed(() => {
+     const metricas = new Map()
+     
+     props.serviciosSeleccionados.forEach(item => {
+       const categorias = obtenerCantidadesPorCategoria(item)
+       
+       if (categorias.length > 0) {
+         // Usar categorías si están disponibles
+         categorias.forEach(categoria => {
+           const tipoKey = categoria.tipo
+           const actual = metricas.get(tipoKey) || { total: 0, unidad: categoria.abreviacion || 'unidades' }
+           
+           metricas.set(tipoKey, {
+             tipo: tipoKey,
+             label: `Total de ${categoria.nombre}`,
+             valor: actual.total + categoria.cantidad,
+             unidad: categoria.abreviacion || (categoria.tipo === 'usuarios' ? 'usuarios' : 'unidades')
+           })
+         })
+       } else {
+         // Fallback al método tradicional
+         const tipo = obtenerTipoUnidadTradicional(item)
+         const unidad = item.servicio.unidad_medida
+         
+         switch (tipo) {
+           case 'capacidad': {
+             const totalGB = (item.cantidadGB || item.cantidadServidores || 0)
+             if (totalGB > 0) {
+               const actual = metricas.get('capacidad') || { total: 0, unidad: 'GB' }
+               metricas.set('capacidad', {
+                 tipo: 'capacidad',
+                 label: 'Total de Almacenamiento',
+                 valor: actual.total + totalGB,
+                 unidad: unidad?.abreviacion || 'GB'
+               })
+             }
+             break
+           }
+           case 'usuarios': {
+             const totalUsuarios = (item.cantidadUsuarios || item.cantidadServidores || 0)
+             if (totalUsuarios > 0) {
+               const actual = metricas.get('usuarios') || { total: 0, unidad: 'usuarios' }
+               metricas.set('usuarios', {
+                 tipo: 'usuarios',
+                 label: 'Total de Usuarios',
+                 valor: actual.total + totalUsuarios,
+                 unidad: 'usuarios'
+               })
+             }
+             break
+           }
+           case 'sesiones': {
+             const totalSesiones = (item.cantidadSesiones || item.cantidadServidores || 0)
+             if (totalSesiones > 0) {
+               const actual = metricas.get('sesiones') || { total: 0, unidad: 'sesiones' }
+               metricas.set('sesiones', {
+                 tipo: 'sesiones',
+                 label: 'Total de Sesiones',
+                 valor: actual.total + totalSesiones,
+                 unidad: 'sesiones'
+               })
+             }
+             break
+           }
+           case 'tiempo': {
+             const totalTiempo = (item.cantidadTiempo || item.cantidadServidores || 0)
+             if (totalTiempo > 0) {
+               const actual = metricas.get('tiempo') || { total: 0, unidad: 'h' }
+               metricas.set('tiempo', {
+                 tipo: 'tiempo',
+                 label: 'Total de Tiempo',
+                 valor: actual.total + totalTiempo,
+                 unidad: unidad?.abreviacion || 'h'
+               })
+             }
+             break
+           }
+           case 'cantidad':
+           default: {
+             const servidores = item.cantidadServidores || 0
+             const equipos = item.cantidadEquipos || 0
+             
+             if (servidores > 0) {
+               const actualServidores = metricas.get('servidores') || { total: 0, unidad: 'unidades' }
+               metricas.set('servidores', {
+                 tipo: 'servidores',
+                 label: 'Total de Servidores',
+                 valor: actualServidores.total + servidores,
+                 unidad: 'unidades'
+               })
+             }
+             
+             if (equipos > 0) {
+               const actualEquipos = metricas.get('equipos') || { total: 0, unidad: 'unidades' }
+               metricas.set('equipos', {
+                 tipo: 'equipos',
+                 label: 'Total de Equipos',
+                 valor: actualEquipos.total + equipos,
+                 unidad: 'unidades'
+               })
+             }
+             break
+           }
+         }
+       }
+     })
+     
+     return Array.from(metricas.values())
+   })
 
-    const precioVentaTotal = computed(() => {
-      return precioVentaAnual.value * props.añosContrato
-    })
+   // ✅ NUEVOS: Computed para precios mensuales
+   const precioMinimoMensual = computed(() => {
+     return props.serviciosSeleccionados.reduce((total, item) => {
+       const totalUnidadesItem = calcularTotalUnidades(item)
+       return total + (totalUnidadesItem * (item.servicio.precioMinimo || item.servicio.precio_minimo || 0))
+     }, 0)
+   })
 
-    const gananciaPotencial = computed(() => {
-      return Math.max(0, precioVentaTotal.value - precioMinimoTotal.value)
-    })
+   const precioVentaMensual = computed(() => {
+     return props.serviciosSeleccionados.reduce((total, item) => {
+       return total + calcularSubtotalMensual(item)
+     }, 0)
+   })
 
-    const porcentajeMargenMinimo = computed(() => {
-      if (precioMinimoTotal.value === 0) return 0
-      return Math.round(((precioVentaTotal.value - precioMinimoTotal.value) / precioMinimoTotal.value) * 100)
-    })
+   // ✅ CORREGIDOS: Computed para precios anuales
+   const precioMinimoAnual = computed(() => {
+     return precioMinimoMensual.value * 12
+   })
 
-    const hayPreciosPorDebajoMinimo = computed(() => {
-      return props.serviciosSeleccionados.some(item => {
-        const totalUnidadesItem = calcularTotalUnidades(item)
-        const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
-        return totalUnidadesItem > 0 && item.precioVentaFinal < precioMinimo
-      })
-    })
+   const precioVentaAnual = computed(() => {
+     return precioVentaMensual.value * 12
+   })
 
-    // Resto de métodos (sin cambios)
-    const reiniciar = () => {
-      mostrarToast('Iniciando nueva cotización', 'info')
-      emit('reiniciar')
-    }
+   // ✅ CORREGIDOS: Computed para totales del contrato
+   const precioMinimoTotal = computed(() => {
+     return precioMinimoAnual.value * props.añosContrato
+   })
 
-    const onLimpiarFormulario = () => {
-      mostrarToast('Formulario limpiado correctamente', 'success')
-      emit('limpiar-formulario')
-    }
+   const precioVentaTotal = computed(() => {
+     return precioVentaAnual.value * props.añosContrato
+   })
 
-    const cerrarModalConfirmacion = () => {
-      mostrarModalConfirmacion.value = false
-    }
+   const gananciaPotencial = computed(() => {
+     return Math.max(0, precioVentaTotal.value - precioMinimoTotal.value)
+   })
 
-    const exportarPDF = () => {
-      if (!precioSeleccionadoPDF.value) {
-        mostrarToast('Por favor selecciona un tipo de precio para la cotización', 'warning')
-        return
-      }
-      mostrarToast('Abriendo configuración para generar PDF', 'info')
-      mostrarModalConfirmacion.value = true
-    }
+   const porcentajeMargenMinimo = computed(() => {
+     if (precioMinimoTotal.value === 0) return 0
+     return Math.round(((precioVentaTotal.value - precioMinimoTotal.value) / precioMinimoTotal.value) * 100)
+   })
 
-    const onGenerarPDF = async (datosParaPDF) => {
-      try {
-        loading.value = true
-        loadingMessage.value = 'Generando PDF...'
-        
-        mostrarToast('Iniciando generación de PDF...', 'info')
-        console.log('🔥 ANTES DE FORMATEAR - props.serviciosSeleccionados:', props.serviciosSeleccionados)
-    console.log('🔥 PRIMER SERVICIO categoriasDetalle:', props.serviciosSeleccionados[0]?.categoriasDetalle)
+   const hayPreciosPorDebajoMinimo = computed(() => {
+     return props.serviciosSeleccionados.some(item => {
+       const totalUnidadesItem = calcularTotalUnidades(item)
+       const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
+       return totalUnidadesItem > 0 && item.precioVentaFinal < precioMinimo
+     })
+   })
 
-        const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-  props.serviciosSeleccionados, // ✅ CAMBIAR: usar props en lugar de datosParaPDF.servicios
-  datosParaPDF.cliente,
-  props.añosContrato,
-  datosParaPDF.tipoPrecio,
-  datosParaPDF.configuracionPDF,
-  datosParaPDF.comentario || ''
-)
+   // Resto de métodos (sin cambios)
+   const reiniciar = () => {
+     mostrarToast('Iniciando nueva cotización', 'info')
+     emit('reiniciar')
+   }
 
-        console.log('💾 Creando cotización en backend:', cotizacionData)
+   const onLimpiarFormulario = () => {
+     mostrarToast('Formulario limpiado correctamente', 'success')
+     emit('limpiar-formulario')
+   }
 
-        const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+   const cerrarModalConfirmacion = () => {
+     mostrarModalConfirmacion.value = false
+   }
 
-        if (!resultado.success) {
-          throw new Error(resultado.message || 'Error al crear la cotización')
-        }
+   const exportarPDF = () => {
+     if (!precioSeleccionadoPDF.value) {
+       mostrarToast('Por favor selecciona un tipo de precio para la cotización', 'warning')
+       return
+     }
+     mostrarToast('Abriendo configuración para generar PDF', 'info')
+     mostrarModalConfirmacion.value = true
+   }
 
-        const cotizacionCreada = resultado.cotizacion
-        console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
+   const onGenerarPDF = async (datosParaPDF) => {
+     try {
+       loading.value = true
+       loadingMessage.value = 'Generando PDF...'
+       
+       mostrarToast('Iniciando generación de PDF...', 'info')
+       console.log('🔥 ANTES DE FORMATEAR - props.serviciosSeleccionados:', props.serviciosSeleccionados)
+       console.log('🔥 PRIMER SERVICIO categoriasDetalle:', props.serviciosSeleccionados[0]?.categoriasDetalle)
 
-        mostrarToast('Cotización creada, generando PDF...', 'info')
+       const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+         props.serviciosSeleccionados, // ✅ CAMBIAR: usar props en lugar de datosParaPDF.servicios
+         datosParaPDF.cliente,
+         props.añosContrato,
+         datosParaPDF.tipoPrecio,
+         datosParaPDF.configuracionPDF,
+         datosParaPDF.comentario || ''
+       )
 
-        console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
-        
-        const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
+       console.log('💾 Creando cotización en backend:', cotizacionData)
 
-        if (!resultadoPDF.success) {
-          throw new Error(resultadoPDF.message || 'Error al generar el PDF')
-        }
+       const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
-        await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
+       if (!resultado.success) {
+         throw new Error(resultado.message || 'Error al crear la cotización')
+       }
 
-        let mensajeExito = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
-        
-        if (resultado.requiere_aprobacion) {
-          mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
-          mostrarToast(mensajeExito, 'warning')
-        } else {
-          mostrarToast(mensajeExito, 'success')
-        }
+       const cotizacionCreada = resultado.cotizacion
+       console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
 
-        cerrarModalConfirmacion()
-        console.log('✅ Proceso completado exitosamente')
+       mostrarToast('Cotización creada, generando PDF...', 'info')
 
-        // Limpiar formulario después del éxito
-        setTimeout(() => {
-          onLimpiarFormulario()
-        }, 2000)
+       console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
+       
+       const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
 
-      } catch (err) {
-        console.error('❌ Error en proceso de PDF:', err)
+       if (!resultadoPDF.success) {
+         throw new Error(resultadoPDF.message || 'Error al generar el PDF')
+       }
+
+       await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
+
+       let mensajeExito = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
+       
+       if (resultado.requiere_aprobacion) {
+         mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+         mostrarToast(mensajeExito, 'warning')
+       } else {
+         mostrarToast(mensajeExito, 'success')
+       }
+
+       cerrarModalConfirmacion()
+       console.log('✅ Proceso completado exitosamente')
+
+       // Limpiar formulario después del éxito
+       setTimeout(() => {
+         onLimpiarFormulario()
+       }, 2000)
+
+     } catch (err) {
+       console.error('❌ Error en proceso de PDF:', err)
        mostrarToast(err.message || 'Error al generar el PDF', 'error')
      } finally {
        loading.value = false
@@ -785,14 +808,14 @@ export default {
        loadingMessage.value = 'Guardando cotización...'
        
        mostrarToast('Guardando cotización...', 'info')
-const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-  props.serviciosSeleccionados, // ✅ CAMBIAR: usar props en lugar de datosCotizacion.servicios
-  datosCotizacion.cliente,
-  props.añosContrato,
-  datosCotizacion.tipoPrecio,
-  datosCotizacion.configuracionPDF,
-  datosCotizacion.comentario || ''
-)
+       const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+         props.serviciosSeleccionados, // ✅ CAMBIAR: usar props en lugar de datosCotizacion.servicios
+         datosCotizacion.cliente,
+         props.añosContrato,
+         datosCotizacion.tipoPrecio,
+         datosCotizacion.configuracionPDF,
+         datosCotizacion.comentario || ''
+       )
 
        console.log('💾 Guardando cotización:', cotizacionData)
 
@@ -845,9 +868,17 @@ const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
      mostrarResultados,
      fechaActual,
      metricasUnidades,
+     
+     // ✅ NUEVOS: Computed mensuales
+     precioMinimoMensual,
+     precioVentaMensual,
+     
+     // ✅ CORREGIDOS: Computed anuales
      precioMinimoAnual,
-     precioMinimoTotal,
      precioVentaAnual,
+     
+     // ✅ CORREGIDOS: Computed totales
+     precioMinimoTotal,
      precioVentaTotal,
      gananciaPotencial,
      porcentajeMargenMinimo,
@@ -859,19 +890,26 @@ const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
      obtenerCantidadesPorCategoria,
      formatearCantidadCategoria,
      obtenerIconoTipo,
-     formatearCalculoDetalleCompleto,
+     
+     // ✅ NUEVOS: Métodos de formateo de cálculos
+     formatearCalculoMensual,
+     formatearCalculoAnual,
+     formatearCalculoTotal,
      
      // ✅ MÉTODOS TRADICIONALES COMO FALLBACK
      obtenerTipoUnidadTradicional,
      obtenerIconoUnidadTradicional,
      obtenerEtiquetaPrincipalTradicional,
      formatearCantidadPrincipalTradicional,
-     formatearCalculoDetalleTradicional,
+     formatearCalculoMensualTradicional,
      calcularTotalUnidades,
      
-     // Métodos existentes
+     // ✅ NUEVOS: Métodos de cálculo corregidos
+     calcularSubtotalMensual,
      calcularSubtotalAnual,
      calcularSubtotalTotal,
+     
+     // Métodos existentes
      formatCurrency,
      reiniciar,
      onLimpiarFormulario,

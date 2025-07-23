@@ -165,6 +165,7 @@
         @update:cantidadEquipos="actualizarCantidadEquipos(servicio.servicios_id, $event)"
         @update:precioVenta="actualizarPrecioVenta(servicio.servicios_id, $event)"
         @update:cantidadesPorTipo="actualizarCantidadesPorTipo($event)"
+        @mostrar-notificacion="mostrarNotificacionHijo"
       />
     </div>
 
@@ -254,10 +255,33 @@
     </div>
   </div>
 
+  <!-- ✅ NUEVO: Mostrar errores de límites globales -->
+  <div v-if="tieneErroresGlobales" class="errores-limites">
+    <div class="error-header">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h4>Errores de Límites de Cantidad</h4>
+    </div>
+    <p>Algunos servicios tienen cantidades fuera de los límites permitidos. Corrige estos errores antes de continuar:</p>
+    <ul class="error-list">
+      <li v-for="(servicioErrores, servicioId) in validacionErrores" :key="servicioId">
+        <div v-for="(error, categoriaId) in servicioErrores" :key="categoriaId">
+          <strong v-if="!error.esValido">
+            {{ obtenerNombreServicio(servicioId) }}: {{ error.mensaje }}
+          </strong>
+        </div>
+      </li>
+    </ul>
+  </div>
+
   <div class="form-actions">
-    <button @click="calcularCotizacion" class="btn-calcular" :disabled="!hayServicios || loading">
+    <button @click="calcularCotizacion" 
+            class="btn-calcular" 
+            :disabled="!hayServicios || loading || tieneErroresGlobales">
       <i class="fas fa-calculator"></i>
       Calcular Cotización
+      <span v-if="tieneErroresGlobales" class="btn-error-badge">
+        <i class="fas fa-exclamation-circle"></i>
+      </span>
     </button>
     <button @click="limpiarFormulario" class="btn-limpiar" :disabled="loading">
       <i class="fas fa-trash-alt"></i>
@@ -287,6 +311,7 @@ import { useRoute } from 'vue-router'
 import ServicioItem from './ServicioItem.vue'
 import ResultadoCotizacion from './ResultadoCotizacion.vue'
 import serviciosService from '@/services/serviciosService'
+
 export default {
 name: 'CotizacionForm',
 components: {
@@ -320,6 +345,9 @@ setup() {
   const esDuplicacion = ref(false)
   const cotizacionOrigen = ref(null)
   
+  // ✅ NUEVOS: Estados para validación de límites
+  const validacionErrores = reactive({})
+  
   // TOAST SYSTEM
   const showToast = ref(false)
   const toastMessage = ref('')
@@ -341,6 +369,14 @@ setup() {
   // Cache para búsquedas
   const cacheResultados = reactive({})
   const timeoutBusqueda = ref(null)
+
+  // ✅ NUEVO: Computed para verificar errores de límites globales
+  const tieneErroresGlobales = computed(() => {
+    return Object.values(validacionErrores).some(servicioErrores => 
+      Object.values(servicioErrores).some(error => !error.esValido)
+    )
+  })
+
   // COMPUTED PARA TOAST
   const toastIcon = computed(() => {
     const iconos = {
@@ -351,6 +387,18 @@ setup() {
     };
     return iconos[toastType.value] || 'fas fa-info-circle';
   })
+
+  // ✅ NUEVO: Helper para obtener nombre del servicio por ID
+  const obtenerNombreServicio = (servicioId) => {
+    const servicio = servicios.value.find(s => s.servicios_id == servicioId)
+    return servicio ? servicio.nombre : `Servicio #${servicioId}`
+  }
+
+  // ✅ NUEVO: Manejar notificaciones de ServicioItem
+  const mostrarNotificacionHijo = (notificacion) => {
+    mostrarToast(notificacion.mensaje, notificacion.tipo)
+  }
+
   // MÉTODOS DE TOAST
   const mostrarToast = (mensaje, tipo = 'info') => {
     toastMessage.value = mensaje
@@ -362,13 +410,16 @@ setup() {
       hideToast()
     }, 5000)
   }
+
   const hideToast = () => {
     showToast.value = false
   }
+
   // Helper para determinar tipo de unidad de un servicio
   const obtenerTipoUnidad = (servicio) => {
     return servicio.categoria?.unidad_medida?.tipo || 'cantidad'
   }
+
   // ===== VERIFICACIÓN DE DUPLICACIÓN =====
   const verificarDuplicacion = async () => {
     console.log('🔍 Verificando si es duplicación...', route.query)
@@ -384,6 +435,7 @@ setup() {
       await cargarServicios()
     }
   }
+
   const cargarDatosParaDuplicar = async () => {
     try {
       loading.value = true
@@ -423,87 +475,137 @@ setup() {
       loadingMessage.value = ''
     }
   }
+
   // ✅ ACTUALIZADO: Precarga con manejo de categorías
-  const precargarFormulario = async (datos) => {
-    console.log('🔄 Precargando formulario con datos:', datos)
+ // ✅ ACTUALIZADO: Precarga con manejo correcto de categorías
+const precargarFormulario = async (datos) => {
+  console.log('🔄 Precargando formulario con datos:', datos)
+  
+  try {
+    // PASO 1: Configurar años del contrato
+    if (datos.servicios && datos.servicios.length > 0) {
+      añosContrato.value = datos.servicios[0].cantidadAnos || 1
+    }
     
-    try {
-      // PASO 1: Configurar años del contrato
-      if (datos.servicios && datos.servicios.length > 0) {
-        añosContrato.value = datos.servicios[0].cantidadAnos || 1
-      }
-      
-      // PASO 2: Precargar servicios usando datos directos
-      if (datos.servicios && datos.servicios.length > 0) {
-        for (const servicioData of datos.servicios) {
-          const servicioId = servicioData.id
+    // PASO 2: Precargar servicios usando datos directos del controller
+    if (datos.servicios && datos.servicios.length > 0) {
+      for (const servicioData of datos.servicios) {
+        const servicioId = servicioData.id
+        
+        const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+        
+        if (servicioExistente) {
+          console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
+          console.log(`📊 Datos del controller:`, servicioData)
           
-          const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+          // Configurar valores legacy para compatibilidad
+          cantidades[servicioId] = servicioData.cantidadServicios || 0
+          cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
+          preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
           
-          if (servicioExistente) {
-            console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
-            
-            // Configurar cantidad principal (para compatibilidad)
-            cantidades[servicioId] = servicioData.cantidadServicios || 0
-            cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
-            preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
-            
-            // ✅ NUEVO: Configurar cantidades por categoría si están disponibles
-            if (servicioData.cantidadesPorCategoria) {
-              cantidadesPorCategoria[servicioId] = { ...servicioData.cantidadesPorCategoria }
+          // ✅ CORRECCIÓN PRINCIPAL: Mapear categoriaId y cantidadPorCategoria
+          if (servicioData.categoriaId && servicioData.cantidadPorCategoria > 0) {
+            // Inicializar objeto si no existe
+            if (!cantidadesPorCategoria[servicioId]) {
+              cantidadesPorCategoria[servicioId] = {}
             }
             
-            console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
-              cantidadPrincipal: cantidades[servicioId],
-              cantidadEquipos: cantidadesEquipos[servicioId],
-              precioUsado: preciosVenta[servicioId],
+            // Mapear la cantidad por categoría usando el categoriaId
+            cantidadesPorCategoria[servicioId][servicioData.categoriaId] = servicioData.cantidadPorCategoria
+            
+            console.log(`✅ Cantidad por categoría mapeada:`, {
+              servicioId,
+              categoriaId: servicioData.categoriaId,
+              cantidad: servicioData.cantidadPorCategoria,
               cantidadesPorCategoria: cantidadesPorCategoria[servicioId]
             })
+            
+            // ✅ NUEVO: Guardar los detalles de la categoría para el componente
+            if (!window.categoriasDetallePorServicio) {
+              window.categoriasDetallePorServicio = {}
+            }
+            
+            if (!window.categoriasDetallePorServicio[servicioId]) {
+              window.categoriasDetallePorServicio[servicioId] = []
+            }
+            
+            // Crear detalle de categoría con la información completa
+            const detalleCategoria = {
+              id: servicioData.categoriaId,
+              categorias_id: servicioData.categoriaId,
+              nombre: servicioExistente.categoria?.nombre || 'Categoría Principal',
+              unidad_id: servicioData.unidadMedida?.id,
+              unidad_nombre: servicioData.unidadMedida?.nombre || 'Unidad',
+              unidad_tipo: servicioData.unidadMedida?.tipo || 'cantidad',
+              unidad_abreviacion: servicioData.unidadMedida?.abreviacion || '',
+              cantidad: servicioData.cantidadPorCategoria
+            }
+            
+            window.categoriasDetallePorServicio[servicioId].push(detalleCategoria)
+            
+            console.log(`📋 Detalle de categoría guardado:`, detalleCategoria)
           }
+          
+          console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
+            cantidadPrincipal: cantidades[servicioId],
+            cantidadEquipos: cantidadesEquipos[servicioId],
+            precioUsado: preciosVenta[servicioId],
+            cantidadesPorCategoria: cantidadesPorCategoria[servicioId],
+            categoriasDetalle: window.categoriasDetallePorServicio?.[servicioId]
+          })
+        } else {
+          console.warn(`⚠️ Servicio con ID ${servicioId} no encontrado`)
         }
       }
-      
-      await nextTick()
-      console.log('✅ Formulario precargado exitosamente')
-      
-    } catch (error) {
-      console.error('❌ Error precargando formulario:', error)
-      mostrarToast('Error precargando formulario', 'error')
-      throw error
     }
+    
+    // ✅ PASO 3: Forzar re-render de los componentes ServicioItem
+    formularioKey.value++
+    
+    await nextTick()
+    console.log('✅ Formulario precargado exitosamente')
+    console.log('📊 Estado final de cantidadesPorCategoria:', cantidadesPorCategoria)
+    
+  } catch (error) {
+    console.error('❌ Error precargando formulario:', error)
+    mostrarToast('Error precargando formulario', 'error')
+    throw error
   }
+}
+
   // Función para resetear paginación
   const resetearPaginacion = () => {
     paginaActual.value = 1
     paginaInput.value = 1
   }
+
   // ===== FUNCIÓN CARGAR SERVICIOS =====
- const cargarServicios = async (params = {}) => {
-  try {
-    console.log('🔄 Iniciando carga de servicios...')
-    const resultado = await serviciosService.getServiciosWithExpandedCategories({
-      estado: 'activo',
-      limit: 100,
-      ...params
-    })
-    if (resultado.success) {
-      servicios.value = resultado.servicios
-      serviciosOriginales.value = [...servicios.value]
-      
-      // 🔥 DEBUG TEMPORAL - AGREGAR ESTO
-      console.log('🔥 ESTRUCTURA DE SERVICIOS CARGADOS:', servicios.value)
-      if (servicios.value.length > 0) {
-        console.log('🔥 PRIMER SERVICIO DETALLADO:', servicios.value[0])
-        console.log('🔥 CATEGORIAS_COMPLETAS:', servicios.value[0].categorias_completas)
+  const cargarServicios = async (params = {}) => {
+    try {
+      console.log('🔄 Iniciando carga de servicios...')
+      const resultado = await serviciosService.getServiciosWithExpandedCategories({
+        estado: 'activo',
+        limit: 100,
+        ...params
+      })
+      if (resultado.success) {
+        servicios.value = resultado.servicios
+        serviciosOriginales.value = [...servicios.value]
+        
+        console.log('🔥 ESTRUCTURA DE SERVICIOS CARGADOS:', servicios.value)
+        if (servicios.value.length > 0) {
+          console.log('🔥 PRIMER SERVICIO DETALLADO:', servicios.value[0])
+          console.log('🔥 CATEGORIAS_COMPLETAS:', servicios.value[0].categorias_completas)
+        }
+        
+        inicializarDatos()
+        console.log('✅ Servicios cargados:', servicios.value.length)
       }
-      
-      inicializarDatos()
-      console.log('✅ Servicios cargados:', servicios.value.length)
+    } catch (err) {
+      console.error('❌ Error cargando servicios:', err)
     }
-  } catch (err) {
-    console.error('❌ Error cargando servicios:', err)
   }
-}
+
   // ===== FUNCIÓN BUSCAR =====
   const buscarServicios = async () => {
     const termino = filtros.busqueda.trim()
@@ -545,22 +647,27 @@ setup() {
       }
     }, 300)
   }
+
   // Función para aplicar filtros locales
   const aplicarFiltros = () => {
     resetearPaginacion()
   }
+
   // Función para filtrar por categoría
   const filtrarPorCategoria = () => {
     aplicarFiltros()
   }
+
   // Función para filtrar por tipo de unidad
   const filtrarPorTipoUnidad = () => {
     aplicarFiltros()
   }
+
   // Función para filtrar por precio
   const filtrarPorPrecio = () => {
     aplicarFiltros()
   }
+
   // Función para inicializar datos reactivos
   const inicializarDatos = () => {
     servicios.value.forEach(servicio => {
@@ -574,11 +681,13 @@ setup() {
       }
     })
   }
+
   // Función recargar servicios
   const recargarServicios = () => {
     mostrarToast('Recargando servicios...', 'info')
     cargarServicios()
   }
+
   // ✅ NUEVO: Computed properties con tipo de unidad
   const categoriasDisponibles = computed(() => {
     const categorias = [...new Set(servicios.value.map(s => s.categoria?.nombre || 'Sin categoría'))]
@@ -587,6 +696,7 @@ setup() {
       label: cat
     })).sort((a, b) => a.label.localeCompare(b.label))
   })
+
   // Tipos de unidad disponibles
   const tiposUnidadDisponibles = computed(() => {
     const tipos = [...new Set(servicios.value.map(s => s.categoria?.unidad_medida?.tipo || 'cantidad'))]
@@ -604,6 +714,7 @@ setup() {
       label: etiquetas[tipo] || tipo
     })).sort((a, b) => a.label.localeCompare(b.label))
   })
+
   const serviciosFiltrados = computed(() => {
     let filtrados = [...servicios.value]
     if (filtros.categoria) {
@@ -633,14 +744,17 @@ setup() {
     }
     return filtrados
   })
+
   const totalPaginas = computed(() => {
     return Math.ceil(serviciosFiltrados.value.length / serviciosPorPagina.value)
   })
+
   const serviciosPaginados = computed(() => {
     const inicio = (paginaActual.value - 1) * serviciosPorPagina.value
     const fin = inicio + serviciosPorPagina.value
     return serviciosFiltrados.value.slice(inicio, fin)
   })
+
   const paginasVisibles = computed(() => {
     const total = totalPaginas.value
     const actual = paginaActual.value
@@ -660,50 +774,60 @@ setup() {
     }
     return paginas
   })
+
   const hayFiltrosActivos = computed(() => {
     return filtros.busqueda || filtros.categoria || filtros.tipoUnidad || filtros.rangoPrecio
   })
-  // ✅ CORREGIDO: Verificar servicios usando cantidades por categoría
+
+  // ✅ ACTUALIZADO: Verificar servicios usando cantidades por categoría y validación
   const hayServicios = computed(() => {
     // Verificar si hay cantidades por categoría
     const cantidadesPorCategoriaTotales = Object.values(cantidadesPorCategoria).some(categoriasServicio => 
       Object.values(categoriasServicio).some(cantidad => cantidad > 0)
     )
     
-    return cantidadesPorCategoriaTotales
+    // No permitir calcular si hay errores de límites
+    return cantidadesPorCategoriaTotales && !tieneErroresGlobales.value
   })
-  // ✅ ACTUALIZADO: Método para actualizar cantidades por categoría
+
+  // ✅ ACTUALIZADO: Método para actualizar cantidades por categoría con validación
   const actualizarCantidadesPorTipo = (datosActualizacion) => {
-    const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle } = datosActualizacion
+    const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle, validacion } = datosActualizacion
     
     console.log(`📊 Actualizando cantidades para servicio ${servicioId}:`, categorias)
     
     // Actualizar cantidades por categoría
     cantidadesPorCategoria[servicioId] = { ...categorias }
     
+    // ✅ NUEVO: Guardar errores de validación
+    if (validacion) {
+      validacionErrores[servicioId] = validacion.errores || {}
+    }
+    
     // ✅ NUEVO: Guardar detalles de categorías para el resultado
     if (!window.categoriasDetallePorServicio) {
       window.categoriasDetallePorServicio = {}
     }
     window.categoriasDetallePorServicio[servicioId] = categoriasDetalle || []
-    
-    console.log(`✅ Categorías detalladas guardadas:`, window.categoriasDetallePorServicio[servicioId])
-  }
-  // Métodos existentes
-  const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
-    cantidadesEquipos[servicioId] = nuevaCantidad || 0
-  }
-  
-  const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
-    preciosVenta[servicioId] = nuevoPrecio || 0
-  }
-  
-  const incrementarAños = () => {
-    if (añosContrato.value < 10) {
-      añosContrato.value++
-    }
-  }
-  
+   
+   console.log(`✅ Categorías detalladas guardadas:`, window.categoriasDetallePorServicio[servicioId])
+ }
+
+ // Métodos existentes
+ const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
+   cantidadesEquipos[servicioId] = nuevaCantidad || 0
+ }
+ 
+ const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
+   preciosVenta[servicioId] = nuevoPrecio || 0
+ }
+ 
+ const incrementarAños = () => {
+   if (añosContrato.value < 10) {
+     añosContrato.value++
+   }
+ }
+ 
  const decrementarAños = () => {
    if (añosContrato.value > 1) {
      añosContrato.value--
@@ -717,12 +841,14 @@ setup() {
      añosContrato.value = 10
    }
  }
+
  const limpiarBusqueda = () => {
    filtros.busqueda = ''
    servicios.value = [...serviciosOriginales.value]
    aplicarFiltros()
    mostrarToast('Búsqueda limpiada', 'info')
  }
+
  const limpiarFiltros = () => {
    filtros.busqueda = ''
    filtros.categoria = ''
@@ -732,6 +858,7 @@ setup() {
    resetearPaginacion()
    mostrarToast('Filtros limpiados', 'info')
  }
+
  const cambiarPagina = (pagina) => {
    if (pagina >= 1 && pagina <= totalPaginas.value) {
      paginaActual.value = pagina
@@ -744,1118 +871,1198 @@ setup() {
      })
    }
  }
+
  const irAPagina = () => {
    if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
      cambiarPagina(paginaInput.value)
-     } else {
-    mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
-    paginaInput.value = paginaActual.value
-  }
-}
-// ✅ FUNCIÓN PRINCIPAL CORREGIDA: calcularCotizacion con cantidades por categoría
-const calcularCotizacion = () => {
- serviciosSeleccionados.value = servicios.value
-   .filter(servicio => {
-     const id = servicio.servicios_id
-     const categorias = cantidadesPorCategoria[id] || {}
-     const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
-     return tieneCantidades
-   })
-   .map(servicio => {
-     const id = servicio.servicios_id
-     const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
-     const categorias = cantidadesPorCategoria[id] || {}
-     
-     // ✅ OBTENER DETALLES DE CATEGORÍAS
-     const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
-     
-     console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
-       categorias,
-       categoriasDetalle
-     })
-     
-     // ✅ CREAR OBJETO BASE CON CANTIDADES INICIALIZADAS
-     const datosServicio = {
-       servicio: {
-         servicios_id: id,
-         nombre: servicio.nombre,
-         categoria: servicio.categoria?.nombre || 'Sin categoría',
-         precioMinimo: servicio.precio_minimo,
-         precio_recomendado: servicio.precio_recomendado,
-         descripcion: servicio.descripcion,
-         unidad_medida: servicio.categoria?.unidad_medida
-       },
-       precioVentaFinal,
-       añosContrato: añosContrato.value
-     }
-     
-     // ✅ INICIALIZAR CANTIDADES CON VALORES QUE SERÁN ACTUALIZADOS
-     let cantidadServidores = 0
-     let cantidadEquipos = 0
-     let cantidadGb = 0
-     let cantidadUsuarios = 0
-     let cantidadSesiones = 0
-     let cantidadTiempo = 0
-     
-     // ✅ MAPEAR CATEGORÍAS A CAMPOS ESPECÍFICOS
-     categoriasDetalle.forEach(categoria => {
-       if (categoria.cantidad > 0) {
-         console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
-         
-         switch (categoria.unidad_tipo) {
-           case 'capacidad':
-             cantidadGb = categoria.cantidad
-             cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-             break
-           case 'usuarios':
-             cantidadUsuarios = categoria.cantidad
-             cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-             break
-           case 'sesiones':
-             cantidadSesiones = categoria.cantidad
-             cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-             break
-           case 'tiempo':
-             cantidadTiempo = categoria.cantidad
-             cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
-             break
-           case 'cantidad':
-           default:
-             if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
-               cantidadEquipos = categoria.cantidad
-             } else {
-               cantidadServidores = categoria.cantidad
-             }
-             break
-         }
-       }
-     })
-     
-     // ✅ ASIGNAR LAS CANTIDADES FINALES AL OBJETO
-     datosServicio.cantidadServidores = cantidadServidores
-     datosServicio.cantidadEquipos = cantidadEquipos
-     datosServicio.cantidadGb = cantidadGb
-     datosServicio.cantidadUsuarios = cantidadUsuarios
-     datosServicio.cantidadSesiones = cantidadSesiones
-     datosServicio.cantidadTiempo = cantidadTiempo
-     
-     // ✅ DATOS PARA EL FRONTEND
-     datosServicio.cantidadesPorCategoria = categorias
-     datosServicio.categoriasDetalle = categoriasDetalle
-     datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
-     
-     console.log(`🔥 SERVICIO FINAL PARA BACKEND:`, datosServicio)
-     return datosServicio
-   })
- console.log('🔥 SERVICIOS FINALES PARA BACKEND:', serviciosSeleccionados.value)
- 
- if (serviciosSeleccionados.value.length > 0) {
-   mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
- } else {
-   mostrarToast('Debes seleccionar al menos un servicio', 'warning')
+   } else {
+     mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
+     paginaInput.value = paginaActual.value
+   }
  }
-}
-// Al final del método calcularCotizacion() en CotizacionForm.vue:
-console.log('🔥 DEBUG FINAL - serviciosSeleccionados:', JSON.stringify(serviciosSeleccionados.value, null, 2))
 
-// ✅ MÉTODO CORREGIDO: limpiarFormulario con key reactivo
-const limpiarFormulario = () => {
-  servicios.value.forEach(servicio => {
-    const id = servicio.servicios_id
-    cantidades[id] = 0
-    cantidadesEquipos[id] = 0
-    preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-    // ✅ LIMPIAR: Cantidades por categoría
-    cantidadesPorCategoria[id] = {}
-  })
-  
-  serviciosSeleccionados.value = []
-  añosContrato.value = 1
-  esDuplicacion.value = false
-  cotizacionOrigen.value = null
-  
-  // ✅ LIMPIAR: Datos de categorías detalladas
-  if (window.categoriasDetallePorServicio) {
-    window.categoriasDetallePorServicio = {}
-  }
-  
-  // ✅ FORZAR RE-RENDER de todos los ServicioItem
-  formularioKey.value++
-  
-  console.log('🧹 Formulario limpiado completamente')
-  mostrarToast('Formulario limpiado correctamente', 'success')
-}
-// ===== CICLO DE VIDA =====
-onMounted(async () => {
-  console.log('🚀 Componente montado')
-  console.log('🔍 Query params:', route.query)
-  
-  await verificarDuplicacion()
-})
-// Watchers
-watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
-  if (filtros.busqueda) {
-    const terminoBusqueda = filtros.busqueda
-    filtros.busqueda = ''
-    nextTick(() => {
-      filtros.busqueda = terminoBusqueda
-      buscarServicios()
-    })
-  }
-})
-watch(paginaActual, (newVal) => {
-  paginaInput.value = newVal
-})
-return {
-  // Estados
-  servicios,
-  serviciosOriginales,
-  loading,
-  loadingServicios,
-  loadingMessage,
-  cantidades,
-  cantidadesEquipos,
-  preciosVenta,
-  serviciosSeleccionados,
-  añosContrato,
-  filtros,
-  paginaActual,
-  serviciosPorPagina,
-  paginaInput,
-  
-  // ✅ NUEVOS: Estados de cantidades por categoría
-  cantidadesPorCategoria,
-  formularioKey, // ✅ NUEVO: Key reactivo
-  
-  // Estados de duplicación
-  esDuplicacion,
-  cotizacionOrigen,
-  
-  // TOAST STATES
-  showToast,
-  toastMessage,
-  toastType,
-  
-  // Computed
-  categoriasDisponibles,
-  tiposUnidadDisponibles,
-  serviciosFiltrados,
-  totalPaginas,
-  serviciosPaginados,
-  paginasVisibles,
-  hayFiltrosActivos,
-  hayServicios,
-  toastIcon,
-  
-  // Funciones
-  cargarServicios,
-  buscarServicios,
-  aplicarFiltros,
-  filtrarPorCategoria,
-  filtrarPorTipoUnidad,
-  filtrarPorPrecio,
-  inicializarDatos,
-  recargarServicios,
-  resetearPaginacion,
-  actualizarCantidadEquipos,
-  actualizarPrecioVenta,
-  incrementarAños,
-  decrementarAños,
-  validarAños,
-  limpiarBusqueda,
-  limpiarFiltros,
-  cambiarPagina,
-  irAPagina,
-  calcularCotizacion,
-  limpiarFormulario,
-  
-  // ✅ NUEVO: Función para manejar cantidades por categoría
-  actualizarCantidadesPorTipo,
-  
-  // Funciones de duplicación
-  verificarDuplicacion,
-  cargarDatosParaDuplicar,
-  precargarFormulario,
-  
-  // TOAST METHODS
-  mostrarToast,
-  hideToast,
-  
-  // HELPERS
-  obtenerTipoUnidad
-}
+ // ✅ ACTUALIZADO: calcularCotizacion con validación de límites
+ const calcularCotizacion = () => {
+   // Verificar errores de límites antes de proceder
+   if (tieneErroresGlobales.value) {
+     mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
+     return
+   }
+
+   serviciosSeleccionados.value = servicios.value
+     .filter(servicio => {
+       const id = servicio.servicios_id
+       const categorias = cantidadesPorCategoria[id] || {}
+       const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
+       return tieneCantidades
+     })
+     .map(servicio => {
+       const id = servicio.servicios_id
+       const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
+       const categorias = cantidadesPorCategoria[id] || {}
+       
+       // ✅ OBTENER DETALLES DE CATEGORÍAS
+       const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
+       
+       console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
+         categorias,
+         categoriasDetalle
+       })
+       
+       // ✅ CREAR OBJETO BASE CON CANTIDADES INICIALIZADAS
+       const datosServicio = {
+         servicio: {
+           servicios_id: id,
+           nombre: servicio.nombre,
+           categoria: servicio.categoria?.nombre || 'Sin categoría',
+           precioMinimo: servicio.precio_minimo,
+           precio_recomendado: servicio.precio_recomendado,
+           descripcion: servicio.descripcion,
+           unidad_medida: servicio.categoria?.unidad_medida
+         },
+         precioVentaFinal,
+         añosContrato: añosContrato.value
+       }
+       
+       // ✅ INICIALIZAR CANTIDADES CON VALORES QUE SERÁN ACTUALIZADOS
+       let cantidadServidores = 0
+       let cantidadEquipos = 0
+       let cantidadGb = 0
+       let cantidadUsuarios = 0
+       let cantidadSesiones = 0
+       let cantidadTiempo = 0
+       
+       // ✅ MAPEAR CATEGORÍAS A CAMPOS ESPECÍFICOS
+       categoriasDetalle.forEach(categoria => {
+         if (categoria.cantidad > 0) {
+           console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
+           
+           switch (categoria.unidad_tipo) {
+             case 'capacidad':
+               cantidadGb = categoria.cantidad
+               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+               break
+             case 'usuarios':
+               cantidadUsuarios = categoria.cantidad
+               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+               break
+             case 'sesiones':
+               cantidadSesiones = categoria.cantidad
+               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+               break
+             case 'tiempo':
+               cantidadTiempo = categoria.cantidad
+               cantidadServidores = categoria.cantidad // Para compatibilidad con fallback
+               break
+             case 'cantidad':
+             default:
+               if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
+                 cantidadEquipos = categoria.cantidad
+               } else {
+                 cantidadServidores = categoria.cantidad
+               }
+               break
+           }
+         }
+       })
+       
+       // ✅ ASIGNAR LAS CANTIDADES FINALES AL OBJETO
+       datosServicio.cantidadServidores = cantidadServidores
+       datosServicio.cantidadEquipos = cantidadEquipos
+       datosServicio.cantidadGb = cantidadGb
+       datosServicio.cantidadUsuarios = cantidadUsuarios
+       datosServicio.cantidadSesiones = cantidadSesiones
+       datosServicio.cantidadTiempo = cantidadTiempo
+       
+       // ✅ DATOS PARA EL FRONTEND
+       datosServicio.cantidadesPorCategoria = categorias
+       datosServicio.categoriasDetalle = categoriasDetalle
+       datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
+       
+       console.log(`🔥 SERVICIO FINAL PARA BACKEND:`, datosServicio)
+       return datosServicio
+     })
+
+   console.log('🔥 SERVICIOS FINALES PARA BACKEND:', serviciosSeleccionados.value)
+   
+   if (serviciosSeleccionados.value.length > 0) {
+     mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
+   } else {
+     mostrarToast('Debes seleccionar al menos un servicio', 'warning')
+   }
+ }
+
+ // ✅ MÉTODO CORREGIDO: limpiarFormulario con key reactivo
+ const limpiarFormulario = () => {
+   servicios.value.forEach(servicio => {
+     const id = servicio.servicios_id
+     cantidades[id] = 0
+     cantidadesEquipos[id] = 0
+     preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+     // ✅ LIMPIAR: Cantidades por categoría
+     cantidadesPorCategoria[id] = {}
+   })
+   
+   serviciosSeleccionados.value = []
+   añosContrato.value = 1
+   esDuplicacion.value = false
+   cotizacionOrigen.value = null
+   
+   // ✅ LIMPIAR: Datos de categorías detalladas
+   if (window.categoriasDetallePorServicio) {
+     window.categoriasDetallePorServicio = {}
+   }
+   
+   // ✅ LIMPIAR: Errores de validación
+   Object.keys(validacionErrores).forEach(key => {
+     delete validacionErrores[key]
+   })
+   
+   // ✅ FORZAR RE-RENDER de todos los ServicioItem
+   formularioKey.value++
+   
+   console.log('🧹 Formulario limpiado completamente')
+   mostrarToast('Formulario limpiado correctamente', 'success')
+ }
+
+ // ===== CICLO DE VIDA =====
+ onMounted(async () => {
+   console.log('🚀 Componente montado')
+   console.log('🔍 Query params:', route.query)
+   
+   await verificarDuplicacion()
+ })
+
+ // Watchers
+ watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
+   if (filtros.busqueda) {
+     const terminoBusqueda = filtros.busqueda
+     filtros.busqueda = ''
+     nextTick(() => {
+       filtros.busqueda = terminoBusqueda
+       buscarServicios()
+     })
+   }
+ })
+
+ watch(paginaActual, (newVal) => {
+   paginaInput.value = newVal
+ })
+
+ return {
+   // Estados
+   servicios,
+   serviciosOriginales,
+   loading,
+   loadingServicios,
+   loadingMessage,
+   cantidades,
+   cantidadesEquipos,
+   preciosVenta,
+   serviciosSeleccionados,
+   añosContrato,
+   filtros,
+   paginaActual,
+   serviciosPorPagina,
+   paginaInput,
+   
+   // ✅ NUEVOS: Estados de cantidades por categoría
+   cantidadesPorCategoria,
+   formularioKey,
+   
+   // ✅ NUEVOS: Estados de validación
+   validacionErrores,
+   tieneErroresGlobales,
+   
+   // Estados de duplicación
+   esDuplicacion,
+   cotizacionOrigen,
+   
+   // TOAST STATES
+   showToast,
+   toastMessage,
+   toastType,
+   
+   // Computed
+   categoriasDisponibles,
+   tiposUnidadDisponibles,
+   serviciosFiltrados,
+   totalPaginas,
+   serviciosPaginados,
+   paginasVisibles,
+   hayFiltrosActivos,
+   hayServicios,
+   toastIcon,
+   
+   // Funciones
+   cargarServicios,
+   buscarServicios,
+   aplicarFiltros,
+   filtrarPorCategoria,
+   filtrarPorTipoUnidad,
+   filtrarPorPrecio,
+   inicializarDatos,
+   recargarServicios,
+   resetearPaginacion,
+   actualizarCantidadEquipos,
+   actualizarPrecioVenta,
+   incrementarAños,
+   decrementarAños,
+   validarAños,
+   limpiarBusqueda,
+   limpiarFiltros,
+   cambiarPagina,
+   irAPagina,
+   calcularCotizacion,
+   limpiarFormulario,
+   
+   // ✅ NUEVO: Función para manejar cantidades por categoría
+   actualizarCantidadesPorTipo,
+   
+   // Funciones de duplicación
+   verificarDuplicacion,
+   cargarDatosParaDuplicar,
+   precargarFormulario,
+   
+   // TOAST METHODS
+   mostrarToast,
+   hideToast,
+   
+   // ✅ NUEVOS: Funciones de validación
+   obtenerNombreServicio,
+   mostrarNotificacionHijo,
+   
+   // HELPERS
+   obtenerTipoUnidad
+ }
 }
 }
 </script>
 
 <style scoped>
-/* Estilos para el nuevo filtro de unidades */
-.unidades-filter {
-display: flex;
-flex-direction: column;
+/* ✅ NUEVOS ESTILOS para errores de validación */
+
+/* Errores de límites globales */
+.errores-limites {
+ background: linear-gradient(135deg, #f8d7da, #f5c2c7);
+ border: 1px solid #dc3545;
+ border-radius: 8px;
+ padding: 1rem;
+ margin-bottom: 1rem;
+ color: #721c24;
+ box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
 }
 
-.unidades-filter label {
-display: flex;
-align-items: center;
-gap: 0.5rem;
-margin-bottom: 0.5rem;
-font-weight: 600;
-color: #495057;
-font-size: 0.9rem;
+.error-header {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin-bottom: 0.75rem;
 }
 
-.unidades-filter label i {
-color: #6c757d;
+.error-header i {
+ color: #dc3545;
+ font-size: 1.2rem;
 }
 
-.select-unidad {
-width: 100%;
-padding: 0.75rem;
-border: 2px solid #e9ecef;
-border-radius: 8px;
-font-size: 1rem;
-background: white;
-color: #495057;
-transition: all 0.2s;
+.error-header h4 {
+ margin: 0;
+ color: #721c24;
+ font-weight: 600;
 }
 
-.select-unidad:focus {
-outline: none;
-border-color: #007bff;
-box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+.errores-limites p {
+ margin: 0 0 0.75rem 0;
+ font-weight: 500;
+ line-height: 1.4;
 }
 
-/* Actualizar grid de filtros para incluir el nuevo filtro */
-.filtros-content {
-display: grid;
-grid-template-columns: 2fr 1fr 1fr 1fr auto;
-gap: 1rem;
-align-items: end;
+.error-list {
+ margin: 0;
+ padding-left: 1.5rem;
 }
 
-/* Responsive para el nuevo filtro */
-@media (max-width: 1200px) {
-.filtros-content {
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+.error-list li {
+ margin-bottom: 0.5rem;
 }
 
-.busqueda-container {
-  grid-column: 1 / -1;
+.error-list li div {
+ margin-bottom: 0.25rem;
 }
 
-.filtros-actions {
-  grid-column: 1 / -1;
-  text-align: center;
-}
-}
-
-@media (max-width: 768px) {
-.filtros-content {
-  grid-template-columns: 1fr;
-}
+.error-list strong {
+ font-weight: 600;
+ color: #721c24;
 }
 
-/* MANTENER TODOS LOS DEMÁS ESTILOS EXISTENTES... */
+/* Badge de error en botón calcular */
+.btn-error-badge {
+ margin-left: 0.5rem;
+ background: rgba(255, 255, 255, 0.2);
+ padding: 0.2rem 0.4rem;
+ border-radius: 50%;
+ font-size: 0.8rem;
+ animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+ 0% {
+   opacity: 1;
+ }
+ 50% {
+   opacity: 0.5;
+ }
+ 100% {
+   opacity: 1;
+ }
+}
+
+/* Estado deshabilitado mejorado para botón calcular */
+.btn-calcular:disabled {
+ background: linear-gradient(135deg, #6c757d, #adb5bd);
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ position: relative;
+}
+
+.btn-calcular:disabled:hover {
+ background: linear-gradient(135deg, #6c757d, #adb5bd);
+ transform: none;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* MANTENER TODOS LOS ESTILOS EXISTENTES... */
 .cotizacion-form-container {
-width: 100%;
-max-width: 1400px;
-margin: 0 auto;
-padding: 0;
-box-sizing: border-box;
+ width: 100%;
+ max-width: 1400px;
+ margin: 0 auto;
+ padding: 0;
+ box-sizing: border-box;
 }
 
 /* Loading overlay */
 .loading-overlay {
-position: fixed;
-top: 0;
-left: 0;
-width: 100vw;
-height: 100vh;
-background: rgba(0, 0, 0, 0.7);
-display: flex;
-justify-content: center;
-align-items: center;
-z-index: 9999;
-backdrop-filter: blur(3px);
+ position: fixed;
+ top: 0;
+ left: 0;
+ width: 100vw;
+ height: 100vh;
+ background: rgba(0, 0, 0, 0.7);
+ display: flex;
+ justify-content: center;
+ align-items: center;
+ z-index: 9999;
+ backdrop-filter: blur(3px);
 }
 
 .loading-spinner {
-text-align: center;
-color: white;
+ text-align: center;
+ color: white;
 }
 
 .loading-spinner i {
-font-size: 3rem;
-margin-bottom: 1rem;
-animation: spin 1s linear infinite;
+ font-size: 3rem;
+ margin-bottom: 1rem;
+ animation: spin 1s linear infinite;
 }
 
 .loading-spinner p {
-font-size: 1.1rem;
-margin: 0;
+ font-size: 1.1rem;
+ margin: 0;
 }
 
 @keyframes spin {
-from { transform: rotate(0deg); }
-to { transform: rotate(360deg); }
+ from { transform: rotate(0deg); }
+ to { transform: rotate(360deg); }
 }
 
 /* Años selector - Más sobrio */
 .años-selector {
-background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-border-radius: 12px;
-padding: 1.5rem;
-margin-bottom: 2rem;
-border: 1px solid #dee2e6;
-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+ background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+ border-radius: 12px;
+ padding: 1.5rem;
+ margin-bottom: 2rem;
+ border: 1px solid #dee2e6;
+ box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .años-container {
-text-align: center;
+ text-align: center;
 }
 
 .años-container label {
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 0.5rem;
-color: #495057;
-font-size: clamp(1rem, 3vw, 1.2rem);
-font-weight: 600;
-margin-bottom: 1rem;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+ color: #495057;
+ font-size: clamp(1rem, 3vw, 1.2rem);
+ font-weight: 600;
+ margin-bottom: 1rem;
 }
 
 .años-container label i {
-color: #6c757d;
-font-size: 1.1em;
+ color: #6c757d;
+ font-size: 1.1em;
 }
 
 .años-controls {
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 1rem;
-margin-bottom: 0.75rem;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 1rem;
+ margin-bottom: 0.75rem;
 }
 
 .btn-años {
-width: 3rem;
-height: 3rem;
-border: 2px solid #6c757d;
-background: white;
-color: #495057;
-border-radius: 8px;
-cursor: pointer;
-font-size: 1.2rem;
-font-weight: bold;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: all 0.3s ease;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ width: 3rem;
+ height: 3rem;
+ border: 2px solid #6c757d;
+ background: white;
+ color: #495057;
+ border-radius: 8px;
+ cursor: pointer;
+ font-size: 1.2rem;
+ font-weight: bold;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ transition: all 0.3s ease;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-años:hover:not(:disabled) {
-background: #f8f9fa;
-border-color: #495057;
-transform: translateY(-1px);
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+ background: #f8f9fa;
+ border-color: #495057;
+ transform: translateY(-1px);
+ box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-años:disabled {
-opacity: 0.4;
-cursor: not-allowed;
-transform: none;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-color: #adb5bd;
-border-color: #dee2e6;
+ opacity: 0.4;
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ color: #adb5bd;
+ border-color: #dee2e6;
 }
 
 .input-años {
-width: 4rem;
-height: 3rem;
-text-align: center;
-border: 2px solid #ced4da;
-border-radius: 8px;
-font-size: 1.3rem;
-font-weight: 600;
-background: white;
-color: #495057;
-box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+ width: 4rem;
+ height: 3rem;
+ text-align: center;
+ border: 2px solid #ced4da;
+ border-radius: 8px;
+ font-size: 1.3rem;
+ font-weight: 600;
+ background: white;
+ color: #495057;
+ box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .input-años:focus {
-outline: none;
-border-color: #007bff;
-box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+ outline: none;
+ border-color: #007bff;
+ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
 }
 
 .años-info {
-color: #6c757d;
-font-size: clamp(0.85rem, 2.5vw, 1rem);
-font-style: normal;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 0.5rem;
+ color: #6c757d;
+ font-size: clamp(0.85rem, 2.5vw, 1rem);
+ font-style: normal;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
 }
 
 .años-info i {
-color: #007bff;
-font-size: 0.9em;
+ color: #007bff;
+ font-size: 0.9em;
 }
 
 /* Filtros - Diseño corporativo */
 .filtros-container {
-background: white;
-border-radius: 12px;
-padding: 1.5rem;
-margin-bottom: 2rem;
-border: 1px solid #dee2e6;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+ background: white;
+ border-radius: 12px;
+ padding: 1.5rem;
+ margin-bottom: 2rem;
+ border: 1px solid #dee2e6;
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .filtros-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 1rem;
-padding-bottom: 1rem;
-border-bottom: 1px solid #e9ecef;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1rem;
+ padding-bottom: 1rem;
+ border-bottom: 1px solid #e9ecef;
 }
 
 .filtros-header h3 {
-color: #495057;
-margin: 0;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-font-weight: 600;
+ color: #495057;
+ margin: 0;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-weight: 600;
 }
 
 .filtros-header h3 i {
-color: #6c757d;
+ color: #6c757d;
 }
 
 .servicios-count {
-color: #6c757d;
-font-weight: 500;
-font-size: 0.9rem;
-background: #f8f9fa;
-padding: 0.25rem 0.75rem;
-border-radius: 20px;
-border: 1px solid #e9ecef;
+ color: #6c757d;
+ font-weight: 500;
+ font-size: 0.9rem;
+ background: #f8f9fa;
+ padding: 0.25rem 0.75rem;
+ border-radius: 20px;
+ border: 1px solid #e9ecef;
+}
+
+.filtros-content {
+ display: grid;
+ grid-template-columns: 2fr 1fr 1fr 1fr auto;
+ gap: 1rem;
+ align-items: end;
 }
 
 .search-input-wrapper {
-position: relative;
+ position: relative;
 }
 
 .search-icon {
-position: absolute;
-left: 1rem;
-top: 50%;
-transform: translateY(-50%);
-color: #6c757d;
-z-index: 1;
+ position: absolute;
+ left: 1rem;
+ top: 50%;
+ transform: translateY(-50%);
+ color: #6c757d;
+ z-index: 1;
 }
 
 .input-busqueda {
-width: 100%;
-padding: 0.75rem 3rem 0.75rem 2.5rem;
-border: 2px solid #e9ecef;
-border-radius: 8px;
-font-size: 1rem;
-transition: all 0.2s;
-background: white;
+ width: 100%;
+ padding: 0.75rem 3rem 0.75rem 2.5rem;
+ border: 2px solid #e9ecef;
+ border-radius: 8px;
+ font-size: 1rem;
+ transition: all 0.2s;
+ background: white;
 }
 
 .input-busqueda:focus {
-outline: none;
-border-color: #007bff;
-box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+ outline: none;
+ border-color: #007bff;
+ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .btn-limpiar-busqueda {
-position: absolute;
-right: 0.5rem;
-top: 50%;
-transform: translateY(-50%);
-background: none;
-border: none;
-color: #6c757d;
-cursor: pointer;
-padding: 0.25rem;
-border-radius: 4px;
-transition: all 0.2s;
+ position: absolute;
+ right: 0.5rem;
+ top: 50%;
+ transform: translateY(-50%);
+ background: none;
+ border: none;
+ color: #6c757d;
+ cursor: pointer;
+ padding: 0.25rem;
+ border-radius: 4px;
+ transition: all 0.2s;
 }
 
 .btn-limpiar-busqueda:hover {
-background: #f8f9fa;
-color: #dc3545;
+ background: #f8f9fa;
+ color: #dc3545;
 }
 
 .categorias-filter label,
+.unidades-filter label,
 .precio-filter label {
-display: block;
-margin-bottom: 0.5rem;
-font-weight: 600;
-color: #495057;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-font-size: 0.9rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin-bottom: 0.5rem;
+ font-weight: 600;
+ color: #495057;
+ font-size: 0.9rem;
 }
 
 .categorias-filter label i,
+.unidades-filter label i,
 .precio-filter label i {
-color: #6c757d;
+ color: #6c757d;
 }
 
 .select-categoria,
+.select-unidad,
 .select-precio {
-width: 100%;
-padding: 0.75rem;
-border: 2px solid #e9ecef;
-border-radius: 8px;
-font-size: 1rem;
-background: white;
-color: #495057;
-transition: all 0.2s;
+ width: 100%;
+ padding: 0.75rem;
+ border: 2px solid #e9ecef;
+ border-radius: 8px;
+ font-size: 1rem;
+ background: white;
+ color: #495057;
+ transition: all 0.2s;
 }
 
 .select-categoria:focus,
+.select-unidad:focus,
 .select-precio:focus {
-outline: none;
-border-color: #007bff;
-box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+ outline: none;
+ border-color: #007bff;
+ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .btn-limpiar-filtros {
-background: linear-gradient(135deg, #6c757d, #495057);
-color: white;
-border: none;
-padding: 0.75rem 1rem;
-border-radius: 8px;
-cursor: pointer;
-font-weight: 600;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-transition: all 0.2s;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ background: linear-gradient(135deg, #6c757d, #495057);
+ color: white;
+ border: none;
+ padding: 0.75rem 1rem;
+ border-radius: 8px;
+ cursor: pointer;
+ font-weight: 600;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ transition: all 0.2s;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-limpiar-filtros:hover {
-background: linear-gradient(135deg, #5a6268, #343a40);
-transform: translateY(-1px);
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+ background: linear-gradient(135deg, #5a6268, #343a40);
+ transform: translateY(-1px);
+ box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Servicios Section */
 .servicios-section {
-margin-bottom: 2rem;
+ margin-bottom: 2rem;
 }
 
 .servicios-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 1.5rem;
-flex-wrap: wrap;
-gap: 1rem;
-padding: 1rem;
-background: white;
-border-radius: 8px;
-border: 1px solid #e9ecef;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1.5rem;
+ flex-wrap: wrap;
+ gap: 1rem;
+ padding: 1rem;
+ background: white;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .servicios-header h3 {
-color: #495057;
-margin: 0;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-font-weight: 600;
+ color: #495057;
+ margin: 0;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-weight: 600;
 }
 
 .servicios-header h3 i {
-color: #6c757d;
+ color: #6c757d;
 }
 
 .paginacion-info {
-display: flex;
-align-items: center;
-gap: 1rem;
-flex-wrap: wrap;
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ flex-wrap: wrap;
 }
 
 .resultados-info {
-color: #6c757d;
-font-size: 0.9rem;
-font-weight: 500;
+ color: #6c757d;
+ font-size: 0.9rem;
+ font-weight: 500;
 }
 
 .items-por-pagina {
-display: flex;
-align-items: center;
-gap: 0.5rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .items-por-pagina label {
-color: #495057;
-font-weight: 500;
-font-size: 0.9rem;
+ color: #495057;
+ font-weight: 500;
+ font-size: 0.9rem;
 }
 
 .select-items {
-padding: 0.4rem 0.8rem;
-border: 1px solid #ced4da;
-border-radius: 6px;
-background: white;
-color: #495057;
-font-weight: 500;
+ padding: 0.4rem 0.8rem;
+ border: 1px solid #ced4da;
+ border-radius: 6px;
+ background: white;
+ color: #495057;
+ font-weight: 500;
 }
 
 /* Servicios Grid */
 .servicios-grid {
-display: grid;
-gap: 1.5rem;
-margin-bottom: 2rem;
-grid-template-columns: 1fr;
-width: 100%;
-box-sizing: border-box;
+ display: grid;
+ gap: 1.5rem;
+ margin-bottom: 2rem;
+ grid-template-columns: 1fr;
+ width: 100%;
+ box-sizing: border-box;
 }
 
 /* No resultados */
 .no-resultados {
-text-align: center;
-padding: 4rem 1rem;
-color: #6c757d;
-background: white;
-border-radius: 12px;
-border: 1px solid #e9ecef;
+ text-align: center;
+ padding: 4rem 1rem;
+ color: #6c757d;
+ background: white;
+ border-radius: 12px;
+ border: 1px solid #e9ecef;
 }
 
 .no-resultados-content i {
-font-size: 3rem;
-margin-bottom: 1rem;
-opacity: 0.4;
-color: #adb5bd;
+ font-size: 3rem;
+ margin-bottom: 1rem;
+ opacity: 0.4;
+ color: #adb5bd;
 }
 
 .no-resultados-content h4 {
-margin-bottom: 0.5rem;
-color: #495057;
-font-weight: 600;
+ margin-bottom: 0.5rem;
+ color: #495057;
+ font-weight: 600;
 }
 
 .btn-link {
-background: none;
-border: none;
-color: #007bff;
-text-decoration: underline;
-cursor: pointer;
-font-weight: 500;
+ background: none;
+ border: none;
+ color: #007bff;
+ text-decoration: underline;
+ cursor: pointer;
+ font-weight: 500;
 }
 
 .btn-link:hover {
-color: #0056b3;
+ color: #0056b3;
 }
 
 /* Paginación - Diseño profesional */
 .paginacion-container {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-top: 2rem;
-flex-wrap: wrap;
-gap: 1rem;
-padding: 1rem;
-background: white;
-border-radius: 8px;
-border: 1px solid #e9ecef;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-top: 2rem;
+ flex-wrap: wrap;
+ gap: 1rem;
+ padding: 1rem;
+ background: white;
+ border-radius: 8px;
+ border: 1px solid #e9ecef;
+ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .paginacion {
-display: flex;
-align-items: center;
-gap: 0.5rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .btn-paginacion {
-padding: 0.5rem 1rem;
-border: 1px solid #dee2e6;
-background: white;
-color: #495057;
-border-radius: 6px;
-cursor: pointer;
-display: flex;
-align-items: center;
-gap: 0.5rem;
-transition: all 0.2s;
-font-weight: 500;
+ padding: 0.5rem 1rem;
+ border: 1px solid #dee2e6;
+ background: white;
+ color: #495057;
+ border-radius: 6px;
+ cursor: pointer;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ transition: all 0.2s;
+ font-weight: 500;
 }
 
 .btn-paginacion:hover:not(:disabled) {
-background: #f8f9fa;
-border-color: #adb5bd;
-color: #212529;
+ background: #f8f9fa;
+ border-color: #adb5bd;
+ color: #212529;
 }
 
 .btn-paginacion:disabled {
-opacity: 0.5;
-cursor: not-allowed;
-color: #adb5bd;
+ opacity: 0.5;
+ cursor: not-allowed;
+ color: #adb5bd;
 }
 
 .numeros-pagina {
-display: flex;
-align-items: center;
-gap: 0.25rem;
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
 }
 
 .btn-numero {
-width: 2.5rem;
-height: 2.5rem;
-border: 1px solid #dee2e6;
-background: white;
-color: #495057;
-border-radius: 6px;
-cursor: pointer;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: all 0.2s;
-font-weight: 500;
+ width: 2.5rem;
+ height: 2.5rem;
+ border: 1px solid #dee2e6;
+ background: white;
+ color: #495057;
+ border-radius: 6px;
+ cursor: pointer;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ transition: all 0.2s;
+ font-weight: 500;
 }
 
 .btn-numero:hover {
-background: #f8f9fa;
-border-color: #adb5bd;
-color: #212529;
+ background: #f8f9fa;
+ border-color: #adb5bd;
+ color: #212529;
 }
 
 .btn-numero.activa {
-background: #007bff;
-border-color: #007bff;
-color: white;
+ background: #007bff;
+ border-color: #007bff;
+ color: white;
 }
 
 .puntos-suspension {
-padding: 0 0.5rem;
-color: #6c757d;
+ padding: 0 0.5rem;
+ color: #6c757d;
 }
 
 .ir-a-pagina {
-display: flex;
-align-items: center;
-gap: 0.5rem;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
 }
 
 .ir-a-pagina label {
-color: #495057;
-font-weight: 500;
-font-size: 0.9rem;
+ color: #495057;
+ font-weight: 500;
+ font-size: 0.9rem;
 }
 
 .input-pagina {
-width: 4rem;
-padding: 0.4rem;
-border: 1px solid #ced4da;
-border-radius: 6px;
-text-align: center;
-color: #495057;
+ width: 4rem;
+ padding: 0.4rem;
+ border: 1px solid #ced4da;
+ border-radius: 6px;
+ text-align: center;
+ color: #495057;
 }
 
 .input-pagina:focus {
-outline: none;
-border-color: #007bff;
-box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+ outline: none;
+ border-color: #007bff;
+ box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .btn-ir {
-padding: 0.4rem 0.8rem;
-background: #007bff;
-color: white;
-border: none;
-border-radius: 6px;
-cursor: pointer;
-font-weight: 500;
-transition: all 0.2s;
+ padding: 0.4rem 0.8rem;
+ background: #007bff;
+ color: white;
+ border: none;
+ border-radius: 6px;
+ cursor: pointer;
+ font-weight: 500;
+ transition: all 0.2s;
 }
 
 .btn-ir:hover {
-background: #0056b3;
+ background: #0056b3;
 }
 
 /* Form Actions - Botón limpiar en rojo */
 .form-actions {
-display: flex;
-justify-content: center;
-gap: 1rem;
-margin-bottom: 2rem;
-flex-wrap: wrap;
+ display: flex;
+ justify-content: center;
+ gap: 1rem;
+ margin-bottom: 2rem;
+ flex-wrap: wrap;
 }
 
 .btn-calcular, .btn-limpiar {
-padding: 0.875rem 2rem;
-border: none;
-border-radius: 8px;
-font-size: 1rem;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.3s ease;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-min-width: 180px;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 0.5rem;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+ padding: 0.875rem 2rem;
+ border: none;
+ border-radius: 8px;
+ font-size: 1rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+ min-width: 180px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ gap: 0.5rem;
+ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-calcular {
-background: linear-gradient(135deg, #28a745, #20c997);
-color: white;
+ background: linear-gradient(135deg, #28a745, #20c997);
+ color: white;
 }
 
 .btn-calcular:hover:not(:disabled) {
-background: linear-gradient(135deg, #1e7e34, #17a2b8);
-transform: translateY(-2px);
-box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
-}
-
-.btn-calcular:disabled {
-background: linear-gradient(135deg, #6c757d, #adb5bd);
-cursor: not-allowed;
-transform: none;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ background: linear-gradient(135deg, #1e7e34, #17a2b8);
+ transform: translateY(-2px);
+ box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
 }
 
 /* Botón limpiar en rojo */
 .btn-limpiar {
-background: linear-gradient(135deg, #dc3545, #c82333);
-color: white;
+ background: linear-gradient(135deg, #dc3545, #c82333);
+ color: white;
 }
 
 .btn-limpiar:hover {
-background: linear-gradient(135deg, #c82333, #a71e2a);
-transform: translateY(-2px);
-box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+ background: linear-gradient(135deg, #c82333, #a71e2a);
+ transform: translateY(-2px);
+ box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
 }
 
 .btn-limpiar:active {
-background: linear-gradient(135deg, #a71e2a, #8b1a1a);
-transform: translateY(0);
+ background: linear-gradient(135deg, #a71e2a, #8b1a1a);
+ transform: translateY(0);
 }
 
 .btn-calcular i,
 .btn-limpiar i {
-font-size: 1.1em;
+ font-size: 1.1em;
 }
 
 /* TOAST NOTIFICATIONS */
 .toast-notification {
-position: fixed;
-top: 2rem;
-right: 2rem;
-padding: 1rem 1.5rem;
-border-radius: 0.5rem;
-box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-display: flex;
-align-items: center;
-gap: 0.75rem;
-max-width: 400px;
-z-index: 1100;
-font-weight: 500;
-animation: slideInRight 0.3s ease;
+ position: fixed;
+ top: 2rem;
+ right: 2rem;
+ padding: 1rem 1.5rem;
+ border-radius: 0.5rem;
+ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ max-width: 400px;
+ z-index: 1100;
+ font-weight: 500;
+ animation: slideInRight 0.3s ease;
 }
 
 .toast-notification.success {
-background: #d4edda;
-color: #155724;
-border: 1px solid #c3e6cb;
+ background: #d4edda;
+ color: #155724;
+ border: 1px solid #c3e6cb;
 }
 
 .toast-notification.error {
-background: #f8d7da;
-color: #721c24;
-border: 1px solid #f5c6cb;
+ background: #f8d7da;
+ color: #721c24;
+ border: 1px solid #f5c6cb;
 }
 
 .toast-notification.warning {
-background: #fff3cd;
-color: #856404;
-border: 1px solid #ffeaa7;
+ background: #fff3cd;
+ color: #856404;
+ border: 1px solid #ffeaa7;
 }
 
 .toast-notification.info {
-background: #d1ecf1;
-color: #0c5460;
-border: 1px solid #bee5eb;
+ background: #d1ecf1;
+ color: #0c5460;
+ border: 1px solid #bee5eb;
 }
 
 .toast-close {
-background: none;
-border: none;
-font-size: 1.2rem;
-cursor: pointer;
-padding: 0;
-margin-left: auto;
-opacity: 0.7;
-transition: opacity 0.3s ease;
+ background: none;
+ border: none;
+ font-size: 1.2rem;
+ cursor: pointer;
+ padding: 0;
+ margin-left: auto;
+ opacity: 0.7;
+ transition: opacity 0.3s ease;
 }
 
 .toast-close:hover {
-opacity: 1;
+ opacity: 1;
 }
 
 @keyframes slideInRight {
-from {
-  transform: translateX(100%);
-  opacity: 0;
-}
-to {
-  transform: translateX(0);
-  opacity: 1;
-}
+ from {
+   transform: translateX(100%);
+   opacity: 0;
+ }
+ to {
+   transform: translateX(0);
+   opacity: 1;
+ }
 }
 
 /* Estados de carga */
 .servicios-grid.loading {
-opacity: 0.7;
-pointer-events: none;
+ opacity: 0.7;
+ pointer-events: none;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
-.filtros-content {
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
+ .filtros-content {
+   grid-template-columns: 1fr 1fr;
+   gap: 1rem;
+ }
 
-.busqueda-container {
-  grid-column: 1 / -1;
-}
+ .busqueda-container {
+   grid-column: 1 / -1;
+ }
 
-.filtros-actions {
-  grid-column: 1 / -1;
-  text-align: center;
-}
+ .filtros-actions {
+   grid-column: 1 / -1;
+   text-align: center;
+ }
 }
 
 @media (max-width: 768px) {
-.filtros-content {
-  grid-template-columns: 1fr;
-}
+ .filtros-content {
+   grid-template-columns: 1fr;
+ }
 
-.servicios-header {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 1rem;
-}
+ .servicios-header {
+   flex-direction: column;
+   align-items: stretch;
+   gap: 1rem;
+ }
 
-.paginacion-info {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.5rem;
-}
+ .paginacion-info {
+   flex-direction: column;
+   align-items: stretch;
+   gap: 0.5rem;
+ }
 
-.paginacion-container {
-  flex-direction: column;
-  align-items: center;
-}
+ .paginacion-container {
+   flex-direction: column;
+   align-items: center;
+ }
 
-.servicios-grid {
-  grid-template-columns: 1fr;
-}
+ .servicios-grid {
+   grid-template-columns: 1fr;
+ }
 
-.btn-calcular, .btn-limpiar {
-  min-width: 150px;
-  padding: 0.75rem 1.5rem;
-}
+ .btn-calcular, .btn-limpiar {
+   min-width: 150px;
+   padding: 0.75rem 1.5rem;
+ }
 
-/* TOAST RESPONSIVE */
-.toast-notification {
-  top: 1rem;
-  right: 1rem;
-  left: 1rem;
-  max-width: none;
-}
+ /* Errores responsive */
+ .errores-limites {
+   padding: 0.75rem;
+   margin-bottom: 0.75rem;
+ }
+
+ .error-header {
+   flex-direction: column;
+   text-align: center;
+   gap: 0.25rem;
+ }
+
+ .error-list {
+   padding-left: 1rem;
+ }
+
+ /* TOAST RESPONSIVE */
+ .toast-notification {
+   top: 1rem;
+   right: 1rem;
+   left: 1rem;
+   max-width: none;
+ }
 }
 
 @media (min-width: 768px) {
-.servicios-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
+ .servicios-grid {
+   grid-template-columns: repeat(2, 1fr);
+ }
 }
 
 @media (min-width: 1200px) {
-.servicios-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
+ .servicios-grid {
+   grid-template-columns: repeat(3, 1fr);
+ }
 }
 
 @media (max-width: 320px) {
-.años-selector {
-  padding: 1rem;
-}
+ .años-selector {
+   padding: 1rem;
+ }
 
-.filtros-container {
-  padding: 0.75rem;
-}
+ .filtros-container {
+   padding: 0.75rem;
+ }
 
-.años-controls {
-  gap: 0.5rem;
-}
+ .años-controls {
+   gap: 0.5rem;
+ }
 
-.btn-años {
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1rem;
-}
+ .btn-años {
+   width: 2.5rem;
+   height: 2.5rem;
+   font-size: 1rem;
+ }
 
-.input-años {
-  width: 3.5rem;
-  height: 2.5rem;
-  font-size: 1.1rem;
-}
+ .input-años {
+   width: 3.5rem;
+   height: 2.5rem;
+   font-size: 1.1rem;
+ }
 
-.años-info {
-  font-size: 0.8rem;
-}
+ .años-info {
+   font-size: 0.8rem;
+ }
 
-.btn-calcular, .btn-limpiar {
-  min-width: 120px;
-  font-size: 0.85rem;
-  gap: 0.4rem;
-  padding: 0.7rem 1.2rem;
-}
+ .btn-calcular, .btn-limpiar {
+   min-width: 120px;
+   font-size: 0.85rem;
+   gap: 0.4rem;
+   padding: 0.7rem 1.2rem;
+ }
 
-.btn-calcular i,
-.btn-limpiar i {
-  font-size: 1em;
-}
+ .btn-calcular i,
+ .btn-limpiar i {
+   font-size: 1em;
+ }
+
+ .errores-limites {
+   padding: 0.5rem;
+ }
+
+ .error-header h4 {
+   font-size: 0.9rem;
+ }
+
+ .error-list {
+   font-size: 0.8rem;
+ }
 }
 
 .cotizacion-form-container * {
-box-sizing: border-box;
+ box-sizing: border-box;
 }
 
 /* Animaciones para transiciones suaves */
 .servicios-grid {
-transition: all 0.3s ease;
+ transition: all 0.3s ease;
 }
 
 .filtros-container,
-.años-selector {
-transition: all 0.3s ease;
+.años-selector,
+.errores-limites {
+ transition: all 0.3s ease;
 }
 
 /* Mejoras de accesibilidad */
@@ -1863,25 +2070,27 @@ transition: all 0.3s ease;
 .btn-paginacion:focus,
 .input-busqueda:focus,
 .select-categoria:focus,
+.select-unidad:focus,
 .select-precio:focus,
 .btn-calcular:focus,
 .btn-limpiar:focus {
-outline: 2px solid #007bff;
-outline-offset: 2px;
+ outline: 2px solid #007bff;
+ outline-offset: 2px;
 }
 
 /* Estilos para impresión */
 @media print {
-.filtros-container,
-.paginacion-container,
-.form-actions,
-.toast-notification {
-  display: none;
-}
+ .filtros-container,
+ .paginacion-container,
+ .form-actions,
+ .toast-notification,
+ .errores-limites {
+   display: none;
+ }
 
-.servicios-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
+ .servicios-grid {
+   grid-template-columns: repeat(2, 1fr);
+   gap: 1rem;
+ }
 }
 </style>
