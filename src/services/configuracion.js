@@ -6,12 +6,10 @@ class ConfiguracionService {
   // Obtener información personal del usuario logueado
   async getInformacionPersonal() {
     try {
-      console.log('👤 Obteniendo información personal...');
       
       const response = await api.get('/configuracion/perfil');
       
       if (response.data.success) {
-        console.log('✅ Información personal obtenida:', response.data.data);
         return {
           success: true,
           data: response.data.data
@@ -35,12 +33,10 @@ class ConfiguracionService {
   // Actualizar información personal del usuario logueado
   async actualizarInformacionPersonal(datosUsuario) {
     try {
-      console.log('✏️ Actualizando información personal:', datosUsuario);
       
       const response = await api.put('/configuracion/perfil', datosUsuario);
       
       if (response.data.success) {
-        console.log('✅ Información personal actualizada:', response.data.data);
         return {
           success: true,
           data: response.data.data,
@@ -74,12 +70,10 @@ class ConfiguracionService {
   // Cambiar contraseña del usuario logueado
   async cambiarContrasena(passwordData) {
     try {
-      console.log('🔐 Cambiando contraseña...');
       
       const response = await api.patch('/configuracion/cambiar-password', passwordData);
       
       if (response.data.success) {
-        console.log('✅ Contraseña cambiada exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -192,7 +186,6 @@ class ConfiguracionService {
         sessionStorage.setItem('cloudtech_user', JSON.stringify(updatedUser));
       }
       
-      console.log('✅ Datos de usuario sincronizados con localStorage/sessionStorage');
       
     } catch (error) {
       console.error('❌ Error sincronizando datos de usuario:', error);

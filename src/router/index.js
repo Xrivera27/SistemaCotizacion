@@ -30,21 +30,18 @@ import VendedorDashboard from '@/views/vendedor/Dashboard.vue';
 
 // Guard de autenticación mejorado
 async function requireAuth(to, from, next) {
-  console.log('🛡️ Verificando acceso a:', to.path);
   
   try {
     // Verificar autenticación con el backend
     const result = await authService.checkAuth();
     
     if (result.success) {
-      console.log('✅ Usuario autenticado, acceso permitido');
       
       // Iniciar heartbeat si no está activo
       authService.startHeartbeat(5);
       
       next();
     } else {
-      console.log('❌ No autenticado, redirigiendo a login');
       next('/login');
     }
     
@@ -56,19 +53,18 @@ async function requireAuth(to, from, next) {
 
 // Guard para evitar acceso a login si ya está autenticado
 async function redirectIfAuthenticated(to, from, next) {
-  console.log('🔍 Verificando si ya está logueado...');
+
   
   try {
     const result = await authService.checkAuth();
     
     if (result.success) {
-      console.log('✅ Ya está logueado, redirigiendo al dashboard');
+
       
       // Redirigir según el tipo de usuario
       const redirectPath = authService.getRedirectPath(result.user.tipo_usuario);
       next(redirectPath);
     } else {
-      console.log('❌ No está logueado, continuar a login');
       next();
     }
     

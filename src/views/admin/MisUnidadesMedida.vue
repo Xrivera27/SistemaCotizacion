@@ -729,7 +729,6 @@ export default {
  },
 
  async mounted() {
-   console.log('🚀 Componente MisUnidadesMedida montado');
    await this.cargarDatosIniciales();
  },
 
@@ -754,7 +753,6 @@ export default {
 
    async cargarUnidades() {
      try {
-       console.log('📏 Cargando unidades de medida con filtros:', this.filtros);
        
        const params = {
          page: this.pagination?.currentPage || 1,
@@ -769,7 +767,6 @@ export default {
        if (result.success) {
          this.unidades = result.unidades;
          this.pagination = result.pagination;
-         console.log('✅ Unidades cargadas:', this.unidades.length);
        } else {
          this.showNotification(result.message || 'Error cargando unidades', 'error');
        }
@@ -782,13 +779,11 @@ export default {
 
    async cargarEstadisticas() {
      try {
-       console.log('📊 Cargando estadísticas...');
        
        const result = await unidadesMedidaService.getEstadisticas();
        
        if (result.success) {
          this.estadisticas = result.estadisticas;
-         console.log('✅ Estadísticas cargadas:', this.estadisticas);
        } else {
          console.error('❌ Error cargando estadísticas:', result.message);
        }
@@ -807,7 +802,6 @@ export default {
    },
 
    async aplicarFiltros() {
-     console.log('🔍 Aplicando filtros:', this.filtros);
      
      // Resetear a la primera página
      if (this.pagination) {
@@ -897,8 +891,6 @@ export default {
    async guardarUnidad() {
      if (this.guardandoUnidad) return;
      
-     console.log('📤 Formulario completo:', this.formulario);
-     
      this.erroresFormulario = [];
      
      if (!this.validarFormulario()) {
@@ -910,7 +902,6 @@ export default {
      
      try {
        const formularioData = JSON.parse(JSON.stringify(this.formulario));
-       console.log('📋 Formulario serializado:', formularioData);
        
        let result;
        

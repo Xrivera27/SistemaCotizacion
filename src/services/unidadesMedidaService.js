@@ -7,12 +7,10 @@ class UnidadesMedidaService {
  // Obtener todas las unidades de medida con paginación y filtros
  async getUnidades(params = {}) {
    try {
-     console.log('📏 Obteniendo unidades de medida con parámetros:', params);
      
      const response = await api.get('/unidades-medida', { params });
      
      if (response.data.success) {
-       console.log('✅ Unidades de medida obtenidas:', response.data.data);
        return {
          success: true,
          unidades: response.data.data.unidades,
@@ -37,12 +35,10 @@ class UnidadesMedidaService {
  // Obtener unidad de medida por ID
  async getUnidadById(id) {
    try {
-     console.log('📏 Obteniendo unidad de medida ID:', id);
      
      const response = await api.get(`/unidades-medida/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Unidad de medida obtenida:', response.data.data);
        return {
          success: true,
          unidad: response.data.data
@@ -66,12 +62,9 @@ class UnidadesMedidaService {
  // Crear nueva unidad de medida
  async createUnidad(unidadData) {
    try {
-     console.log('➕ Creando unidad de medida:', unidadData);
-     
      const response = await api.post('/unidades-medida', unidadData);
      
      if (response.data.success) {
-       console.log('✅ Unidad de medida creada exitosamente:', response.data.data);
        return {
          success: true,
          unidad: response.data.data,
@@ -105,12 +98,10 @@ class UnidadesMedidaService {
  // Actualizar unidad de medida
  async updateUnidad(id, unidadData) {
    try {
-     console.log('✏️ Actualizando unidad de medida ID:', id, 'con datos:', unidadData);
      
      const response = await api.put(`/unidades-medida/${id}`, unidadData);
      
      if (response.data.success) {
-       console.log('✅ Unidad de medida actualizada exitosamente:', response.data.data);
        return {
          success: true,
          unidad: response.data.data,
@@ -144,12 +135,10 @@ class UnidadesMedidaService {
  // Eliminar unidad de medida (soft delete)
  async deleteUnidad(id) {
    try {
-     console.log('🗑️ Eliminando unidad de medida ID:', id);
      
      const response = await api.delete(`/unidades-medida/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Unidad de medida eliminada exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -173,12 +162,10 @@ class UnidadesMedidaService {
  // Restaurar unidad de medida
  async restoreUnidad(id) {
    try {
-     console.log('🔄 Restaurando unidad de medida ID:', id);
      
      const response = await api.post(`/unidades-medida/${id}/restore`);
      
      if (response.data.success) {
-       console.log('✅ Unidad de medida restaurada exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -202,12 +189,10 @@ class UnidadesMedidaService {
  // Obtener estadísticas de unidades de medida
  async getEstadisticas() {
    try {
-     console.log('📊 Obteniendo estadísticas de unidades de medida...');
      
      const response = await api.get('/unidades-medida/estadisticas');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas obtenidas:', response.data.data);
        return {
          success: true,
          estadisticas: response.data.data
@@ -231,8 +216,6 @@ class UnidadesMedidaService {
  // Buscar unidades de medida (método helper para autocompletado)
  async searchUnidades(searchTerm, limit = 10) {
    try {
-     console.log('🔍 Buscando unidades de medida:', searchTerm);
-     
      const response = await api.get('/unidades-medida/search', {
        params: {
          q: searchTerm,
@@ -241,7 +224,6 @@ class UnidadesMedidaService {
      });
      
      if (response.data.success) {
-       console.log('✅ Unidades de medida encontradas:', response.data.data);
        return {
          success: true,
          unidades: response.data.data
@@ -265,12 +247,9 @@ class UnidadesMedidaService {
  // Obtener unidades de medida activas (para selects/dropdowns)
  async getUnidadesActivas() {
    try {
-     console.log('📝 Obteniendo unidades de medida activas para select...');
-     
      const response = await api.get('/unidades-medida/activas');
      
      if (response.data.success) {
-       console.log('✅ Unidades de medida activas obtenidas:', response.data.data);
        return {
          success: true,
          unidades: response.data.data
@@ -294,7 +273,6 @@ class UnidadesMedidaService {
  // Validar disponibilidad de nombre de unidad de medida
  async checkNombreDisponible(nombre, excludeId = null) {
    try {
-     console.log('🔍 Verificando disponibilidad de nombre:', nombre);
      
      const params = {
        search: nombre,
@@ -315,9 +293,6 @@ class UnidadesMedidaService {
            isAvailable = false;
          }
        }
-       
-       console.log(`Nombre "${nombre}" está ${isAvailable ? 'disponible' : 'ocupado'}`);
-       
        return {
          success: true,
          available: isAvailable
@@ -341,7 +316,6 @@ class UnidadesMedidaService {
  // Validar disponibilidad de abreviación
  async checkAbreviacionDisponible(abreviacion, excludeId = null) {
    try {
-     console.log('🔍 Verificando disponibilidad de abreviación:', abreviacion);
      
      const params = {
        search: abreviacion,
@@ -367,8 +341,6 @@ class UnidadesMedidaService {
            }
          }
        }
-       
-       console.log(`Abreviación "${abreviacion}" está ${isAvailable ? 'disponible' : 'ocupada'}`);
        
        return {
          success: true,

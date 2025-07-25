@@ -8,12 +8,10 @@ class DashboardService {
   // Obtener estadísticas generales (cards superiores)
   async getAdminStats() {
     try {
-      console.log('📊 Obteniendo estadísticas del dashboard admin...');
       
       const response = await api.get('/dashboard/admin/stats');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas admin obtenidas:', response.data.data);
         return {
           success: true,
           stats: response.data.data
@@ -37,12 +35,10 @@ class DashboardService {
   // Obtener datos para gráfico de colaboradores
   async getColaboradoresChart() {
     try {
-      console.log('📈 Obteniendo datos del gráfico de colaboradores...');
       
       const response = await api.get('/dashboard/admin/colaboradores-chart');
       
       if (response.data.success) {
-        console.log('✅ Datos de colaboradores obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -66,12 +62,10 @@ class DashboardService {
   // Obtener datos para gráfico de servicios
   async getServiciosChart() {
     try {
-      console.log('📊 Obteniendo datos del gráfico de servicios...');
       
       const response = await api.get('/dashboard/admin/servicios-chart');
       
       if (response.data.success) {
-        console.log('✅ Datos de servicios obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -95,14 +89,12 @@ class DashboardService {
   // Obtener resumen mensual
   async getResumenMensual(mes = 'actual') {
     try {
-      console.log('📅 Obteniendo resumen mensual:', mes);
       
       const response = await api.get('/dashboard/admin/resumen-mensual', {
         params: { mes }
       });
       
       if (response.data.success) {
-        console.log('✅ Resumen mensual obtenido:', response.data.data);
         return {
           success: true,
           resumen: response.data.data
@@ -126,14 +118,12 @@ class DashboardService {
   // Obtener cotizaciones recientes
   async getCotizacionesRecientes(limit = 8) {
     try {
-      console.log('📋 Obteniendo cotizaciones recientes, limit:', limit);
       
       const response = await api.get('/dashboard/admin/cotizaciones-recientes', {
         params: { limit }
       });
       
       if (response.data.success) {
-        console.log('✅ Cotizaciones recientes obtenidas:', response.data.data);
         return {
           success: true,
           cotizaciones: response.data.data
@@ -157,14 +147,12 @@ class DashboardService {
   // Obtener todos los datos del dashboard de una vez (optimizado)
   async getAllDashboardData(mes = 'actual') {
     try {
-      console.log('🚀 Obteniendo todos los datos del dashboard...');
       
       const response = await api.get('/dashboard/admin/all-data', {
         params: { mes }
       });
       
       if (response.data.success) {
-        console.log('✅ Todos los datos del dashboard obtenidos:', response.data.data);
         return {
           success: true,
           data: response.data.data
@@ -189,12 +177,10 @@ class DashboardService {
   
   async getVendedorStats() {
     try {
-      console.log('📊 Obteniendo estadísticas del vendedor...');
       
       const response = await api.get('/dashboard/vendedor/stats');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas vendedor obtenidas:', response.data.data);
         return {
           success: true,
           stats: response.data.data
@@ -217,14 +203,12 @@ class DashboardService {
 
   async getVendedorVentasChart(dias = 7) {
     try {
-      console.log('📈 Obteniendo gráfico de ventas del vendedor, días:', dias);
       
       const response = await api.get('/dashboard/vendedor/ventas-chart', {
         params: { dias }
       });
       
       if (response.data.success) {
-        console.log('✅ Datos del gráfico de ventas obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -247,12 +231,10 @@ class DashboardService {
 
   async getVendedorEstadosChart() {
     try {
-      console.log('📊 Obteniendo gráfico de estados del vendedor...');
       
       const response = await api.get('/dashboard/vendedor/estados-chart');
       
       if (response.data.success) {
-        console.log('✅ Datos del gráfico de estados obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -275,14 +257,11 @@ class DashboardService {
 
   async getVendedorResumenVentas(periodo = 'mes') {
     try {
-      console.log('📅 Obteniendo resumen de ventas del vendedor, período:', periodo);
-      
       const response = await api.get('/dashboard/vendedor/resumen-ventas', {
         params: { periodo }
       });
       
       if (response.data.success) {
-        console.log('✅ Resumen de ventas vendedor obtenido:', response.data.data);
         return {
           success: true,
           resumen: response.data.data
@@ -305,14 +284,11 @@ class DashboardService {
 
   async getVendedorCotizacionesRecientes(limit = 5) {
     try {
-      console.log('📋 Obteniendo cotizaciones recientes del vendedor, limit:', limit);
-      
       const response = await api.get('/dashboard/vendedor/cotizaciones-recientes', {
         params: { limit }
       });
       
       if (response.data.success) {
-        console.log('✅ Cotizaciones recientes vendedor obtenidas:', response.data.data);
         return {
           success: true,
           cotizaciones: response.data.data
@@ -336,14 +312,11 @@ class DashboardService {
   // Obtener todos los datos del dashboard vendedor de una vez (optimizado)
   async getVendedorAllDashboardData(periodo = 'mes', dias = 7) {
     try {
-      console.log('🚀 Obteniendo todos los datos del dashboard vendedor...');
-      
       const response = await api.get('/dashboard/vendedor/all-data', {
         params: { periodo, dias }
       });
       
       if (response.data.success) {
-        console.log('✅ Todos los datos del dashboard vendedor obtenidos:', response.data.data);
         return {
           success: true,
           data: response.data.data
@@ -368,7 +341,6 @@ class DashboardService {
   
   async getSuperUsuarioStats() {
     try {
-      console.log('📊 Obteniendo estadísticas del super usuario...');
       
       const response = await api.get('/dashboard/super-usuario/stats');
       

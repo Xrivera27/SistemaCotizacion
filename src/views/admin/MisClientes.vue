@@ -840,7 +840,6 @@ export default {
  },
 
  async mounted() {
-   console.log('🚀 Componente AdminClientes montado');
 
    await this.cargarDatosIniciales();
    await this.cargarUsuariosDisponibles(); // ✅ NUEVO
@@ -867,7 +866,6 @@ export default {
 
   async cargarClientes() {
   try {
-    console.log('📋 Cargando clientes con filtros:', this.filtros);
     
     const params = {
       page: this.pagination?.currentPage || 1,
@@ -882,7 +880,6 @@ export default {
     if (result.success) {
       this.clientes = result.clientes;
       this.pagination = result.pagination;
-      console.log('✅ Clientes cargados:', this.clientes.length);
     } else {
       this.showNotification(result.message || 'Error cargando clientes', 'error');
     }
@@ -895,13 +892,11 @@ export default {
 
    async cargarEstadisticas() {
      try {
-       console.log('📊 Cargando estadísticas...');
        
        const result = await clientesService.getEstadisticas();
        
        if (result.success) {
          this.estadisticas = result.estadisticas;
-         console.log('✅ Estadísticas cargadas:', this.estadisticas);
        } else {
          console.error('❌ Error cargando estadísticas:', result.message);
        }
@@ -914,13 +909,11 @@ export default {
    // ✅ NUEVO: Cargar usuarios disponibles para manager
    async cargarUsuariosDisponibles() {
      try {
-       console.log('👥 Cargando usuarios disponibles para manager...');
        
        const result = await usuariosService.getUsuariosParaManager();
        
        if (result.success) {
          this.usuariosDisponibles = result.usuarios;
-         console.log('✅ Usuarios cargados:', this.usuariosDisponibles.length);
        } else {
          console.error('❌ Error cargando usuarios:', result.message);
          this.showNotification('Error cargando usuarios disponibles', 'error');
@@ -942,7 +935,6 @@ export default {
    },
 
    async aplicarFiltros() {
-     console.log('🔍 Aplicando filtros:', this.filtros);
      
      // Resetear a la primera página
      if (this.pagination) {

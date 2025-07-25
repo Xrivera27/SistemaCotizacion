@@ -411,22 +411,18 @@ setup() {
       const id = servicio.servicios_id
       if (!preciosVenta[id] || preciosVenta[id] === 0) {
         preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-        console.log(`💰 Precio reinicializado para ${servicio.nombre}: ${preciosVenta[id]}`)
       }
     })
   }
 
   // ===== VERIFICACIÓN DE DUPLICACIÓN =====
   const verificarDuplicacion = async () => {
-    console.log('🔍 Verificando si es duplicación...', route.query)
     
     if (route.query.duplicar === 'true') {
-      console.log('📋 Es una duplicación, cargando datos...')
       esDuplicacion.value = true
       cotizacionOrigen.value = route.query.origen
       await cargarDatosParaDuplicar()
     } else {
-      console.log('📄 Creación normal de cotización')
       esDuplicacion.value = false
       await cargarServicios()
     }
@@ -441,9 +437,6 @@ const cargarDatosParaDuplicar = async () => {
     
     if (datosGuardados) {
       const datos = JSON.parse(datosGuardados)
-      
-      console.log('✅ Datos para duplicar encontrados:', datos)
-      
       // ✅ PRIMERO cargar servicios completamente
       await cargarServicios()
       
@@ -451,10 +444,7 @@ const cargarDatosParaDuplicar = async () => {
       await nextTick()
       await nextTick()
       await nextTick()
-      
-      // ✅ VERIFICAR QUE LOS SERVICIOS ESTÉN CARGADOS
-      console.log('🔍 Servicios cargados antes de precargar:', servicios.value.length)
-      
+
       if (servicios.value.length > 0) {
         // ✅ AHORA SÍ precargar el formulario
         await precargarFormulario(datos)
@@ -484,25 +474,6 @@ const cargarDatosParaDuplicar = async () => {
 }
 
 const precargarFormulario = async (datos) => {
-  console.log('🔄 Precargando formulario con datos:', datos)
-  console.log('🔍 Servicios recibidos para precargar:', datos.servicios)
-  
-  // ✅ VERIFICAR ESTADO ANTES DE PRECARGAR
-  console.log('🔍 Estado actual servicios.value.length:', servicios.value.length)
-  console.log('🔍 Estado actual cantidadesPorCategoria:', cantidadesPorCategoria)
-  
-  // ✅ Log detallado de cada servicio
-  datos.servicios.forEach((servicio, index) => {
-    console.log(`🔥 Servicio ${index}:`, {
-      id: servicio.id,
-      nombre: servicio.nombre,
-      cantidadPorCategoria: servicio.cantidadPorCategoria,
-      cantidadServicios: servicio.cantidadServicios,
-      categoriaId: servicio.categoriaId,
-      precioUsadoOriginal: servicio.precioUsadoOriginal
-    })
-  })
-  
   try {
     if (datos.servicios && datos.servicios.length > 0) {
       añosContrato.value = datos.servicios[0].cantidadAnos || 1
@@ -517,33 +488,23 @@ const precargarFormulario = async (datos) => {
     if (datos.servicios && datos.servicios.length > 0) {
       for (const servicioData of datos.servicios) {
         const servicioId = servicioData.id
-        
-        console.log(`🔍 Buscando servicio ID ${servicioId} en lista de ${servicios.value.length} servicios`)
-        
+
         const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
         
         if (servicioExistente) {
-          console.log(`📝 ✅ ENCONTRADO - Precargando servicio: ${servicioExistente.nombre}`)
-          console.log(`🔍 Datos del servicio para precargar:`, servicioData)
-          
+
           // ✅ USAR cantidadPorCategoria
           const cantidad = servicioData.cantidadPorCategoria || servicioData.cantidadServicios || 0
-          
-          console.log(`📊 Cantidad a aplicar: ${cantidad}`)
-          
+
           // ✅ CONFIGURAR TODAS LAS CANTIDADES
           cantidades[servicioId] = cantidad
           cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
           preciosVenta[servicioId] = servicioData.precioUsadoOriginal || servicioData.precioRecomendado || 0
-          
-          console.log(`💰 Configurando precio: ${preciosVenta[servicioId]}`)
-          
+
           // ✅ CONFIGURAR CANTIDADES POR CATEGORÍA
           if (cantidad > 0) {
             const categoriaId = servicioData.categoriaId || servicioExistente.categoria?.categorias_id
-            
-            console.log(`🎯 Configurando categoría ${categoriaId} con cantidad ${cantidad}`)
-            
+
             if (categoriaId) {
               // ✅ ASEGURAR QUE EL OBJETO EXISTE
               if (!cantidadesPorCategoria[servicioId]) {
@@ -551,9 +512,7 @@ const precargarFormulario = async (datos) => {
               }
               
               cantidadesPorCategoria[servicioId][categoriaId] = cantidad
-              
-              console.log(`📊 ✅ cantidadesPorCategoria[${servicioId}]:`, cantidadesPorCategoria[servicioId])
-              
+
               // ✅ CONFIGURAR CATEGORÍAS DETALLE
               if (!window.categoriasDetallePorServicio) {
                 window.categoriasDetallePorServicio = {}
@@ -571,21 +530,12 @@ const precargarFormulario = async (datos) => {
                 limite_maximo: servicioExistente.limite_maximo || null
               }]
               
-              console.log(`✅ ✅ window.categoriasDetallePorServicio[${servicioId}]:`, window.categoriasDetallePorServicio[servicioId])
+            
             }
           }
           
-          console.log(`🔥 🔥 Servicio ${servicioExistente.nombre} COMPLETAMENTE CONFIGURADO:`, {
-            servicioId,
-            cantidades: cantidades[servicioId],
-            cantidadesEquipos: cantidadesEquipos[servicioId],
-            preciosVenta: preciosVenta[servicioId],
-            cantidadesPorCategoria: cantidadesPorCategoria[servicioId],
-            categoriasDetalle: window.categoriasDetallePorServicio[servicioId]
-          })
         } else {
           console.error(`❌ ❌ Servicio ${servicioId} NO ENCONTRADO en la lista actual`)
-          console.log('🔍 IDs disponibles:', servicios.value.map(s => ({ id: s.servicios_id, nombre: s.nombre })))
         }
       }
     }
@@ -593,15 +543,10 @@ const precargarFormulario = async (datos) => {
     await nextTick()
     
     // ✅ FORZAR RE-RENDER CON MÚLTIPLES CAMBIOS
-    console.log('🔄 Forzando re-render del formulario...')
     formularioKey.value++
     
     await nextTick()
     await nextTick()
-    
-    console.log('✅ ✅ ✅ Formulario precargado exitosamente')
-    console.log('🔍 Estado FINAL cantidadesPorCategoria:', cantidadesPorCategoria)
-    console.log('🔍 Estado FINAL window.categoriasDetallePorServicio:', window.categoriasDetallePorServicio)
     
   } catch (error) {
     console.error('❌ Error precargando formulario:', error)
@@ -619,7 +564,6 @@ const precargarFormulario = async (datos) => {
   // ===== FUNCIÓN CARGAR SERVICIOS =====
   const cargarServicios = async (params = {}) => {
     try {
-      console.log('🔄 Iniciando carga de servicios...')
       const resultado = await serviciosService.getServiciosWithExpandedCategories({
         estado: 'activo',
         limit: 100,
@@ -629,14 +573,7 @@ const precargarFormulario = async (datos) => {
         servicios.value = resultado.servicios
         serviciosOriginales.value = [...servicios.value]
         
-        console.log('🔥 ESTRUCTURA DE SERVICIOS CARGADOS:', servicios.value)
-        if (servicios.value.length > 0) {
-          console.log('🔥 PRIMER SERVICIO DETALLADO:', servicios.value[0])
-          console.log('🔥 CATEGORIAS_COMPLETAS:', servicios.value[0].categorias_completas)
-        }
-        
         inicializarDatos()
-        console.log('✅ Servicios cargados:', servicios.value.length)
       }
     } catch (err) {
       console.error('❌ Error cargando servicios:', err)
@@ -691,7 +628,6 @@ const precargarFormulario = async (datos) => {
           cacheResultados[termino] = serviciosConPreciosCorrectos
           servicios.value = serviciosConPreciosCorrectos
           aplicarFiltros()
-          console.log(`🔍 Búsqueda "${termino}": ${resultado.servicios.length} resultados con precios corregidos`)
           
           mostrarToast(`${resultado.servicios.length} servicios encontrados para "${termino}"`, 'info')
         } else {
@@ -939,8 +875,7 @@ const precargarFormulario = async (datos) => {
   // Método para actualizar cantidades por categoría con validación
   const actualizarCantidadesPorTipo = (datosActualizacion) => {
     const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle, validacion } = datosActualizacion
-    
-    console.log(`📊 Actualizando cantidades para servicio ${servicioId}:`, categorias)
+
     
     cantidadesPorCategoria[servicioId] = { ...categorias }
     
@@ -953,7 +888,6 @@ const precargarFormulario = async (datos) => {
     }
     window.categoriasDetallePorServicio[servicioId] = categoriasDetalle || []
    
-   console.log(`✅ Categorías detalladas guardadas:`, window.categoriasDetallePorServicio[servicioId])
   }
 
   // Métodos existentes
@@ -1045,11 +979,6 @@ const precargarFormulario = async (datos) => {
         
         const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
         
-        console.log(`🔥 DEBUG MAPEO - Servicio ${servicio.nombre}:`, {
-          categorias,
-          categoriasDetalle
-        })
-        
         const datosServicio = {
           servicio: {
             servicios_id: id,
@@ -1073,7 +1002,6 @@ const precargarFormulario = async (datos) => {
         
         categoriasDetalle.forEach(categoria => {
           if (categoria.cantidad > 0) {
-            console.log(`🎯 Mapeando categoría: ${categoria.unidad_nombre} (${categoria.unidad_tipo}) = ${categoria.cantidad}`)
             
             switch (categoria.unidad_tipo) {
               case 'capacidad':
@@ -1115,11 +1043,8 @@ const precargarFormulario = async (datos) => {
         datosServicio.categoriasDetalle = categoriasDetalle
         datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
         
-        console.log(`🔥 SERVICIO FINAL PARA BACKEND:`, datosServicio)
         return datosServicio
       })
-
-    console.log('🔥 SERVICIOS FINALES PARA BACKEND:', serviciosSeleccionados.value)
     
     if (serviciosSeleccionados.value.length > 0) {
       mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
@@ -1153,14 +1078,11 @@ const precargarFormulario = async (datos) => {
     
     formularioKey.value++
     
-    console.log('🧹 Formulario limpiado completamente')
     mostrarToast('Formulario limpiado correctamente', 'success')
   }
 
   // ===== CICLO DE VIDA =====
   onMounted(async () => {
-    console.log('🚀 Componente montado')
-    console.log('🔍 Query params:', route.query)
     
     await verificarDuplicacion()
   })

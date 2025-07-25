@@ -892,10 +892,6 @@ export default {
       const response = await cotizacionesService.getCotizacionById(cotizacion.id);
       
       if (response.success) {
-        console.log('✅ Datos completos de la cotización:', response.cotizacion);
-        console.log('📋 Estado:', response.cotizacion.estado);
-        console.log('📝 Comentario:', response.cotizacion.comentario);
-        console.log('👤 Auditoría:', response.cotizacion.auditoria);
         
         this.modalCotizacion = response.cotizacion;
       } else {

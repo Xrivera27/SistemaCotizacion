@@ -741,8 +741,6 @@ export default {
        loadingMessage.value = 'Generando PDF...'
        
        mostrarToast('Iniciando generación de PDF...', 'info')
-       console.log('🔥 ANTES DE FORMATEAR - props.serviciosSeleccionados:', props.serviciosSeleccionados)
-       console.log('🔥 PRIMER SERVICIO categoriasDetalle:', props.serviciosSeleccionados[0]?.categoriasDetalle)
 
        const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
          props.serviciosSeleccionados, // ✅ CAMBIAR: usar props en lugar de datosParaPDF.servicios
@@ -753,8 +751,6 @@ export default {
          datosParaPDF.comentario || ''
        )
 
-       console.log('💾 Creando cotización en backend:', cotizacionData)
-
        const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
        if (!resultado.success) {
@@ -762,11 +758,8 @@ export default {
        }
 
        const cotizacionCreada = resultado.cotizacion
-       console.log('✅ Cotización creada con ID:', cotizacionCreada.cotizaciones_id)
 
        mostrarToast('Cotización creada, generando PDF...', 'info')
-
-       console.log('📄 Generando PDF para cotización:', cotizacionCreada.cotizaciones_id)
        
        const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
 
@@ -786,7 +779,6 @@ export default {
        }
 
        cerrarModalConfirmacion()
-       console.log('✅ Proceso completado exitosamente')
 
        // Limpiar formulario después del éxito
        setTimeout(() => {
@@ -817,16 +809,11 @@ export default {
          datosCotizacion.comentario || ''
        )
 
-       console.log('💾 Guardando cotización:', cotizacionData)
-
        const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
        if (!resultado.success) {
          throw new Error(resultado.message || 'Error al guardar la cotización')
        }
-
-       const cotizacionCreada = resultado.cotizacion
-       console.log('✅ Cotización guardada con ID:', cotizacionCreada.cotizaciones_id)
 
        let mensajeExito = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
        

@@ -10,8 +10,6 @@ import authService from '@/services/auth';
 export default {
   name: 'App',
   async mounted() {
-    console.log('🚀 App mounted - Verificando autenticación...');
-    
     // Verificar autenticación al cargar la app
     await this.checkAuthentication();
     
@@ -30,11 +28,8 @@ export default {
     async checkAuthentication() {
       const currentRoute = this.$route.path;
       
-      console.log('🔍 Verificando autenticación para ruta:', currentRoute);
-      
       // Si estamos en login, no verificar
       if (currentRoute === '/login') {
-        console.log('📍 En página de login, saltando verificación');
         return;
       }
       
@@ -43,7 +38,6 @@ export default {
         const result = await authService.checkAuth();
         
         if (result.success) {
-          console.log('✅ Usuario autenticado:', result.user);
           
           // Iniciar heartbeat si no está activo
           authService.startHeartbeat(5);
@@ -52,12 +46,10 @@ export default {
           const expectedPath = authService.getRedirectPath(result.user.tipo_usuario);
           
           if (currentRoute === '/' || currentRoute === '') {
-            console.log('🔀 Redirigiendo desde root a:', expectedPath);
             this.$router.push(expectedPath);
           }
           
         } else {
-          console.log('❌ No hay sesión válida, redirigiendo a login');
           
           // Detener heartbeat
           authService.stopHeartbeat();
@@ -79,7 +71,6 @@ export default {
       // Manejar cuando la página se vuelve visible (para renovar token si es necesario)
       document.addEventListener('visibilitychange', async () => {
         if (!document.hidden && authService.isAuthenticated()) {
-          console.log('👁️ Página visible, verificando sesión...');
           
           try {
             const result = await authService.renewToken();
@@ -97,7 +88,6 @@ export default {
     },
     
     async handleSessionExpired() {
-      console.log('⏰ Sesión expirada, cerrando sesión...');
       
       // Cerrar sesión
       await authService.logout();

@@ -340,7 +340,6 @@ export default {
     
     async cargarDatosIniciales() {
       try {
-        console.log('🚀 Cargando datos iniciales del dashboard supervisor...')
         
         // Usar el endpoint optimizado del supervisor
         const result = await SuperDashboardService.getAllDashboardData(this.mesSeleccionado, 30)
@@ -355,8 +354,6 @@ export default {
           this.serviciosData = data.serviciosChart
           this.resumenMensual = data.resumenMensual || this.resumenMensual
           this.cotizacionesCompletas = data.cotizacionesPendientes || []
-          
-          console.log('✅ Todos los datos del supervisor cargados exitosamente')
         } else {
           this.mostrarError(result.message || 'Error cargando datos del dashboard')
           // Cargar datos individuales como fallback
@@ -371,7 +368,6 @@ export default {
     
     async cargarDatosIndividuales() {
       try {
-        console.log('🔄 Cargando datos individualmente...')
         
         // Cargar cada sección por separado
         const [statsResult, efectivasVsCanceladasResult, colaboradoresResult, serviciosResult, resumenResult, cotizacionesResult] = 
@@ -408,8 +404,7 @@ export default {
         if (cotizacionesResult.status === 'fulfilled' && cotizacionesResult.value.success) {
           this.cotizacionesCompletas = cotizacionesResult.value.cotizaciones
         }
-        
-        console.log('✅ Datos individuales cargados')
+
       } catch (error) {
         console.error('❌ Error cargando datos individuales:', error)
         this.mostrarError('Error cargando algunos datos del dashboard')
@@ -626,7 +621,6 @@ export default {
           if (result.success) {
             this.efectivasVsCanceladasData = result.chartData
             this.createEfectivasVsCanceladasChart()
-            console.log('✅ Gráfico comparativo actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando gráfico comparativo')
           }
@@ -645,7 +639,6 @@ export default {
           if (result.success) {
             this.colaboradoresData = result.chartData
             this.createColaboradoresChart()
-            console.log('✅ Datos de colaboradores actualizados')
           } else {
             this.mostrarError(result.message || 'Error actualizando datos de colaboradores')
           }
@@ -664,7 +657,6 @@ export default {
           if (result.success) {
             this.serviciosData = result.chartData
             this.createServiciosChart()
-            console.log('✅ Datos de servicios actualizados')
           } else {
             this.mostrarError(result.message || 'Error actualizando datos de servicios')
           }
@@ -682,7 +674,6 @@ export default {
           
           if (result.success) {
             this.cotizacionesCompletas = result.cotizaciones
-            console.log('✅ Cotizaciones pendientes actualizadas')
           } else {
             this.mostrarError(result.message || 'Error actualizando cotizaciones pendientes')
           }
@@ -700,7 +691,6 @@ export default {
           
           if (result.success) {
             this.resumenMensual = result.resumen
-            console.log('✅ Resumen mensual actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando resumen mensual')
           }

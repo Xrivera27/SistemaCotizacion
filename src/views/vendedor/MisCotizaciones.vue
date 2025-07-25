@@ -790,7 +790,6 @@ export default {
    // ===== MÉTODOS DEL MODAL DE DUPLICAR =====
    
   abrirModalDuplicar(cotizacion) {
-  console.log('🔍 Abriendo modal para duplicar:', cotizacion); // ✅ Debug
   this.cotizacionParaDuplicar = cotizacion;
   this.modalConfirmDuplicar = true;
 },

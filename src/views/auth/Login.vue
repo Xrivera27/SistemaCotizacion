@@ -217,8 +217,6 @@ export default {
     },
     
     handleImageError(event) {
-      // Fallback en caso de que la imagen no cargue
-      console.log('Error cargando imagen del logo');
       // Crear un fallback visual simple
       event.target.style.display = 'none';
       // Opcional: mostrar texto alternativo
@@ -276,7 +274,6 @@ export default {
       this.generalError = '';
       
       try {
-        console.log('🔐 Iniciando login con backend real...');
         
         // Hacer login real con el backend
         const result = await authService.login(
@@ -286,7 +283,6 @@ export default {
         );
         
         if (result.success) {
-          console.log('✅ Login exitoso:', result.user);
           
           // Emitir evento de login exitoso
           this.$emit('login-success', result.user);
@@ -296,7 +292,6 @@ export default {
           
           // Redirigir según el tipo de usuario
           const redirectPath = authService.getRedirectPath(result.user.tipo_usuario);
-          console.log('🔀 Redirigiendo a:', redirectPath);
           
           this.$router.push(redirectPath);
           
@@ -321,13 +316,11 @@ export default {
       this.successMessage = '';
       
       try {
-        console.log(`📧 Enviando email de recuperación a: ${this.forgotForm.email}`);
         
         // Usar el método real del authService
         const result = await authService.forgotPassword(this.forgotForm.email);
         
         if (result.success) {
-          console.log('✅ Email enviado exitosamente');
           this.emailSent = true;
           this.successMessage = result.message;
           this.generalError = ''; // Limpiar errores
@@ -347,14 +340,12 @@ export default {
     },
     
     async checkExistingAuth() {
-      console.log('🔍 Verificando autenticación existente...');
       
       try {
         // Verificar si hay sesión válida en el backend
         const result = await authService.checkAuth();
         
         if (result.success) {
-          console.log('✅ Sesión válida encontrada:', result.user);
           
           // Emitir evento de login exitoso
           this.$emit('login-success', result.user);
@@ -368,7 +359,6 @@ export default {
           
           return true;
         } else {
-          console.log('❌ No hay sesión válida');
           // Limpiar cualquier dato local inválido
           authService.clearLocalUserData();
           return false;
@@ -383,7 +373,6 @@ export default {
   },
   
   async mounted() {
-    console.log('🚀 Login component mounted');
     
     // Verificar si ya hay una sesión activa
     await this.checkExistingAuth();

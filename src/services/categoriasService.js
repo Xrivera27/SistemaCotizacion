@@ -5,12 +5,10 @@ class CategoriasService {
  // Obtener todas las categorías con paginación y filtros
  async getCategorias(params = {}) {
    try {
-     console.log('📋 Obteniendo categorías con parámetros:', params);
      
      const response = await api.get('/categorias', { params });
      
      if (response.data.success) {
-       console.log('✅ Categorías obtenidas:', response.data.data);
        return {
          success: true,
          categorias: response.data.data.categorias,
@@ -35,12 +33,11 @@ class CategoriasService {
  // Obtener categoría por ID
  async getCategoriaById(id) {
    try {
-     console.log('🏷️ Obteniendo categoría ID:', id);
      
      const response = await api.get(`/categorias/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Categoría obtenida:', response.data.data.categoria);
+
        return {
          success: true,
          categoria: response.data.data.categoria
@@ -64,12 +61,11 @@ class CategoriasService {
  // Crear nueva categoría
  async createCategoria(categoriaData) {
    try {
-     console.log('➕ Creando categoría:', categoriaData);
      
      const response = await api.post('/categorias', categoriaData);
      
      if (response.data.success) {
-       console.log('✅ Categoría creada exitosamente:', response.data.data.categoria);
+
        return {
          success: true,
          categoria: response.data.data.categoria,
@@ -103,12 +99,10 @@ class CategoriasService {
  // Actualizar categoría
  async updateCategoria(id, categoriaData) {
    try {
-     console.log('✏️ Actualizando categoría ID:', id, 'con datos:', categoriaData);
      
      const response = await api.put(`/categorias/${id}`, categoriaData);
      
      if (response.data.success) {
-       console.log('✅ Categoría actualizada exitosamente:', response.data.data.categoria);
        return {
          success: true,
          categoria: response.data.data.categoria,
@@ -142,12 +136,10 @@ class CategoriasService {
  // Eliminar categoría (soft delete)
  async deleteCategoria(id) {
    try {
-     console.log('🗑️ Eliminando categoría ID:', id);
      
      const response = await api.delete(`/categorias/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Categoría eliminada exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -171,12 +163,10 @@ class CategoriasService {
  // Restaurar categoría
  async restoreCategoria(id) {
    try {
-     console.log('🔄 Restaurando categoría ID:', id);
      
      const response = await api.patch(`/categorias/${id}/restore`);
      
      if (response.data.success) {
-       console.log('✅ Categoría restaurada exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -200,12 +190,10 @@ class CategoriasService {
  // Obtener estadísticas de categorías
  async getEstadisticas() {
    try {
-     console.log('📊 Obteniendo estadísticas de categorías...');
      
      const response = await api.get('/categorias/admin/estadisticas');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
        return {
          success: true,
          estadisticas: response.data.data.estadisticas
@@ -229,7 +217,6 @@ class CategoriasService {
  // Buscar categorías (método helper para autocompletado)
  async searchCategorias(searchTerm, limit = 10) {
    try {
-     console.log('🔍 Buscando categorías:', searchTerm);
      
      const response = await api.get('/categorias/search', {
        params: {
@@ -239,7 +226,6 @@ class CategoriasService {
      });
      
      if (response.data.success) {
-       console.log('✅ Categorías encontradas:', response.data.data.categorias);
        return {
          success: true,
          categorias: response.data.data.categorias
@@ -263,12 +249,10 @@ class CategoriasService {
  // Obtener categorías activas (para selects/dropdowns)
  async getCategoriasActivas() {
    try {
-     console.log('📝 Obteniendo categorías activas para select...');
      
      const response = await api.get('/categorias/activas');
      
      if (response.data.success) {
-       console.log('✅ Categorías activas obtenidas:', response.data.data.categorias);
        return {
          success: true,
          categorias: response.data.data.categorias
@@ -292,12 +276,10 @@ class CategoriasService {
  // 🆕 NUEVO: Obtener unidades de medida activas
  async getUnidadesMedidaActivas() {
    try {
-     console.log('📏 Obteniendo unidades de medida activas...');
      
      const response = await api.get('/unidades-medida/activas');
      
      if (response.data.success) {
-       console.log('✅ Unidades de medida obtenidas:', response.data.data.unidades);
        return {
          success: true,
          unidades: response.data.data.unidades
@@ -334,7 +316,6 @@ class CategoriasService {
  // Validar disponibilidad de nombre de categoría
  async checkNombreDisponible(nombre, excludeId = null) {
    try {
-     console.log('🔍 Verificando disponibilidad de nombre:', nombre);
      
      const params = {
        search: nombre,
@@ -356,7 +337,6 @@ class CategoriasService {
          }
        }
        
-       console.log(`Nombre "${nombre}" está ${isAvailable ? 'disponible' : 'ocupado'}`);
        
        return {
          success: true,

@@ -399,13 +399,11 @@ export default {
   methods: {
     async cargarDatosUsuario() {
       try {
-        console.log('🔄 Cargando datos del usuario...');
         
         // Primero intentar cargar desde el backend
         const result = await ConfiguracionService.getInformacionPersonal();
         
         if (result.success) {
-          console.log('✅ Datos cargados desde el backend:', result.data);
           
           this.formData = {
             nombre: result.data.nombre || '',
@@ -423,7 +421,6 @@ export default {
           ConfiguracionService.syncUserData(result.data);
           
         } else {
-          console.log('⚠️ Error del backend, cargando desde localStorage');
           this.cargarDatosLocalStorage();
           this.showNotification('No se pudieron cargar los datos del servidor', 'warning');
         }
@@ -450,7 +447,6 @@ export default {
         };
         
         this.originalData = { ...this.formData };
-        console.log('📱 Datos cargados desde localStorage');
       }
     },
     
@@ -507,17 +503,13 @@ export default {
       this.errors = {}; // Limpiar errores previos
       
       try {
-        console.log('💾 Guardando información personal...');
         
         // Formatear datos para envío (solo campos que cambiaron)
         const datosParaEnviar = ConfiguracionService.formatDataForUpdate(this.formData);
         
-        console.log('📤 Datos a enviar:', datosParaEnviar);
-        
         const result = await ConfiguracionService.actualizarInformacionPersonal(datosParaEnviar);
         
         if (result.success) {
-          console.log('✅ Información actualizada exitosamente');
           
           // Actualizar datos locales con la respuesta del servidor
           this.formData = {
@@ -540,7 +532,6 @@ export default {
           );
           
         } else {
-          console.log('❌ Error del servidor:', result.message);
           
           this.showNotification(
             result.message || 'Error al guardar la información',
@@ -571,7 +562,6 @@ export default {
       this.errors = {}; // Limpiar errores previos
       
       try {
-        console.log('🔐 Cambiando contraseña...');
         
         const passwordData = {
           actual: this.passwordData.actual,
@@ -582,7 +572,6 @@ export default {
         const result = await ConfiguracionService.cambiarContrasena(passwordData);
         
         if (result.success) {
-          console.log('✅ Contraseña cambiada exitosamente');
           
           this.showNotification(
             result.message || 'Contraseña cambiada exitosamente',
@@ -593,7 +582,6 @@ export default {
           this.cancelarCambiosPassword();
           
         } else {
-          console.log('❌ Error cambiando contraseña:', result.message);
           
           this.showNotification(
             result.message || 'Error al cambiar la contraseña',

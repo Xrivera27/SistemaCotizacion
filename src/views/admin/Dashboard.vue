@@ -308,7 +308,6 @@ export default {
     
     async cargarDatosIniciales() {
       try {
-        console.log('🚀 Cargando datos iniciales del dashboard...')
         
         // Usar el endpoint optimizado que trae todos los datos de una vez
         const result = await DashboardService.getAllDashboardData(this.mesSeleccionado)
@@ -322,8 +321,7 @@ export default {
           this.serviciosData = data.serviciosChart
           this.resumenMensual = data.resumenMensual || this.resumenMensual
           this.ultimasCotizaciones = data.cotizacionesRecientes || []
-          
-          console.log('✅ Todos los datos cargados exitosamente')
+
         } else {
           this.mostrarError(result.message || 'Error cargando datos del dashboard')
           // Cargar datos individuales como fallback
@@ -339,7 +337,6 @@ export default {
     
     async cargarDatosIndividuales() {
       try {
-        console.log('🔄 Cargando datos individualmente...')
         
         // Cargar cada sección por separado
         const [statsResult, colaboradoresResult, serviciosResult, resumenResult, cotizacionesResult] = 
@@ -371,8 +368,7 @@ export default {
         if (cotizacionesResult.status === 'fulfilled' && cotizacionesResult.value.success) {
           this.ultimasCotizaciones = cotizacionesResult.value.cotizaciones
         }
-        
-        console.log('✅ Datos individuales cargados')
+
       } catch (error) {
         console.error('❌ Error cargando datos individuales:', error)
         this.mostrarError('Error cargando algunos datos del dashboard')
@@ -532,7 +528,6 @@ export default {
           if (result.success) {
             this.colaboradoresData = result.chartData
             this.createColaboradoresChart()
-            console.log('✅ Datos de colaboradores actualizados')
           } else {
             this.mostrarError(result.message || 'Error actualizando datos de colaboradores')
           }
@@ -551,7 +546,6 @@ export default {
           if (result.success) {
             this.serviciosData = result.chartData
             this.createServiciosChart()
-            console.log('✅ Datos de servicios actualizados')
           } else {
             this.mostrarError(result.message || 'Error actualizando datos de servicios')
           }
@@ -569,7 +563,6 @@ export default {
           
           if (result.success) {
             this.ultimasCotizaciones = result.cotizaciones
-            console.log('✅ Cotizaciones actualizadas')
           } else {
             this.mostrarError(result.message || 'Error actualizando cotizaciones')
           }
@@ -587,7 +580,6 @@ export default {
           
           if (result.success) {
             this.resumenMensual = result.resumen
-            console.log('✅ Resumen mensual actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando resumen mensual')
           }

@@ -492,7 +492,6 @@ export default {
           this.mostrarError(opcionesResult.message || 'Error cargando opciones de reporte');
         }
 
-        console.log('✅ Datos iniciales cargados correctamente');
 
       } catch (error) {
         console.error('❌ Error cargando datos iniciales:', error);
@@ -568,7 +567,6 @@ export default {
         if (resultado.success) {
           this.datosReporte = resultado.reporte;
           this.reporteGenerado = true;
-          console.log('✅ Reporte generado exitosamente:', this.datosReporte);
           
           // Verificar si hay datos
           if (!ReportesService.tienedatos(this.datosReporte)) {

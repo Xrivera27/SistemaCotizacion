@@ -459,19 +459,19 @@ export default {
       try {
         loadingBusqueda.value = true
         
-        console.log('📋 Cargando clientes iniciales...')
+       
         
         const resultado = await clientesService.getClientesRecientes(8) // Cargar 8 clientes recientes
         
         if (resultado.success) {
           clientesFiltrados.value = resultado.clientes.map(clientesService.formatClienteDisplay)
-          console.log(`📋 Clientes iniciales cargados: ${resultado.clientes.length}`)
+          
           
           if (resultado.clientes.length > 0) {
             mostrarToast(`${resultado.clientes.length} clientes cargados`, 'info')
           }
         } else {
-          console.log('ℹ️ No hay clientes para mostrar')
+          
           mostrarToast('No hay clientes registrados aún', 'info')
         }
       } catch (err) {
@@ -502,14 +502,14 @@ export default {
         try {
           loadingBusqueda.value = true
           
-          console.log('🔍 Buscando clientes con término:', termino)
+          
           
           // ✅ CORREGIDO: Usar searchClientesModal (nuevo endpoint con filtros)
           const resultado = await clientesService.searchClientesModal(termino)
           
           if (resultado.success) {
             clientesFiltrados.value = resultado.clientes.map(clientesService.formatClienteDisplay)
-            console.log(`🔍 Búsqueda "${termino}": ${resultado.clientes.length} resultados`)
+            
             
             if (resultado.clientes.length > 0) {
               mostrarToast(`${resultado.clientes.length} cliente${resultado.clientes.length > 1 ? 's' : ''} encontrado${resultado.clientes.length > 1 ? 's' : ''}`, 'info')
@@ -570,7 +570,7 @@ export default {
 
     // Métodos de selección y edición
     const seleccionarCliente = (cliente) => {
-      console.log('🏢 Cliente seleccionado:', cliente)
+      
       const nombreEmpresa = cliente.nombre_empresa || cliente.nombreEmpresa
       mostrarToast(`Cliente ${nombreEmpresa} seleccionado`, 'success')
       emit('cliente-seleccionado', cliente)
@@ -578,7 +578,6 @@ export default {
     }
 
     const editarCliente = (cliente) => {
-      console.log('✏️ Editando cliente:', cliente)
       modoEdicion.value = true
       tabActiva.value = 'agregar'
       
@@ -606,12 +605,6 @@ export default {
         
         mostrarToast(`${modoEdicion.value ? 'Actualizando' : 'Creando'} cliente...`, 'info')
 
-        // ✅ DEBUG TEMPORAL
-        console.log('🐛 DEBUG - Iniciando guardarCliente')
-        console.log('🐛 DEBUG - Modo edición:', modoEdicion.value)
-        console.log('🐛 DEBUG - Formulario válido:', formularioValido.value)
-        console.log('🐛 DEBUG - clienteForm.value:', clienteForm.value)
-
         // Validaciones finales
         if (!formularioValido.value) {
           throw new Error('Por favor completa todos los campos obligatorios correctamente')
@@ -629,21 +622,12 @@ export default {
           estado: 'activo'
         }
 
-        console.log('🐛 DEBUG - Datos preparados:', datosCliente)
-
         let resultado
         if (modoEdicion.value) {
-          // Actualizar cliente existente
-          console.log('🐛 DEBUG - Actualizando cliente ID:', clienteForm.value.clientes_id)
           resultado = await clientesService.updateCliente(clienteForm.value.clientes_id, datosCliente)
         } else {
-          // Crear nuevo cliente
-          console.log('🐛 DEBUG - Creando nuevo cliente...')
           resultado = await clientesService.createCliente(datosCliente)
         }
-
-        console.log('🐛 DEBUG - Resultado del service:', resultado)
-
         if (resultado.success) {
           const clienteCreado = clientesService.formatClienteDisplay(resultado.cliente)
           const nombreEmpresa = clienteCreado.nombre_empresa
@@ -657,7 +641,6 @@ export default {
             cerrar()
           }, 2000)
         } else {
-          console.log('🐛 DEBUG - Error del service:', resultado.message)
           throw new Error(resultado.message || 'Error al guardar el cliente')
         }
 

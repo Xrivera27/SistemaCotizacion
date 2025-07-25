@@ -360,7 +360,6 @@ export default {
  },
  methods: {
    handleLogoError(event) {
-     console.log('Error cargando logo del sidebar');
      // Crear un fallback visual
      event.target.style.display = 'none';
      const fallback = document.createElement('div');
@@ -370,8 +369,6 @@ export default {
    },
 
    async loadUserData() {
-     console.log('📊 Cargando datos del usuario...');
-     
      try {
        // Primero intentar obtener del servicio de auth
        const currentUser = authService.getCurrentUser();
@@ -387,8 +384,6 @@ export default {
            iniciales: this.generateInitials(currentUser.nombre_completo || currentUser.nombre),
            rolTexto: this.getTipoUsuarioTexto(currentUser.tipo_usuario)
          };
-         
-         console.log('✅ Datos del usuario cargados:', this.usuarioActual);
        } else {
          console.warn('⚠️ No se encontraron datos del usuario');
          
@@ -442,12 +437,10 @@ export default {
    
    handleOnline() {
      this.isOnline = true;
-     console.log('🌐 Conexión restaurada');
    },
    
    handleOffline() {
      this.isOnline = false;
-     console.log('📴 Conexión perdida');
    },
    
    checkMobile() {
@@ -488,19 +481,12 @@ export default {
      
      this.isLoggingOut = true;
      
-     try {
-       console.log('🚪 Iniciando proceso de cierre de sesión...');
-       
+     try { 
        if (this.logoutAllSessions) {
-         console.log('🔄 Cerrando todas las sesiones...');
          await authService.logoutAll();
        } else {
-         console.log('🔄 Cerrando sesión actual...');
          await authService.logout();
        }
-       
-       console.log('✅ Sesión cerrada correctamente');
-       
        // Cerrar modal
        this.modalCerrarSesion = false;
        

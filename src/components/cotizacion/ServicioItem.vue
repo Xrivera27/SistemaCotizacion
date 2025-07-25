@@ -196,12 +196,9 @@ setup(props, { emit }) {
     } else if (servicio.value.categoria) {
       categoriasData = [servicio.value.categoria]
     }
-    
-    console.log('📋 Categorías del servicio:', servicio.value.nombre, categoriasData)
       
     // Mapear cada categoría individual
     categoriasData.forEach((categoria, index) => {
-      console.log(`🔥 CATEGORIA ${index}:`, categoria)
       
       if (categoria.unidad_medida) {
         const categoriaInfo = {
@@ -227,8 +224,6 @@ setup(props, { emit }) {
       }
     })
     
-    console.log('🎯 Categorías mapeadas:', categorias)
-    console.log('📊 Cantidades por categoría:', cantidadesPorCategoria)
     return categorias
   })
 
@@ -517,12 +512,9 @@ setup(props, { emit }) {
         errores: validacionLimites.value
       }
     }
-    
-    console.log('📤 EMITIENDO DATOS CON VALIDACIÓN:', datosParaEmitir)
+
     emit('update:cantidadesPorTipo', datosParaEmitir)
     
-    const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
-    console.log(`📊 ${categoria?.nombre} actualizada a ${cantidadesPorCategoria[categoriaId]}. Total: ${totalUnidadesPorTipo.value}`)
   }
 
   const actualizarPrecioVenta = () => {
@@ -541,7 +533,7 @@ setup(props, { emit }) {
 
   // ✅ NUEVO: Método para actualizar desde el padre
   const actualizarDesdeElPadre = (cantidades) => {
-    console.log(`🔄 Actualizando desde el padre para servicio ${servicio.value.servicios_id}:`, cantidades)
+
     Object.assign(cantidadesPorCategoria, cantidades)
   }
 
@@ -559,12 +551,10 @@ setup(props, { emit }) {
   // ✅ NUEVO: Watcher para recibir cantidades desde el componente padre
   watch(() => props.modelValue, (newVal) => {
     if (newVal > 0) {
-      console.log(`📥 Recibiendo modelValue para servicio ${servicio.value.servicios_id}: ${newVal}`)
       // Distribuir la cantidad en la primera categoría disponible
       const primeraCategoria = categoriasDelServicio.value[0]
       if (primeraCategoria && primeraCategoria.id) {
         cantidadesPorCategoria[primeraCategoria.id] = newVal
-        console.log(`✅ Cantidad aplicada a categoría ${primeraCategoria.id}: ${newVal}`)
         actualizarCantidad(primeraCategoria.id)
       }
     }
@@ -576,12 +566,10 @@ setup(props, { emit }) {
     return window.categoriasDetallePorServicio?.[servicioId]
   }, (nuevasCategorias) => {
     if (nuevasCategorias && Array.isArray(nuevasCategorias)) {
-      console.log(`📥 Recibiendo categorías detalladas para servicio ${servicio.value.servicios_id}:`, nuevasCategorias)
       
       nuevasCategorias.forEach(categoria => {
         if (categoria.cantidad > 0) {
           const categoriaId = categoria.categoria_id || categoria.id
-          console.log(`🎯 Aplicando cantidad ${categoria.cantidad} a categoría ${categoriaId}`)
           cantidadesPorCategoria[categoriaId] = categoria.cantidad
         }
       })
@@ -601,13 +589,11 @@ setup(props, { emit }) {
       const { cantidadesPorCategoria: nuevasCantidades, servicioId } = event.detail
       
       if (servicioId === servicio.value.servicios_id) {
-        console.log(`📥 Evento personalizado - actualizando cantidades para servicio ${servicioId}:`, nuevasCantidades)
         
         Object.keys(nuevasCantidades).forEach(categoriaId => {
           const cantidad = nuevasCantidades[categoriaId]
           if (cantidad > 0) {
             cantidadesPorCategoria[categoriaId] = cantidad
-            console.log(`✅ Cantidad aplicada via evento: categoría ${categoriaId} = ${cantidad}`)
           }
         })
         

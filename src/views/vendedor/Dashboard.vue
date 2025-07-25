@@ -286,7 +286,6 @@ export default {
     
     async cargarDatosIniciales() {
       try {
-        console.log('🚀 Cargando datos iniciales del dashboard vendedor...')
         
         // Obtener nombre del usuario del localStorage
         const userData = JSON.parse(localStorage.getItem('user') || '{}')
@@ -305,7 +304,6 @@ export default {
           this.resumenVentas = data.resumenVentas || this.resumenVentas
           this.ultimasCotizaciones = data.cotizacionesRecientes || []
           
-          console.log('✅ Todos los datos del vendedor cargados exitosamente')
         } else {
           this.mostrarError(result.message || 'Error cargando datos del dashboard')
           // Cargar datos individuales como fallback
@@ -321,7 +319,6 @@ export default {
     
     async cargarDatosIndividuales() {
       try {
-        console.log('🔄 Cargando datos del vendedor individualmente...')
         
         // Cargar cada sección por separado
         const [statsResult, ventasResult, estadosResult, resumenResult, cotizacionesResult] = 
@@ -353,8 +350,6 @@ export default {
         if (cotizacionesResult.status === 'fulfilled' && cotizacionesResult.value.success) {
           this.ultimasCotizaciones = cotizacionesResult.value.cotizaciones
         }
-        
-        console.log('✅ Datos individuales del vendedor cargados')
       } catch (error) {
         console.error('❌ Error cargando datos individuales vendedor:', error)
         this.mostrarError('Error cargando algunos datos del dashboard')
@@ -538,7 +533,6 @@ export default {
           if (result.success) {
             this.ventasChartData = result.chartData
             this.createVentasChart()
-            console.log('✅ Gráfico de ventas actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando gráfico de ventas')
           }
@@ -557,7 +551,6 @@ export default {
           if (result.success) {
             this.estadosChartData = result.chartData
             this.createEstadosChart()
-            console.log('✅ Gráfico de estados actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando gráfico de estados')
           }
@@ -575,7 +568,6 @@ export default {
           
           if (result.success) {
             this.ultimasCotizaciones = result.cotizaciones
-            console.log('✅ Cotizaciones actualizadas')
           } else {
             this.mostrarError(result.message || 'Error actualizando cotizaciones')
           }
@@ -593,7 +585,6 @@ export default {
           
           if (result.success) {
             this.resumenVentas = result.resumen
-            console.log('✅ Resumen de ventas actualizado')
           } else {
             this.mostrarError(result.message || 'Error actualizando resumen de ventas')
           }

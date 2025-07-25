@@ -6,7 +6,6 @@ class CotizacionVendedorService {
   // Obtener mis cotizaciones con filtros y paginación
   async getMisCotizaciones(filtros = {}) {
     try {
-      console.log('📋 Obteniendo mis cotizaciones...', filtros);
       
       const params = new URLSearchParams();
       
@@ -19,7 +18,6 @@ class CotizacionVendedorService {
       const response = await api.get(`/cotizacion-vendedor?${params.toString()}`);
       
       if (response.data.success) {
-        console.log('✅ Mis cotizaciones obtenidas:', response.data);
         return {
           success: true,
           cotizaciones: response.data.cotizaciones,
@@ -44,12 +42,10 @@ class CotizacionVendedorService {
   // Obtener mis estadísticas
   async getMisEstadisticas() {
     try {
-      console.log('📊 Obteniendo mis estadísticas...');
       
       const response = await api.get('/cotizacion-vendedor/estadisticas');
       
       if (response.data.success) {
-        console.log('✅ Mis estadísticas obtenidas:', response.data.estadisticas);
         return {
           success: true,
           estadisticas: response.data.estadisticas
@@ -73,12 +69,10 @@ class CotizacionVendedorService {
   // Obtener una cotización específica mía
   async getMiCotizacion(id) {
     try {
-      console.log('📄 Obteniendo mi cotización:', id);
       
       const response = await api.get(`/cotizacion-vendedor/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Mi cotización obtenida:', response.data.cotizacion);
         return {
           success: true,
           cotizacion: response.data.cotizacion
@@ -102,7 +96,6 @@ class CotizacionVendedorService {
   // Generar PDF de mi cotización
   async generarMiPDF(id, tipo = 'copia') {
     try {
-      console.log('📄 Generando mi PDF:', id, tipo);
       
       const response = await api.get(`/cotizacion-vendedor/${id}/pdf?tipo=${tipo}`, {
         responseType: 'blob'
@@ -123,7 +116,6 @@ class CotizacionVendedorService {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      console.log('✅ PDF generado y descargado:', nombreArchivo);
       return {
         success: true,
         message: `PDF ${tipoTexto} generado exitosamente`
@@ -141,7 +133,6 @@ class CotizacionVendedorService {
   // Vista previa de PDF en modal (sin descargar)
   async vistaPreviaPDF(id, tipo = 'copia') {
     try {
-      console.log('👁️ Vista previa PDF:', id, tipo);
       
       const response = await api.get(`/cotizacion-vendedor/${id}/pdf?tipo=${tipo}`, {
         responseType: 'blob'
@@ -150,7 +141,6 @@ class CotizacionVendedorService {
       // Crear URL del blob para vista previa
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       
-      console.log('✅ Vista previa PDF creada');
       return {
         success: true,
         pdfUrl: url
@@ -168,12 +158,10 @@ class CotizacionVendedorService {
 // Actualizar el método duplicarCotizacion en el service
 async duplicarCotizacion(id) {
   try {
-    console.log('📋 Obteniendo datos para duplicar cotización:', id);
     
     const response = await api.post(`/cotizacion-vendedor/${id}/duplicar`);
     
     if (response.data.success) {
-      console.log('✅ Datos para duplicar obtenidos:', response.data.datos);
       return {
         success: true,
         datos: response.data.datos,

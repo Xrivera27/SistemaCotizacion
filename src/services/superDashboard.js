@@ -8,12 +8,10 @@ class SuperDashboardService {
   // Obtener estadísticas del supervisor
   async getSuperUsuarioStats() {
     try {
-      console.log('📊 Obteniendo estadísticas del supervisor...');
       
       const response = await api.get('/dashboard/super-usuario/stats');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas supervisor obtenidas:', response.data.data);
         return {
           success: true,
           stats: response.data.data
@@ -37,14 +35,12 @@ class SuperDashboardService {
   // Obtener datos para gráfico efectivas vs canceladas
   async getEfectivasVsCanceladas(dias = 30) {
     try {
-      console.log('📈 Obteniendo datos del gráfico comparativo...');
       
       const response = await api.get('/dashboard/super-usuario/efectivas-vs-canceladas', {
         params: { dias }
       });
       
       if (response.data.success) {
-        console.log('✅ Datos comparativos obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -68,12 +64,10 @@ class SuperDashboardService {
   // Obtener datos para gráfico de colaboradores
   async getColaboradoresChart() {
     try {
-      console.log('📊 Obteniendo datos del gráfico de colaboradores...');
       
       const response = await api.get('/dashboard/super-usuario/colaboradores-chart');
       
       if (response.data.success) {
-        console.log('✅ Datos de colaboradores obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -97,12 +91,10 @@ class SuperDashboardService {
   // Obtener datos para gráfico de servicios
   async getServiciosChart() {
     try {
-      console.log('📊 Obteniendo datos del gráfico de servicios...');
       
       const response = await api.get('/dashboard/super-usuario/servicios-chart');
       
       if (response.data.success) {
-        console.log('✅ Datos de servicios obtenidos:', response.data.data);
         return {
           success: true,
           chartData: response.data.data
@@ -126,14 +118,11 @@ class SuperDashboardService {
   // Obtener resumen mensual
   async getResumenMensual(mes = 'actual') {
     try {
-      console.log('📅 Obteniendo resumen mensual supervisor:', mes);
-      
       const response = await api.get('/dashboard/super-usuario/resumen-mensual', {
         params: { mes }
       });
       
       if (response.data.success) {
-        console.log('✅ Resumen mensual supervisor obtenido:', response.data.data);
         return {
           success: true,
           resumen: response.data.data
@@ -157,12 +146,10 @@ class SuperDashboardService {
   // Obtener cotizaciones pendientes de aprobación
   async getCotizacionesPendientesAprobacion() {
     try {
-      console.log('📋 Obteniendo cotizaciones pendientes de aprobación...');
       
       const response = await api.get('/dashboard/super-usuario/cotizaciones-pendientes-aprobacion');
       
       if (response.data.success) {
-        console.log('✅ Cotizaciones pendientes obtenidas:', response.data.data);
         return {
           success: true,
           cotizaciones: response.data.data
@@ -186,14 +173,12 @@ class SuperDashboardService {
   // Aprobar cotización
   async aprobarCotizacion(cotizacionId) {
     try {
-      console.log('✅ Aprobando cotización:', cotizacionId);
       
       const response = await api.post('/dashboard/super-usuario/aprobar-cotizacion', {
         cotizacionId
       });
       
       if (response.data.success) {
-        console.log('✅ Cotización aprobada exitosamente:', response.data.data);
         return {
           success: true,
           data: response.data.data
@@ -217,7 +202,6 @@ class SuperDashboardService {
   // Rechazar cotización
   async rechazarCotizacion(cotizacionId, motivo) {
     try {
-      console.log('❌ Rechazando cotización:', cotizacionId, 'Motivo:', motivo);
       
       if (!motivo || motivo.trim() === '') {
         return {
@@ -232,7 +216,6 @@ class SuperDashboardService {
       });
       
       if (response.data.success) {
-        console.log('✅ Cotización rechazada exitosamente:', response.data.data);
         return {
           success: true,
           data: response.data.data
@@ -256,14 +239,11 @@ class SuperDashboardService {
   // Obtener todos los datos del dashboard de una vez (optimizado)
   async getAllDashboardData(mes = 'actual', dias = 30) {
     try {
-      console.log('🚀 Obteniendo todos los datos del dashboard supervisor...');
-      
       const response = await api.get('/dashboard/super-usuario/all-data', {
         params: { mes, dias }
       });
       
       if (response.data.success) {
-        console.log('✅ Todos los datos del dashboard supervisor obtenidos:', response.data.data);
         return {
           success: true,
           data: response.data.data

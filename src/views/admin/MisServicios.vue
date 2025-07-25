@@ -1321,9 +1321,6 @@ async guardarServicio() {
     return;
   }
   
-  // 🔍 DEBUG: Ver qué datos estamos enviando
-  console.log('📤 Datos del formulario antes de enviar:', this.formulario);
-  
   this.guardandoServicio = true;
  this.loadingMessage = this.servicioEditando ? 'Actualizando servicio...' : 'Creando servicio...';
  

@@ -750,7 +750,6 @@ export default {
  },
 
  async mounted() {
-   console.log('🚀 Componente MisCategorias montado');
    await this.cargarDatosIniciales();
  },
 
@@ -778,19 +777,13 @@ export default {
    async cargarUnidadesMedida() {
      try {
        this.cargandoUnidades = true;
-       console.log('📏 Cargando unidades de medida...');
        
        // ✅ CORRECCIÓN: Usar el servicio correcto
        const result = await unidadesMedidaService.getUnidadesActivas();
        
-       console.log('🔍 RESULTADO COMPLETO:', result);
-       console.log('🔍 RESULT.SUCCESS:', result.success);
-       console.log('🔍 RESULT.UNIDADES:', result.unidades);
-       
        if (result.success) {
          // ✅ CORRECCIÓN: Asegurar que siempre sea un array
          this.unidadesMedida = result.unidades || [];
-         console.log('✅ Unidades de medida cargadas:', this.unidadesMedida);
        } else {
          console.error('❌ Error cargando unidades de medida:', result.message);
          // ✅ CORRECCIÓN: Mantener array vacío en caso de error
@@ -810,7 +803,6 @@ export default {
 
    async cargarCategorias() {
      try {
-       console.log('📋 Cargando categorías con filtros:', this.filtros);
        
        const params = {
          page: this.pagination?.currentPage || 1,
@@ -824,7 +816,6 @@ export default {
        if (result.success) {
          this.categorias = result.categorias;
          this.pagination = result.pagination;
-         console.log('✅ Categorías cargadas:', this.categorias.length);
        } else {
          this.showNotification(result.message || 'Error cargando categorías', 'error');
        }
@@ -837,13 +828,11 @@ export default {
 
    async cargarEstadisticas() {
      try {
-       console.log('📊 Cargando estadísticas...');
        
        const result = await categoriasService.getEstadisticas();
        
        if (result.success) {
          this.estadisticas = result.estadisticas;
-         console.log('✅ Estadísticas cargadas:', this.estadisticas);
        } else {
          console.error('❌ Error cargando estadísticas:', result.message);
        }
@@ -863,8 +852,6 @@ export default {
    },
 
    async aplicarFiltros() {
-     console.log('🔍 Aplicando filtros:', this.filtros);
-     
      // Resetear a la primera página
      if (this.pagination) {
        this.pagination.currentPage = 1;
@@ -963,13 +950,6 @@ export default {
 
    async guardarCategoria() {
      if (this.guardandoCategoria) return;
-     
-     // ✅ AGREGAR ESTAS LÍNEAS DE DEBUG
-     console.log('📤 Formulario completo:', this.formulario);
-     console.log('🔍 Unidad de medida ID:', this.formulario.unidades_medida_id);
-     console.log('📏 Unidades disponibles:', this.unidadesMedida);
-     console.log('🏷️ Unidades agrupadas:', this.unidadesPorTipo);
-     
      this.erroresFormulario = [];
      
      // Validaciones básicas
@@ -983,7 +963,6 @@ export default {
      try {
        // 🆕 NUEVO: Serializar el formulario para eliminar Proxies de Vue
        const formularioData = JSON.parse(JSON.stringify(this.formulario));
-       console.log('📋 Formulario serializado:', formularioData);
        
        let result;
        
@@ -1048,9 +1027,6 @@ export default {
      if (this.formulario.descripcion && this.formulario.descripcion.trim().length > 500) {
        errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 500 caracteres' });
      }
-
-     // ✅ CORREGIDO: Validar unidad de medida
-     console.log('🔍 Validando unidad de medida:', this.formulario.unidades_medida_id);
      
      if (!this.formulario.unidades_medida_id || this.formulario.unidades_medida_id === '') {
        errores.push({ field: 'unidades_medida_id', message: 'La unidad de medida es requerida' });

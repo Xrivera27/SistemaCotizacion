@@ -7,12 +7,10 @@ class ServiciosService {
  // Obtener todos los servicios con paginación y filtros
  async getServicios(params = {}) {
    try {
-     console.log('📋 Obteniendo servicios con parámetros:', params);
      
      const response = await api.get('/servicios', { params });
      
      if (response.data.success) {
-       console.log('✅ Servicios obtenidos:', response.data.data);
        return {
          success: true,
          servicios: response.data.data.servicios,
@@ -37,12 +35,10 @@ class ServiciosService {
  // Obtener servicio por ID (con categorías expandidas)
  async getServicioById(id) {
    try {
-     console.log('🛠️ Obteniendo servicio ID:', id);
      
      const response = await api.get(`/servicios/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Servicio obtenido:', response.data.data.servicio);
        return {
          success: true,
          servicio: response.data.data.servicio
@@ -66,12 +62,10 @@ class ServiciosService {
  // 🆕 NUEVO: Obtener todas las categorías de un servicio
  async getCategoriesForServicio(servicioId) {
    try {
-     console.log('🏷️ Obteniendo categorías para servicio ID:', servicioId);
      
      const response = await api.get(`/servicios/${servicioId}/categories`);
      
      if (response.data.success) {
-       console.log('✅ Categorías obtenidas:', response.data.data.categorias);
        return {
          success: true,
          categorias: response.data.data.categorias
@@ -95,14 +89,12 @@ class ServiciosService {
  // 🆕 NUEVO: Obtener servicios relacionados
  async getRelatedServicios(servicioId, limit = 5) {
    try {
-     console.log('🔗 Obteniendo servicios relacionados para ID:', servicioId);
      
      const response = await api.get(`/servicios/${servicioId}/related`, {
        params: { limit }
      });
      
      if (response.data.success) {
-       console.log('✅ Servicios relacionados obtenidos:', response.data.data.servicios);
        return {
          success: true,
          servicios: response.data.data.servicios
@@ -126,12 +118,10 @@ class ServiciosService {
  // 🆕 NUEVO: Obtener servicios con categorías expandidas
  async getServiciosWithExpandedCategories(params = {}) {
    try {
-     console.log('📋🏷️ Obteniendo servicios con categorías expandidas:', params);
      
      const response = await api.get('/servicios/expanded', { params });
      
      if (response.data.success) {
-       console.log('✅ Servicios con categorías expandidas obtenidos:', response.data.data);
        return {
          success: true,
          servicios: response.data.data.servicios,
@@ -156,7 +146,6 @@ class ServiciosService {
  // 🔧 ACTUALIZADO: Crear nuevo servicio (con soporte para múltiples categorías y límites)
  async createServicio(servicioData) {
    try {
-     console.log('➕ Creando servicio:', servicioData);
      
      // 🆕 NUEVO: Preparar datos para múltiples categorías y límites
      const dataToSend = this.prepareServicioDataForAPI(servicioData);
@@ -164,7 +153,6 @@ class ServiciosService {
      const response = await api.post('/servicios', dataToSend);
      
      if (response.data.success) {
-       console.log('✅ Servicio creado exitosamente:', response.data.data.servicio);
        return {
          success: true,
          servicio: response.data.data.servicio,
@@ -198,7 +186,6 @@ class ServiciosService {
  // 🔧 ACTUALIZADO: Actualizar servicio (con soporte para múltiples categorías y límites)
  async updateServicio(id, servicioData) {
    try {
-     console.log('✏️ Actualizando servicio ID:', id, 'con datos:', servicioData);
      
      // 🆕 NUEVO: Preparar datos para múltiples categorías y límites
      const dataToSend = this.prepareServicioDataForAPI(servicioData);
@@ -206,7 +193,6 @@ class ServiciosService {
      const response = await api.put(`/servicios/${id}`, dataToSend);
      
      if (response.data.success) {
-       console.log('✅ Servicio actualizado exitosamente:', response.data.data.servicio);
        return {
          success: true,
          servicio: response.data.data.servicio,
@@ -240,7 +226,6 @@ class ServiciosService {
  // 🆕 NUEVO: Asignar múltiples categorías a un servicio existente
  async assignCategoriesToServicio(servicioId, categorias, categoriaPrincipal) {
    try {
-     console.log('🏷️ Asignando categorías al servicio ID:', servicioId, 'categorías:', categorias);
      
      const response = await api.post(`/servicios/${servicioId}/assign-categories`, {
        categorias,
@@ -249,7 +234,6 @@ class ServiciosService {
      });
      
      if (response.data.success) {
-       console.log('✅ Categorías asignadas exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -272,9 +256,7 @@ class ServiciosService {
 
  // 🆕 NUEVO: Verificar conflictos de nombres en múltiples categorías
  async checkNameConflicts(nombre, categorias, excludeId = null) {
-   try {
-     console.log('🔍 Verificando conflictos de nombre:', nombre, 'en categorías:', categorias);
-     
+   try { 
      const response = await api.post('/servicios/check-conflicts', {
        nombre,
        categorias,
@@ -282,7 +264,6 @@ class ServiciosService {
      });
      
      if (response.data.success) {
-       console.log('✅ Verificación de conflictos completada:', response.data.data);
        return {
          success: true,
          hasConflicts: response.data.data.hasConflicts,
@@ -307,7 +288,6 @@ class ServiciosService {
  // 🆕 NUEVO: Validar cantidad contra límites del servicio
  async validateCantidad(servicioId, cantidad) {
    try {
-     console.log('🔍 Validando cantidad:', cantidad, 'para servicio ID:', servicioId);
      
      const response = await api.post('/servicios/validate-cantidad', {
        servicios_id: servicioId,
@@ -315,7 +295,6 @@ class ServiciosService {
      });
      
      if (response.data.success) {
-       console.log('✅ Validación de cantidad completada:', response.data.data);
        return {
          success: true,
          valid: response.data.data.valid,
@@ -341,12 +320,10 @@ class ServiciosService {
  // 🆕 NUEVO: Obtener límites de un servicio
  async getLimitesServicio(servicioId) {
    try {
-     console.log('📏 Obteniendo límites para servicio ID:', servicioId);
      
      const response = await api.get(`/servicios/${servicioId}/limites`);
      
      if (response.data.success) {
-       console.log('✅ Límites obtenidos:', response.data.data);
        return {
          success: true,
          limites: response.data.data
@@ -370,12 +347,10 @@ class ServiciosService {
  // Eliminar servicio (soft delete)
  async deleteServicio(id) {
    try {
-     console.log('🗑️ Eliminando servicio ID:', id);
      
      const response = await api.delete(`/servicios/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Servicio eliminado exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -399,12 +374,9 @@ class ServiciosService {
  // Restaurar servicio
  async restoreServicio(id) {
    try {
-     console.log('🔄 Restaurando servicio ID:', id);
-     
      const response = await api.patch(`/servicios/${id}/restore`);
      
      if (response.data.success) {
-       console.log('✅ Servicio restaurado exitosamente');
        return {
          success: true,
          message: response.data.message
@@ -428,12 +400,10 @@ class ServiciosService {
  // Obtener estadísticas de servicios
  async getEstadisticas() {
    try {
-     console.log('📊 Obteniendo estadísticas de servicios...');
      
      const response = await api.get('/servicios/admin/estadisticas');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
        return {
          success: true,
          estadisticas: response.data.data.estadisticas
@@ -457,12 +427,10 @@ class ServiciosService {
  // 🆕 NUEVO: Obtener estadísticas avanzadas por categoría
  async getAdvancedCategoryStats() {
    try {
-     console.log('📊 Obteniendo estadísticas avanzadas por categoría...');
      
      const response = await api.get('/servicios/admin/stats/categories');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas avanzadas obtenidas:', response.data.data.estadisticas);
        return {
          success: true,
          estadisticas: response.data.data.estadisticas
@@ -486,12 +454,10 @@ class ServiciosService {
  // 🆕 NUEVO: Migrar servicios a múltiples categorías
  async migrateToMultipleCategories() {
    try {
-     console.log('🔄 Iniciando migración a múltiples categorías...');
      
      const response = await api.post('/servicios/admin/migrate');
      
      if (response.data.success) {
-       console.log('✅ Migración completada:', response.data.message);
        return {
          success: true,
          message: response.data.message
@@ -515,12 +481,10 @@ class ServiciosService {
  // 🆕 NUEVO: Validar integridad de datos
  async validateDataIntegrity() {
    try {
-     console.log('🔍 Validando integridad de datos...');
      
      const response = await api.get('/servicios/admin/validate');
      
      if (response.data.success) {
-       console.log('✅ Validación completada:', response.data);
        return {
          success: true,
          issues: response.data.issues || [],
@@ -545,7 +509,6 @@ class ServiciosService {
  // Buscar servicios (método helper para autocompletado)
  async searchServicios(searchTerm, limit = 10) {
    try {
-     console.log('🔍 Buscando servicios:', searchTerm);
      
      const response = await api.get('/servicios/search', {
        params: {
@@ -555,7 +518,6 @@ class ServiciosService {
      });
      
      if (response.data.success) {
-       console.log('✅ Servicios encontrados:', response.data.data.servicios);
        return {
          success: true,
          servicios: response.data.data.servicios
@@ -579,12 +541,11 @@ class ServiciosService {
  // Obtener servicios activos (para selects/dropdowns)
  async getServiciosActivos() {
    try {
-     console.log('📝 Obteniendo servicios activos para select...');
      
      const response = await api.get('/servicios/activos');
      
      if (response.data.success) {
-       console.log('✅ Servicios activos obtenidos:', response.data.data.servicios);
+
        return {
          success: true,
          servicios: response.data.data.servicios
@@ -608,12 +569,10 @@ class ServiciosService {
  // 🔧 ACTUALIZADO: Obtener servicios por categoría (ahora considera múltiples categorías)
  async getServiciosPorCategoria(categoriaId) {
    try {
-     console.log('🏷️ Obteniendo servicios por categoría ID:', categoriaId);
      
      const response = await api.get(`/servicios/categoria/${categoriaId}`);
      
      if (response.data.success) {
-       console.log('✅ Servicios por categoría obtenidos:', response.data.data.servicios);
        return {
          success: true,
          servicios: response.data.data.servicios
@@ -677,23 +636,18 @@ prepareServicioDataForAPI(servicioData) {
     data.limite_maximo = null; // Sin límite máximo
   }
   
-  console.log('🔧 Datos preparados para API:', data); // Para debug
-  
   return data;
 }
 
  // 🔧 ACTUALIZADO: Validar disponibilidad de nombre (ahora considera múltiples categorías)
  async checkNombreDisponible(nombre, categorias, excludeId = null) {
    try {
-     console.log('🔍 Verificando disponibilidad de nombre:', nombre, 'en categorías:', categorias);
-     
      // Si es un solo ID, convertir a array
      const categoriasArray = Array.isArray(categorias) ? categorias : [categorias];
      
      const result = await this.checkNameConflicts(nombre, categoriasArray, excludeId);
      
      if (result.success) {
-       console.log(`Nombre "${nombre}" ${result.hasConflicts ? 'tiene conflictos' : 'está disponible'}`);
        
        return {
          success: true,
@@ -732,7 +686,6 @@ prepareServicioDataForAPI(servicioData) {
    let categoriasArray = [];
    try {
      if (servicio.categorias_ids && servicio.categorias_ids !== 'null') {
-       console.log('📋 Parseando categorias_ids:', servicio.categorias_ids);
        categoriasArray = JSON.parse(servicio.categorias_ids);
        
        // Asegurar que es un array de números
@@ -751,8 +704,6 @@ prepareServicioDataForAPI(servicioData) {
        categoriasArray = [parseInt(servicio.categorias_id)];
      }
    }
-   
-   console.log('📋 Categorías parseadas para servicio', servicio.servicios_id, ':', categoriasArray);
    
    // Obtener información de la categoría principal (para compatibilidad)
    const categoriaPrincipal = servicio.categoria ? {
@@ -788,13 +739,10 @@ prepareServicioDataForAPI(servicioData) {
  // Agregar este método al servicio:
  async getServiciosParaCotizacion(params = {}) {
    try {
-     console.log('📋 Obteniendo servicios para cotización con categorías expandidas:', params);
-     
      // Usar endpoint expandido
      const response = await api.get('/servicios/expanded', { params });
      
      if (response.data.success) {
-       console.log('✅ Servicios expandidos obtenidos:', response.data.data);
        
        // Formatear cada servicio con sus categorías completas
        const serviciosFormateados = response.data.data.servicios.map(servicio => {

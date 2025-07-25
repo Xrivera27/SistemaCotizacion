@@ -6,7 +6,6 @@ class AuthService {
   // Login con el backend real
   async login(usuario, password, recordar = false) {
     try {
-      console.log('🔐 Intentando login:', { usuario, recordar });
       
       const response = await api.post('/auth/login', {
         usuario,
@@ -15,8 +14,6 @@ class AuthService {
 
       if (response.data.success) {
         const userData = response.data.data.user;
-        
-        console.log('✅ Login exitoso:', userData);
         
         // Guardar datos del usuario (el JWT ya está en la cookie)
         const userToStore = {
@@ -107,7 +104,6 @@ class AuthService {
   async logout() {
     try {
       await api.post('/auth/logout');
-      console.log('✅ Logout exitoso');
     } catch (error) {
       console.error('❌ Error en logout:', error);
     } finally {
@@ -120,7 +116,7 @@ class AuthService {
   async logoutAll() {
     try {
       await api.post('/auth/logout-all');
-      console.log('✅ Logout de todas las sesiones exitoso');
+
     } catch (error) {
       console.error('❌ Error en logout all:', error);
     } finally {
@@ -134,7 +130,6 @@ class AuthService {
       const response = await api.get('/auth/heartbeat');
       
       if (response.data.success) {
-        console.log('🔄 Token renovado exitosamente');
         return {
           success: true,
           expiresAt: response.data.data.expiresAt
@@ -272,7 +267,6 @@ class AuthService {
       }
     }, intervalMinutes * 60 * 1000);
 
-    console.log(`🔄 Heartbeat iniciado cada ${intervalMinutes} minutos`);
   }
 
   // Detener heartbeat
@@ -280,21 +274,18 @@ class AuthService {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
-      console.log('⏹️ Heartbeat detenido');
     }
   }
 
   // Forgot Password - NUEVO MÉTODO
 async forgotPassword(email) {
   try {
-    console.log('📧 Enviando solicitud de recuperación para:', email);
     
     const response = await api.post('/auth/forgot-password', {
       email
     });
 
     if (response.data.success) {
-      console.log('✅ Email de recuperación enviado exitosamente');
       return {
         success: true,
         message: response.data.message

@@ -8,12 +8,10 @@ class ReportesService {
   // Obtener tipos de reporte disponibles
   async getTiposReporte() {
     try {
-      console.log('📋 Obteniendo tipos de reporte...');
       
       const response = await api.get('/reportes/tipos');
       
       if (response.data.success) {
-        console.log('✅ Tipos de reporte obtenidos:', response.data.data);
         return {
           success: true,
           tipos: response.data.data
@@ -37,12 +35,10 @@ class ReportesService {
   // Obtener opciones para filtros (vendedores, servicios, clientes)
   async getOpcionesReporte() {
     try {
-      console.log('🔧 Obteniendo opciones de reporte...');
       
       const response = await api.get('/reportes/opciones');
       
       if (response.data.success) {
-        console.log('✅ Opciones de reporte obtenidas:', response.data.data);
         return {
           success: true,
           opciones: response.data.data
@@ -68,7 +64,6 @@ class ReportesService {
   // Generar reporte dinámico (POST)
   async generarReporte(tipo, filtros = {}) {
     try {
-      console.log('📊 Generando reporte:', tipo, 'con filtros:', filtros);
       
       const response = await api.post('/reportes/generar', {
         tipo,
@@ -76,7 +71,6 @@ class ReportesService {
       });
       
       if (response.data.success) {
-        console.log('✅ Reporte generado exitosamente:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -100,7 +94,6 @@ class ReportesService {
   // Exportar reporte
   async exportarReporte(tipo, formato = 'pdf', filtros = {}, datos = {}) {
     try {
-      console.log('📤 Exportando reporte:', tipo, 'formato:', formato);
       
       const response = await api.post('/reportes/exportar', {
         tipo,
@@ -110,7 +103,6 @@ class ReportesService {
       });
       
       if (response.data.success) {
-        console.log('✅ Reporte exportado exitosamente:', response.data.data);
         return {
           success: true,
           archivo: response.data.data
@@ -136,13 +128,11 @@ class ReportesService {
   // Reporte de Cotizaciones
   async getReporteCotizaciones(filtros = {}) {
     try {
-      console.log('📊 Obteniendo reporte de cotizaciones con filtros:', filtros);
       
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/cotizaciones', { params });
       
       if (response.data.success) {
-        console.log('✅ Reporte de cotizaciones obtenido:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -166,13 +156,11 @@ class ReportesService {
   // Reporte de Vendedores
   async getReporteVendedores(filtros = {}) {
     try {
-      console.log('👥 Obteniendo reporte de vendedores con filtros:', filtros);
       
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/vendedores', { params });
       
       if (response.data.success) {
-        console.log('✅ Reporte de vendedores obtenido:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -196,13 +184,11 @@ class ReportesService {
   // Reporte de Servicios
   async getReporteServicios(filtros = {}) {
     try {
-      console.log('🔧 Obteniendo reporte de servicios con filtros:', filtros);
       
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/servicios', { params });
       
       if (response.data.success) {
-        console.log('✅ Reporte de servicios obtenido:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -226,13 +212,11 @@ class ReportesService {
   // Reporte de Clientes
   async getReporteClientes(filtros = {}) {
     try {
-      console.log('🏢 Obteniendo reporte de clientes con filtros:', filtros);
       
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/clientes', { params });
       
       if (response.data.success) {
-        console.log('✅ Reporte de clientes obtenido:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -256,13 +240,11 @@ class ReportesService {
   // Reporte Financiero
   async getReporteFinanciero(filtros = {}) {
     try {
-      console.log('💰 Obteniendo reporte financiero con filtros:', filtros);
       
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/financiero', { params });
       
       if (response.data.success) {
-        console.log('✅ Reporte financiero obtenido:', response.data.data);
         return {
           success: true,
           reporte: response.data.data
@@ -319,8 +301,6 @@ construirParametros(filtros) {
   
   if (filtros.agrupacion) params.agrupacion = filtros.agrupacion;
   
-  console.log('🔧 Parámetros construidos:', params);
-  console.log('🔧 Filtros originales:', filtros);
   return params;
 }
 
@@ -568,7 +548,6 @@ formatearMoneda(valor) {
 // Generar PDF desde backend
 async generarPDF(tipo, filtros = {}) {
   try {
-    console.log('📄 Solicitando PDF al backend:', tipo);
     
     const response = await api.post('/reportes/generar-pdf', {
       tipo,
@@ -586,7 +565,6 @@ async generarPDF(tipo, filtros = {}) {
     link.click();
     link.remove();
     
-    console.log('✅ PDF descargado exitosamente');
     
     return {
       success: true,

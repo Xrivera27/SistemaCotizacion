@@ -19,11 +19,8 @@ class ClientesService {
       
       if (this._categoriasCache && this._categoriasCacheTime && 
           (now - this._categoriasCacheTime) < cacheExpiry) {
-        console.log('✅ Usando categorías desde cache');
         return this._categoriasCache;
       }
-      
-      console.log('🔄 Obteniendo categorías desde API...');
       const result = await categoriasService.getCategoriasActivas();
       
       if (result.success) {
@@ -36,7 +33,7 @@ class ClientesService {
           this._categoriasMap.set(cat.nombre.toLowerCase(), cat.categorias_id);
         });
         
-        console.log('✅ Categorías cacheadas:', result.categorias.length);
+
         return result.categorias;
       }
       
@@ -86,7 +83,6 @@ class ClientesService {
         categoriaId = this._categoriasCache[0].categorias_id;
       }
       
-      console.log(`🔧 Categoria mapeada: "${nombreCategoria}" → ID ${categoriaId}`);
       return categoriaId || 1;
       
     } catch (error) {
@@ -97,7 +93,6 @@ class ClientesService {
 
   // ✅ FUNCIÓN CORREGIDA: Formatear servicios para envío al backend
   async formatServiciosParaPDF(servicios) {
-    console.log('🔧 INICIO formatServiciosParaPDF - Recibido:', servicios);
     
     // Convertir Proxy a array normal
     const serviciosArray = Array.from(servicios || []);
@@ -112,7 +107,6 @@ class ClientesService {
     
     for (let i = 0; i < serviciosArray.length; i++) {
       const item = serviciosArray[i];
-      console.log(`🔧 Formateando servicio ${i}:`, item);
       
       const servicio = item.servicio || item;
       let categoriaFormateada = null;
@@ -125,7 +119,7 @@ class ClientesService {
             categorias_id: servicio.categoria.categorias_id,
             nombre: servicio.categoria.nombre
           };
-          console.log(`✅ Categoria ya es objeto: ${categoriaFormateada.nombre}`);
+
         } else if (typeof servicio.categoria === 'string') {
           // Es string - mapear dinámicamente
           const categoriaId = await this.getCategoriaIdByNombre(servicio.categoria);
@@ -133,7 +127,6 @@ class ClientesService {
             categorias_id: categoriaId,
             nombre: servicio.categoria
           };
-          console.log(`🔧 Categoria string convertida: "${servicio.categoria}" → ID ${categoriaId}`);
         }
       }
       
@@ -146,7 +139,6 @@ class ClientesService {
           categorias_id: primerCategoria.categorias_id,
           nombre: primerCategoria.nombre
         };
-        console.log(`⚠️ Usando categoria fallback: ${categoriaFormateada.nombre}`);
       }
 
       const servicioFormateado = {
@@ -165,7 +157,6 @@ class ClientesService {
         precioVentaFinal: item.precioVentaFinal || 0
       };
 
-      console.log(`✅ Servicio ${i} categoria final:`, servicioFormateado.servicio.categoria);
       serviciosFormateados.push(servicioFormateado);
     }
     
@@ -174,15 +165,12 @@ class ClientesService {
 
   // ✅ FUNCIÓN PRINCIPAL: Formatear datos completos para PDF
   async formatDataParaPDF(datosOriginales) {
-    console.log('🔧 Formateando datos para PDF:', datosOriginales);
     
     const datosFormateados = {
       ...datosOriginales,
       servicios: await this.formatServiciosParaPDF(datosOriginales.servicios || [])
     };
 
-    console.log('✅ Datos formateados para PDF:', datosFormateados);
-    console.log('✅ Ejemplo categoria formateada:', datosFormateados.servicios[0]?.servicio?.categoria);
     
     return datosFormateados;
   }
@@ -190,12 +178,10 @@ class ClientesService {
   // Obtener todos los clientes con paginación y filtros
   async getClientes(params = {}) {
     try {
-      console.log('📋 Obteniendo clientes con parámetros:', params);
       
       const response = await api.get('/clientes', { params });
       
       if (response.data.success) {
-        console.log('✅ Clientes obtenidos:', response.data.data);
         return {
           success: true,
           clientes: response.data.data.clientes,
@@ -220,12 +206,10 @@ class ClientesService {
   // Obtener cliente por ID
   async getClienteById(id) {
     try {
-      console.log('👤 Obteniendo cliente ID:', id);
       
       const response = await api.get(`/clientes/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Cliente obtenido:', response.data.data.cliente);
         return {
           success: true,
           cliente: response.data.data.cliente
@@ -249,12 +233,10 @@ class ClientesService {
   // Crear nuevo cliente
   async createCliente(clienteData) {
     try {
-      console.log('➕ Creando cliente:', clienteData);
       
       const response = await api.post('/clientes', clienteData);
       
       if (response.data.success) {
-        console.log('✅ Cliente creado exitosamente:', response.data.data.cliente);
         return {
           success: true,
           cliente: response.data.data.cliente,
@@ -288,12 +270,10 @@ class ClientesService {
   // Actualizar cliente
   async updateCliente(id, clienteData) {
     try {
-      console.log('✏️ Actualizando cliente ID:', id, 'con datos:', clienteData);
       
       const response = await api.put(`/clientes/${id}`, clienteData);
       
       if (response.data.success) {
-        console.log('✅ Cliente actualizado exitosamente:', response.data.data.cliente);
         return {
           success: true,
           cliente: response.data.data.cliente,
@@ -327,12 +307,10 @@ class ClientesService {
   // Eliminar cliente (soft delete)
   async deleteCliente(id) {
     try {
-      console.log('🗑️ Eliminando cliente ID:', id);
       
       const response = await api.delete(`/clientes/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Cliente eliminado exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -355,13 +333,10 @@ class ClientesService {
   
   // Restaurar cliente
   async restoreCliente(id) {
-    try {
-      console.log('🔄 Restaurando cliente ID:', id);
-      
+    try {  
       const response = await api.patch(`/clientes/${id}/restore`);
       
       if (response.data.success) {
-        console.log('✅ Cliente restaurado exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -385,12 +360,10 @@ class ClientesService {
   // Obtener estadísticas de clientes
   async getEstadisticas() {
     try {
-      console.log('📊 Obteniendo estadísticas de clientes...');
       
       const response = await api.get('/clientes/admin/estadisticas');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
         return {
           success: true,
           estadisticas: response.data.data.estadisticas
@@ -414,7 +387,6 @@ class ClientesService {
   // Buscar clientes (método helper para autocompletado ADMIN)
   async searchClientes(searchTerm) {
     try {
-      console.log('🔍 Buscando clientes (admin):', searchTerm);
       
       const response = await api.get('/clientes/search', {
         params: {
@@ -424,7 +396,6 @@ class ClientesService {
       });
       
       if (response.data.success) {
-        console.log('✅ Clientes encontrados:', response.data.data.clientes);
         return {
           success: true,
           clientes: response.data.data.clientes
@@ -448,7 +419,6 @@ class ClientesService {
   // ✅ NUEVO: Buscar clientes para modales (CON filtros de usuario)
   async searchClientesModal(searchTerm) {
     try {
-      console.log('🔍 Buscando clientes para modal:', searchTerm);
       
       const response = await api.get('/clientes/modal/search', {
         params: {
@@ -458,7 +428,6 @@ class ClientesService {
       });
       
       if (response.data.success) {
-        console.log('✅ Clientes encontrados para modal:', response.data.data.clientes);
         return {
           success: true,
           clientes: response.data.data.clientes
@@ -482,7 +451,6 @@ class ClientesService {
   // ✅ CORREGIDO: Obtener clientes recientes usando el endpoint correcto
   async getClientesRecientes(limit = 5) {
     try {
-      console.log('📋 Obteniendo clientes recientes para modal...');
       
       // ✅ USAR EL ENDPOINT CORRECTO que aplica filtros de usuario
       const response = await api.get('/clientes/modal/search', {
@@ -493,11 +461,6 @@ class ClientesService {
       });
       
       if (response.data.success) {
-        console.log('✅ Clientes recientes obtenidos:', response.data.data.clientes);
-        console.log('🔍 DEBUG - usuarios_id de cada cliente:', response.data.data.clientes.map(c => ({
-          empresa: c.nombre_empresa,
-          usuarios_id: c.usuarios_id
-        })));
         return {
           success: true,
           clientes: response.data.data.clientes
@@ -521,7 +484,6 @@ class ClientesService {
   // Validar disponibilidad de documento fiscal
   async checkDocumentoDisponible(documento_fiscal, excludeId = null) {
     try {
-      console.log('🔍 Verificando disponibilidad de documento:', documento_fiscal);
       
       const params = {
         search: documento_fiscal,
@@ -542,7 +504,6 @@ class ClientesService {
           }
         }
         
-        console.log(`Documento ${documento_fiscal} está ${isAvailable ? 'disponible' : 'ocupado'}`);
         
         return {
           success: true,
@@ -754,12 +715,10 @@ formatRTN(rtn) {
   // ✅ NUEVO: Obtener TODOS los clientes para administración
 async getClientesAdmin(params = {}) {
   try {
-    console.log('📋 Obteniendo TODOS los clientes (admin) con parámetros:', params);
     
     const response = await api.get('/clientes/admin/todos', { params });
     
     if (response.data.success) {
-      console.log('✅ Clientes admin obtenidos:', response.data.data);
       return {
         success: true,
         clientes: response.data.data.clientes,
@@ -784,12 +743,10 @@ async getClientesAdmin(params = {}) {
 // ✅ NUEVO: Crear cliente desde administración
 async createClienteAdmin(clienteData) {
   try {
-    console.log('➕ Creando cliente (admin):', clienteData);
     
     const response = await api.post('/clientes/admin/crear', clienteData);
     
     if (response.data.success) {
-      console.log('✅ Cliente creado exitosamente (admin):', response.data.data.cliente);
       return {
         success: true,
         cliente: response.data.data.cliente,

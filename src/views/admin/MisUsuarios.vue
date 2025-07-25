@@ -764,7 +764,6 @@ export default {
  },
  
 async mounted() {
-  console.log('🚀 Componente AdminUsuarios montado');
   
   await this.cargarDatosIniciales();
 },
@@ -790,7 +789,6 @@ methods: {
   
   async cargarUsuarios() {
     try {
-      console.log('📋 Cargando usuarios con filtros:', this.filtros);
       
       const params = {
         page: this.pagination?.currentPage || 1,
@@ -805,7 +803,6 @@ methods: {
       if (result.success) {
         this.usuarios = result.usuarios;
         this.pagination = result.pagination;
-        console.log('✅ Usuarios cargados:', this.usuarios.length);
       } else {
         this.showNotification(result.message || 'Error cargando usuarios', 'error');
       }
@@ -818,13 +815,12 @@ methods: {
   
   async cargarEstadisticas() {
     try {
-      console.log('📊 Cargando estadísticas...');
       
       const result = await usuariosService.getEstadisticas();
       
       if (result.success) {
         this.estadisticas = result.estadisticas;
-        console.log('✅ Estadísticas cargadas:', this.estadisticas);
+
       } else {
         console.error('❌ Error cargando estadísticas:', result.message);
       }
@@ -844,7 +840,6 @@ methods: {
   },
   
   async aplicarFiltros() {
-    console.log('🔍 Aplicando filtros:', this.filtros);
     
     // Resetear a la primera página
     if (this.pagination) {

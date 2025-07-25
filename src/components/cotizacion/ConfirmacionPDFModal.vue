@@ -596,7 +596,6 @@ export default {
     }
 
     const onClienteSeleccionado = (clienteSeleccionado) => {
-      console.log('🏢 Cliente seleccionado:', clienteSeleccionado)
       cliente.value = clienteSeleccionado
       mostrarModalCliente.value = false
       clienteParaEditar.value = null
@@ -614,7 +613,6 @@ export default {
     }
 
     const onClienteCreado = (clienteCreado) => {
-      console.log('🆕 Cliente creado:', clienteCreado)
       cliente.value = clienteCreado
       mostrarModalCliente.value = false
       clienteParaEditar.value = null
@@ -631,7 +629,6 @@ export default {
     }
 
     const onClienteActualizado = (clienteActualizado) => {
-      console.log('✏️ Cliente actualizado:', clienteActualizado)
       cliente.value = clienteActualizado
       mostrarModalCliente.value = false
       clienteParaEditar.value = null
@@ -690,12 +687,7 @@ export default {
           tipoPrecio: props.tipoPrecio,
           comentario: comentario.value.trim()
         }
-
-        console.log('📄 Datos antes de formatear:', datosParaPDF)
-
         const datosFormateados = await clientesService.formatDataParaPDF(datosParaPDF)
-
-        console.log('📄 Enviando datos formateados para generar PDF:', datosFormateados)
 
         mostrarToast('Enviando datos para generar PDF...', 'info')
         emit('generar-pdf', datosFormateados)
@@ -732,13 +724,8 @@ export default {
           fecha: new Date().toISOString(),
           preciosPorDebajoMinimo: preciosPorDebajoMinimo.value
         }
-
-        console.log('💾 Datos antes de formatear:', datosCotizacion)
-
         // ✅ CORREGIDO: Usar await correctamente
         const datosFormateados = await clientesService.formatDataParaPDF(datosCotizacion)
-
-        console.log('💾 Enviando datos formateados para guardar:', datosFormateados)
 
         mostrarToast('Enviando cotización para guardar...', 'info')
         emit('guardar-cotizacion', datosFormateados)

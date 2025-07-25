@@ -6,12 +6,10 @@ class CrearCotizacionService {
   // Crear nueva cotización
   async createCotizacion(cotizacionData) {
     try {
-      console.log('💰 Creando cotización:', cotizacionData);
       
       const response = await api.post('/cotizaciones-vendedor', cotizacionData);
       
       if (response.data.success) {
-        console.log('✅ Cotización creada exitosamente:', response.data.data);
         return {
           success: true,
           cotizacion: response.data.data.cotizacion,
@@ -46,12 +44,10 @@ class CrearCotizacionService {
   // Obtener mis cotizaciones con paginación y filtros
   async getCotizaciones(params = {}) {
     try {
-      console.log('📋 Obteniendo cotizaciones con parámetros:', params);
       
       const response = await api.get('/cotizaciones-vendedor', { params });
       
       if (response.data.success) {
-        console.log('✅ Cotizaciones obtenidas:', response.data.data);
         return {
           success: true,
           cotizaciones: response.data.data.cotizaciones,
@@ -76,12 +72,10 @@ class CrearCotizacionService {
   // Obtener cotización por ID
   async getCotizacionById(id) {
     try {
-      console.log('💰 Obteniendo cotización ID:', id);
       
       const response = await api.get(`/cotizaciones-vendedor/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Cotización obtenida:', response.data.data.cotizacion);
         return {
           success: true,
           cotizacion: response.data.data.cotizacion
@@ -105,12 +99,10 @@ class CrearCotizacionService {
   // Obtener estadísticas de mis cotizaciones
   async getEstadisticas() {
     try {
-      console.log('📊 Obteniendo estadísticas de cotizaciones...');
       
       const response = await api.get('/cotizaciones-vendedor/estadisticas');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
         return {
           success: true,
           estadisticas: response.data.data.estadisticas
@@ -134,12 +126,10 @@ class CrearCotizacionService {
   // Marcar PDF como generado
   async marcarPDFGenerado(cotizacionId) {
     try {
-      console.log('📄 Marcando PDF como generado para cotización:', cotizacionId);
       
       const response = await api.put(`/cotizaciones-vendedor/${cotizacionId}/pdf`);
       
       if (response.data.success) {
-        console.log('✅ PDF marcado como generado');
         return {
           success: true,
           message: response.data.message
@@ -163,12 +153,10 @@ class CrearCotizacionService {
   // Duplicar cotización
   async duplicarCotizacion(cotizacionId) {
     try {
-      console.log('📋 Duplicando cotización:', cotizacionId);
       
       const response = await api.post(`/cotizaciones-vendedor/${cotizacionId}/duplicar`);
       
       if (response.data.success) {
-        console.log('✅ Cotización duplicada exitosamente:', response.data.data.cotizacion);
         return {
           success: true,
           cotizacion: response.data.data.cotizacion,
@@ -193,7 +181,6 @@ class CrearCotizacionService {
   // Generar PDF de cotización (descarga)
   async generarPDF(cotizacionId) {
     try {
-      console.log('📄 Generando PDF para cotización:', cotizacionId);
       
       const response = await api.get(`/pdf/cotizacion/${cotizacionId}`, {
         responseType: 'blob' // Importante para archivos
@@ -214,7 +201,6 @@ class CrearCotizacionService {
       // Limpiar URL
       window.URL.revokeObjectURL(url);
       
-      console.log('✅ PDF generado y descargado exitosamente');
       
       return {
         success: true,
@@ -233,7 +219,6 @@ class CrearCotizacionService {
   // Vista previa del PDF (abrir en nueva ventana)
   async previewPDF(cotizacionId) {
     try {
-      console.log('👁️ Generando preview de PDF para cotización:', cotizacionId);
       
       const response = await api.get(`/pdf/cotizacion/${cotizacionId}/preview`, {
         responseType: 'blob'
@@ -251,7 +236,6 @@ class CrearCotizacionService {
         window.URL.revokeObjectURL(url);
       }, 10000);
       
-      console.log('✅ Preview de PDF abierto exitosamente');
       
       return {
         success: true,
@@ -269,22 +253,13 @@ class CrearCotizacionService {
   
   // ✅ ACTUALIZADO COMPLETO: Helper para formatear datos de cotización CON CÁLCULOS CORREGIDOS
   formatCotizacionParaFormulario(serviciosSeleccionados, cliente, añosContrato, tipoPrecio, configuracionPDF, comentario) {
-    console.log('📝 Formateando datos para envío (CÁLCULOS CORREGIDOS):', {
-      serviciosSeleccionados,
-      cliente,
-      añosContrato,
-      tipoPrecio
-    });
+
     
     // ✅ FORMATEAR SERVICIOS CON CATEGORÍAS DETALLADAS
     const serviciosFormateados = serviciosSeleccionados.map(item => {
-      console.log('🔥 DEBUG - Formateando servicio:', item.servicio.nombre);
-      console.log('🔥 DEBUG - Categorías detalle:', item.categoriasDetalle);
-      console.log('🔥 DEBUG - Cantidades por categoría:', item.cantidadesPorCategoria);
       
       // ✅ NUEVA ESTRUCTURA: Priorizar categoriasDetalle
       if (item.categoriasDetalle && item.categoriasDetalle.length > 0) {
-        console.log('✅ Usando categorías detalladas para:', item.servicio.nombre);
         
         return {
           servicio: {
@@ -307,7 +282,6 @@ class CrearCotizacionService {
         };
       } else {
         // ✅ FALLBACK: Usar método anterior para compatibilidad
-        console.log('⚠️ Sin categorías detalladas, usando fallback para:', item.servicio.nombre);
         
         return {
           servicio: {
@@ -328,7 +302,6 @@ class CrearCotizacionService {
       }
     });
     
-    console.log('✅ Servicios formateados con nueva estructura:', serviciosFormateados);
     
     // ✅ CALCULAR PRECIO TOTAL CORREGIDO: MENSUAL × 12 × AÑOS
     const precioTotal = serviciosSeleccionados.reduce((total, item) => {
@@ -370,9 +343,6 @@ class CrearCotizacionService {
       },
       comentario: comentario || ''
     };
-    
-    console.log('✅ Datos formateados finales (CÁLCULOS CORREGIDOS):', cotizacionData);
-    console.log('💰 Precio total calculado:', precioTotal);
     return cotizacionData;
   }
   

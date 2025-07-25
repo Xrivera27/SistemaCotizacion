@@ -6,12 +6,10 @@ class CotizacionesService {
  // Obtener todas las cotizaciones con paginación y filtros
  async getCotizaciones(params = {}) {
    try {
-     console.log('📋 Obteniendo cotizaciones con parámetros:', params);
      
      const response = await api.get('/cotizaciones', { params });
      
      if (response.data.success) {
-       console.log('✅ Cotizaciones obtenidas:', response.data.cotizaciones);
        return {
          success: true,
          cotizaciones: response.data.cotizaciones,
@@ -36,12 +34,10 @@ class CotizacionesService {
  // NUEVO: Obtener cotizaciones pendientes de aprobación (SuperUsuario)
  async getCotizacionesPendientesAprobacion(params = {}) {
    try {
-     console.log('⏳ Obteniendo cotizaciones pendientes de aprobación:', params);
      
      const response = await api.get('/cotizaciones/pendientes-aprobacion', { params });
      
      if (response.data.success) {
-       console.log('✅ Cotizaciones pendientes obtenidas:', response.data.cotizaciones);
        return {
          success: true,
          cotizaciones: response.data.cotizaciones,
@@ -66,12 +62,10 @@ class CotizacionesService {
  // Obtener cotización por ID
  async getCotizacionById(id) {
    try {
-     console.log('📋 Obteniendo cotización ID:', id);
      
      const response = await api.get(`/cotizaciones/${id}`);
      
      if (response.data.success) {
-       console.log('✅ Cotización obtenida:', response.data.cotizacion);
        return {
          success: true,
          cotizacion: response.data.cotizacion
@@ -95,12 +89,10 @@ class CotizacionesService {
  // Obtener estadísticas de cotizaciones
  async getEstadisticas() {
    try {
-     console.log('📊 Obteniendo estadísticas de cotizaciones...');
      
      const response = await api.get('/cotizaciones/estadisticas');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas obtenidas:', response.data.estadisticas);
        return {
          success: true,
          estadisticas: response.data.estadisticas
@@ -124,12 +116,10 @@ class CotizacionesService {
  // NUEVO: Obtener estadísticas específicas para SuperUsuario
  async getEstadisticasSuper() {
    try {
-     console.log('📊 Obteniendo estadísticas de SuperUsuario...');
      
      const response = await api.get('/cotizaciones/estadisticas/super');
      
      if (response.data.success) {
-       console.log('✅ Estadísticas SuperUsuario obtenidas:', response.data.estadisticas);
        return {
          success: true,
          estadisticas: response.data.estadisticas,
@@ -154,12 +144,10 @@ class CotizacionesService {
  // Obtener vendedores únicos
  async getVendedores() {
    try {
-     console.log('👥 Obteniendo vendedores únicos...');
      
      const response = await api.get('/cotizaciones/vendedores');
      
      if (response.data.success) {
-       console.log('✅ Vendedores obtenidos:', response.data.vendedores);
        return {
          success: true,
          vendedores: response.data.vendedores
@@ -183,7 +171,6 @@ class CotizacionesService {
  // Generar PDF de cotización (copia o original)
  async generarPDF(id, tipo = 'copia') {
    try {
-     console.log('📄 Generando PDF tipo:', tipo, 'para cotización ID:', id);
      
      const response = await api.get(`/cotizaciones/${id}/pdf`, {
        params: { tipo },
@@ -206,7 +193,6 @@ class CotizacionesService {
      link.remove();
      window.URL.revokeObjectURL(url);
      
-     console.log('✅ PDF descargado exitosamente');
      return {
        success: true,
        message: 'PDF descargado exitosamente'
@@ -224,7 +210,6 @@ class CotizacionesService {
  // Cambiar estado de cotización
  async cambiarEstado(id, estado, motivoRechazo = '') {
    try {
-     console.log('🔄 Cambiando estado de cotización ID:', id, 'a:', estado);
      
      const data = { estado };
      if (estado === 'rechazado' && motivoRechazo) {
@@ -234,7 +219,6 @@ class CotizacionesService {
      const response = await api.patch(`/cotizaciones/${id}/estado`, data);
      
      if (response.data.success) {
-       console.log('✅ Estado cambiado exitosamente');
        return {
          success: true,
          message: response.data.message,
@@ -259,7 +243,6 @@ class CotizacionesService {
  // NUEVO: Aprobar cotización (SuperUsuario)
  async aprobarCotizacion(id, comentario = '') {
    try {
-     console.log('✅ Aprobando cotización ID:', id);
      
      const data = {};
      if (comentario) {
@@ -269,7 +252,6 @@ class CotizacionesService {
      const response = await api.patch(`/cotizaciones/${id}/aprobar`, data);
      
      if (response.data.success) {
-       console.log('✅ Cotización aprobada exitosamente');
        return {
          success: true,
          message: response.data.message,
@@ -294,7 +276,6 @@ class CotizacionesService {
  // NUEVO: Rechazar cotización (SuperUsuario)
  async rechazarCotizacion(id, motivoRechazo) {
    try {
-     console.log('❌ Rechazando cotización ID:', id, 'Motivo:', motivoRechazo);
      
      if (!motivoRechazo || motivoRechazo.trim().length === 0) {
        return {
@@ -310,7 +291,6 @@ class CotizacionesService {
      const response = await api.patch(`/cotizaciones/${id}/rechazar`, data);
      
      if (response.data.success) {
-       console.log('✅ Cotización rechazada exitosamente');
        return {
          success: true,
          message: response.data.message,
@@ -744,7 +724,6 @@ async marcarComoEfectiva(cotizacion) {
 // Aplicar descuento a cotización
 async aplicarDescuento(id, descuentoPorcentaje, comentario) {
   try {
-    console.log('💰 Aplicando descuento:', descuentoPorcentaje + '% a cotización', id);
     
     if (!descuentoPorcentaje || descuentoPorcentaje <= 0 || descuentoPorcentaje > 100) {
       return {
@@ -768,7 +747,6 @@ async aplicarDescuento(id, descuentoPorcentaje, comentario) {
     const response = await api.patch(`/cotizaciones/${id}/aplicar-descuento`, data);
 
     if (response.data.success) {
-      console.log('✅ Descuento aplicado exitosamente');
       return {
         success: true,
         message: response.data.message,

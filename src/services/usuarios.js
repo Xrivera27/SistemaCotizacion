@@ -6,12 +6,10 @@ class UsuariosService {
   // Obtener todos los usuarios con paginación y filtros
   async getUsuarios(params = {}) {
     try {
-      console.log('📋 Obteniendo usuarios con parámetros:', params);
       
       const response = await api.get('/usuarios', { params });
       
       if (response.data.success) {
-        console.log('✅ Usuarios obtenidos:', response.data.data);
         return {
           success: true,
           usuarios: response.data.data.usuarios,
@@ -36,12 +34,10 @@ class UsuariosService {
   // Obtener usuario por ID
   async getUsuarioById(id) {
     try {
-      console.log('👤 Obteniendo usuario ID:', id);
       
       const response = await api.get(`/usuarios/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Usuario obtenido:', response.data.data.usuario);
         return {
           success: true,
           usuario: response.data.data.usuario
@@ -65,12 +61,10 @@ class UsuariosService {
   // Crear nuevo usuario
   async createUsuario(usuarioData) {
     try {
-      console.log('➕ Creando usuario:', { ...usuarioData, password: '[OCULTO]' });
       
       const response = await api.post('/usuarios', usuarioData);
       
       if (response.data.success) {
-        console.log('✅ Usuario creado exitosamente:', response.data.data.usuario);
         return {
           success: true,
           usuario: response.data.data.usuario,
@@ -104,12 +98,8 @@ class UsuariosService {
   // Actualizar usuario
   async updateUsuario(id, usuarioData) {
     try {
-      console.log('✏️ Actualizando usuario ID:', id, 'con datos:', { ...usuarioData, password: usuarioData.password ? '[OCULTO]' : undefined });
-      
       const response = await api.put(`/usuarios/${id}`, usuarioData);
-      
       if (response.data.success) {
-        console.log('✅ Usuario actualizado exitosamente:', response.data.data.usuario);
         return {
           success: true,
           usuario: response.data.data.usuario,
@@ -143,12 +133,9 @@ class UsuariosService {
   // Eliminar usuario (soft delete)
   async deleteUsuario(id) {
     try {
-      console.log('🗑️ Eliminando usuario ID:', id);
-      
       const response = await api.delete(`/usuarios/${id}`);
       
       if (response.data.success) {
-        console.log('✅ Usuario eliminado exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -172,12 +159,10 @@ class UsuariosService {
   // Restaurar usuario
   async restoreUsuario(id) {
     try {
-      console.log('🔄 Restaurando usuario ID:', id);
       
       const response = await api.patch(`/usuarios/${id}/restore`);
       
       if (response.data.success) {
-        console.log('✅ Usuario restaurado exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -201,12 +186,9 @@ class UsuariosService {
   // Cambiar contraseña
   async changePassword(id, passwordData) {
     try {
-      console.log('🔐 Cambiando contraseña para usuario ID:', id);
-      
       const response = await api.patch(`/usuarios/${id}/change-password`, passwordData);
       
       if (response.data.success) {
-        console.log('✅ Contraseña cambiada exitosamente');
         return {
           success: true,
           message: response.data.message
@@ -230,12 +212,10 @@ class UsuariosService {
   // Obtener estadísticas de usuarios
   async getEstadisticas() {
     try {
-      console.log('📊 Obteniendo estadísticas de usuarios...');
       
       const response = await api.get('/usuarios/estadisticas');
       
       if (response.data.success) {
-        console.log('✅ Estadísticas obtenidas:', response.data.data.estadisticas);
         return {
           success: true,
           estadisticas: response.data.data.estadisticas
@@ -288,7 +268,6 @@ class UsuariosService {
   // Validar disponibilidad de usuario/email
   async checkAvailability(field, value) {
     try {
-      console.log(`🔍 Verificando disponibilidad de ${field}:`, value);
       
       const params = {};
       params[field] = value;
@@ -298,7 +277,6 @@ class UsuariosService {
       
       if (result.success) {
         const isAvailable = result.usuarios.length === 0;
-        console.log(`${field} ${value} está ${isAvailable ? 'disponible' : 'ocupado'}`);
         
         return {
           success: true,
@@ -393,12 +371,10 @@ class UsuariosService {
   // Obtener usuarios disponibles para ser managers
 async getUsuariosParaManager() {
   try {
-    console.log('👥 Obteniendo usuarios disponibles para manager...');
     
     const response = await api.get('/usuarios/managers/disponibles');
     
     if (response.data.success) {
-      console.log('✅ Usuarios para manager obtenidos:', response.data.data.usuarios);
       return {
         success: true,
         usuarios: response.data.data.usuarios
