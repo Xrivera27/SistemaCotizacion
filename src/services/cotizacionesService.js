@@ -741,6 +741,78 @@ async marcarComoEfectiva(cotizacion) {
   }
 }
  
+// Aplicar descuento a cotización
+async aplicarDescuento(id, descuentoPorcentaje, comentario) {
+  try {
+    console.log('💰 Aplicando descuento:', descuentoPorcentaje + '% a cotización', id);
+    
+    if (!descuentoPorcentaje || descuentoPorcentaje <= 0 || descuentoPorcentaje > 100) {
+      return {
+        success: false,
+        message: 'El porcentaje de descuento debe estar entre 0.01% y 100%'
+      };
+    }
+
+    if (!comentario || comentario.trim().length === 0) {
+      return {
+        success: false,
+        message: 'El comentario del descuento es obligatorio'
+      };
+    }
+
+    const data = {
+      descuento_porcentaje: parseFloat(descuentoPorcentaje),
+      comentario_descuento: comentario.trim()
+    };
+
+    const response = await api.patch(`/cotizaciones/${id}/aplicar-descuento`, data);
+
+    if (response.data.success) {
+      console.log('✅ Descuento aplicado exitosamente');
+      return {
+        success: true,
+        message: response.data.message,
+        cotizacion: response.data.cotizacion
+      };
+    }
+
+    return {
+      success: false,
+      message: response.data.message || 'Error aplicando descuento'
+    };
+
+  } catch (error) {
+    console.error('❌ Error aplicando descuento:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Error de conexión'
+    };
+  }
+}
+
+// Helper para formatear información de descuento
+formatDescuentoInfo(cotizacion) {
+  if (!cotizacion.tiene_descuento) {
+    return null;
+  }
+
+  const totalOriginal = parseFloat(cotizacion.total_original || 0);
+  const totalConDescuento = parseFloat(cotizacion.total || 0);
+  const porcentajeDescuento = parseFloat(cotizacion.descuento_porcentaje || 0);
+  const montoDescuento = totalOriginal - totalConDescuento;
+
+  return {
+    tieneDescuento: true,
+    porcentaje: porcentajeDescuento,
+    totalOriginal: totalOriginal,
+    montoDescuento: montoDescuento,
+    totalConDescuento: totalConDescuento,
+    comentario: cotizacion.comentario_descuento,
+    otorgadoPor: cotizacion.descuento_otorgado_por_nombre,
+    fechaDescuento: cotizacion.fecha_descuento,
+    ahorroTexto: `Ahorro: $${this.formatPrice(montoDescuento)} (${porcentajeDescuento}%)`
+  };
+}
 
 }
 
