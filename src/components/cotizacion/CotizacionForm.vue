@@ -432,85 +432,183 @@ setup() {
     }
   }
 
-  const cargarDatosParaDuplicar = async () => {
-    try {
-      loading.value = true
-      loadingMessage.value = 'Cargando datos para duplicar...'
-      
-      const datosGuardados = sessionStorage.getItem('datosParaDuplicar')
-      
-      if (datosGuardados) {
-        const datos = JSON.parse(datosGuardados)
-        
-        console.log('✅ Datos para duplicar encontrados:', datos)
-        
-        await cargarServicios()
-        await precargarFormulario(datos)
-        sessionStorage.removeItem('datosParaDuplicar')
-        
-        mostrarToast(`Cotización duplicada exitosamente desde ${cotizacionOrigen.value}`, 'success')
-        
-      } else {
-        console.warn('⚠️ No se encontraron datos para duplicar, cargando normalmente')
-        mostrarToast('No se encontraron datos para duplicar', 'warning')
-        await cargarServicios()
-      }
-      
-    } catch (error) {
-      console.error('❌ Error cargando datos para duplicar:', error)
-      mostrarToast('Error cargando datos para duplicar', 'error')
-      await cargarServicios()
-    } finally {
-      loading.value = false
-      loadingMessage.value = ''
-    }
-  }
-
-  // Precarga con manejo de categorías
-  const precargarFormulario = async (datos) => {
-    console.log('🔄 Precargando formulario con datos:', datos)
+const cargarDatosParaDuplicar = async () => {
+  try {
+    loading.value = true
+    loadingMessage.value = 'Cargando datos para duplicar...'
     
-    try {
-      if (datos.servicios && datos.servicios.length > 0) {
-        añosContrato.value = datos.servicios[0].cantidadAnos || 1
+    const datosGuardados = sessionStorage.getItem('datosParaDuplicar')
+    
+    if (datosGuardados) {
+      const datos = JSON.parse(datosGuardados)
+      
+      console.log('✅ Datos para duplicar encontrados:', datos)
+      
+      // ✅ PRIMERO cargar servicios completamente
+      await cargarServicios()
+      
+      // ✅ ESPERAR MÚLTIPLES TICKS para asegurar que todo esté inicializado
+      await nextTick()
+      await nextTick()
+      await nextTick()
+      
+      // ✅ VERIFICAR QUE LOS SERVICIOS ESTÉN CARGADOS
+      console.log('🔍 Servicios cargados antes de precargar:', servicios.value.length)
+      
+      if (servicios.value.length > 0) {
+        // ✅ AHORA SÍ precargar el formulario
+        await precargarFormulario(datos)
+      } else {
+        console.error('❌ No se pudieron cargar los servicios')
+        mostrarToast('Error: No se pudieron cargar los servicios', 'error')
       }
       
-      if (datos.servicios && datos.servicios.length > 0) {
-        for (const servicioData of datos.servicios) {
-          const servicioId = servicioData.id
+      sessionStorage.removeItem('datosParaDuplicar')
+      
+      mostrarToast(`Cotización duplicada exitosamente desde ${cotizacionOrigen.value}`, 'success')
+      
+    } else {
+      console.warn('⚠️ No se encontraron datos para duplicar, cargando normalmente')
+      mostrarToast('No se encontraron datos para duplicar', 'warning')
+      await cargarServicios()
+    }
+    
+  } catch (error) {
+    console.error('❌ Error cargando datos para duplicar:', error)
+    mostrarToast('Error cargando datos para duplicar', 'error')
+    await cargarServicios()
+  } finally {
+    loading.value = false
+    loadingMessage.value = ''
+  }
+}
+
+const precargarFormulario = async (datos) => {
+  console.log('🔄 Precargando formulario con datos:', datos)
+  console.log('🔍 Servicios recibidos para precargar:', datos.servicios)
+  
+  // ✅ VERIFICAR ESTADO ANTES DE PRECARGAR
+  console.log('🔍 Estado actual servicios.value.length:', servicios.value.length)
+  console.log('🔍 Estado actual cantidadesPorCategoria:', cantidadesPorCategoria)
+  
+  // ✅ Log detallado de cada servicio
+  datos.servicios.forEach((servicio, index) => {
+    console.log(`🔥 Servicio ${index}:`, {
+      id: servicio.id,
+      nombre: servicio.nombre,
+      cantidadPorCategoria: servicio.cantidadPorCategoria,
+      cantidadServicios: servicio.cantidadServicios,
+      categoriaId: servicio.categoriaId,
+      precioUsadoOriginal: servicio.precioUsadoOriginal
+    })
+  })
+  
+  try {
+    if (datos.servicios && datos.servicios.length > 0) {
+      añosContrato.value = datos.servicios[0].cantidadAnos || 1
+    }
+    
+    // ✅ VERIFICAR QUE LOS SERVICIOS ESTÉN CARGADOS
+    if (servicios.value.length === 0) {
+      console.error('❌ Servicios aún no están cargados, abortando precarga')
+      return
+    }
+    
+    if (datos.servicios && datos.servicios.length > 0) {
+      for (const servicioData of datos.servicios) {
+        const servicioId = servicioData.id
+        
+        console.log(`🔍 Buscando servicio ID ${servicioId} en lista de ${servicios.value.length} servicios`)
+        
+        const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+        
+        if (servicioExistente) {
+          console.log(`📝 ✅ ENCONTRADO - Precargando servicio: ${servicioExistente.nombre}`)
+          console.log(`🔍 Datos del servicio para precargar:`, servicioData)
           
-          const servicioExistente = servicios.value.find(s => s.servicios_id === servicioId)
+          // ✅ USAR cantidadPorCategoria
+          const cantidad = servicioData.cantidadPorCategoria || servicioData.cantidadServicios || 0
           
-          if (servicioExistente) {
-            console.log(`📝 Precargando servicio: ${servicioExistente.nombre}`)
+          console.log(`📊 Cantidad a aplicar: ${cantidad}`)
+          
+          // ✅ CONFIGURAR TODAS LAS CANTIDADES
+          cantidades[servicioId] = cantidad
+          cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
+          preciosVenta[servicioId] = servicioData.precioUsadoOriginal || servicioData.precioRecomendado || 0
+          
+          console.log(`💰 Configurando precio: ${preciosVenta[servicioId]}`)
+          
+          // ✅ CONFIGURAR CANTIDADES POR CATEGORÍA
+          if (cantidad > 0) {
+            const categoriaId = servicioData.categoriaId || servicioExistente.categoria?.categorias_id
             
-            cantidades[servicioId] = servicioData.cantidadServicios || 0
-            cantidadesEquipos[servicioId] = servicioData.cantidadEquipos || 0
-            preciosVenta[servicioId] = servicioData.precioUsadoOriginal || 0
+            console.log(`🎯 Configurando categoría ${categoriaId} con cantidad ${cantidad}`)
             
-            if (servicioData.cantidadesPorCategoria) {
-              cantidadesPorCategoria[servicioId] = { ...servicioData.cantidadesPorCategoria }
+            if (categoriaId) {
+              // ✅ ASEGURAR QUE EL OBJETO EXISTE
+              if (!cantidadesPorCategoria[servicioId]) {
+                cantidadesPorCategoria[servicioId] = {}
+              }
+              
+              cantidadesPorCategoria[servicioId][categoriaId] = cantidad
+              
+              console.log(`📊 ✅ cantidadesPorCategoria[${servicioId}]:`, cantidadesPorCategoria[servicioId])
+              
+              // ✅ CONFIGURAR CATEGORÍAS DETALLE
+              if (!window.categoriasDetallePorServicio) {
+                window.categoriasDetallePorServicio = {}
+              }
+              
+              window.categoriasDetallePorServicio[servicioId] = [{
+                categoria_id: categoriaId,
+                categoria_nombre: servicioExistente.categoria?.nombre || 'Sin categoría',
+                unidad_id: servicioData.unidadMedida?.id || servicioExistente.categoria?.unidad_medida?.unidades_medida_id,
+                unidad_nombre: servicioData.unidadMedida?.nombre || servicioExistente.categoria?.unidad_medida?.nombre,
+                unidad_abreviacion: servicioData.unidadMedida?.abreviacion || servicioExistente.categoria?.unidad_medida?.abreviacion,
+                unidad_tipo: servicioData.unidadMedida?.tipo || servicioExistente.categoria?.unidad_medida?.tipo,
+                cantidad: cantidad,
+                limite_minimo: servicioExistente.limite_minimo || 1,
+                limite_maximo: servicioExistente.limite_maximo || null
+              }]
+              
+              console.log(`✅ ✅ window.categoriasDetallePorServicio[${servicioId}]:`, window.categoriasDetallePorServicio[servicioId])
             }
-            
-            console.log(`✅ Servicio ${servicioExistente.nombre} configurado:`, {
-              cantidadPrincipal: cantidades[servicioId],
-              cantidadEquipos: cantidadesEquipos[servicioId],
-              precioUsado: preciosVenta[servicioId],
-              cantidadesPorCategoria: cantidadesPorCategoria[servicioId]
-            })
           }
+          
+          console.log(`🔥 🔥 Servicio ${servicioExistente.nombre} COMPLETAMENTE CONFIGURADO:`, {
+            servicioId,
+            cantidades: cantidades[servicioId],
+            cantidadesEquipos: cantidadesEquipos[servicioId],
+            preciosVenta: preciosVenta[servicioId],
+            cantidadesPorCategoria: cantidadesPorCategoria[servicioId],
+            categoriasDetalle: window.categoriasDetallePorServicio[servicioId]
+          })
+        } else {
+          console.error(`❌ ❌ Servicio ${servicioId} NO ENCONTRADO en la lista actual`)
+          console.log('🔍 IDs disponibles:', servicios.value.map(s => ({ id: s.servicios_id, nombre: s.nombre })))
         }
       }
-      
-      await nextTick()
-      console.log('✅ Formulario precargado exitosamente')
-      
-    } catch (error) {
-      console.error('❌ Error precargando formulario:', error)
-      mostrarToast('Error precargando formulario', 'error')
-      throw error
     }
+    
+    await nextTick()
+    
+    // ✅ FORZAR RE-RENDER CON MÚLTIPLES CAMBIOS
+    console.log('🔄 Forzando re-render del formulario...')
+    formularioKey.value++
+    
+    await nextTick()
+    await nextTick()
+    
+    console.log('✅ ✅ ✅ Formulario precargado exitosamente')
+    console.log('🔍 Estado FINAL cantidadesPorCategoria:', cantidadesPorCategoria)
+    console.log('🔍 Estado FINAL window.categoriasDetallePorServicio:', window.categoriasDetallePorServicio)
+    
+  } catch (error) {
+    console.error('❌ Error precargando formulario:', error)
+    mostrarToast('Error precargando formulario', 'error')
+    throw error
   }
+}
 
   // Función para resetear paginación
   const resetearPaginacion = () => {

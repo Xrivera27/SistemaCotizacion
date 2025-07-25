@@ -148,7 +148,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, toRefs, reactive } from 'vue'
+import { ref, computed, watch, toRefs, reactive, nextTick, onMounted, onUnmounted } from 'vue'
 
 export default {
 name: 'ServicioItem',
@@ -478,7 +478,7 @@ setup(props, { emit }) {
     }
   }
 
-  // ✅ CORREGIDO: Método actualizarCantidad SIN variable no usada
+  // ✅ CORREGIDO: Método actualizarCantidad
   const actualizarCantidad = (categoriaId) => {
     if (cantidadesPorCategoria[categoriaId] < 0) {
       cantidadesPorCategoria[categoriaId] = 0
@@ -539,6 +539,12 @@ setup(props, { emit }) {
     })
   }
 
+  // ✅ NUEVO: Método para actualizar desde el padre
+  const actualizarDesdeElPadre = (cantidades) => {
+    console.log(`🔄 Actualizando desde el padre para servicio ${servicio.value.servicios_id}:`, cantidades)
+    Object.assign(cantidadesPorCategoria, cantidades)
+  }
+
   // Watchers
   watch(precioVenta, (newVal) => {
     precioVentaLocal.value = newVal || 0
@@ -550,17 +556,90 @@ setup(props, { emit }) {
     inicializarCantidades()
   }, { immediate: true })
 
+  // ✅ NUEVO: Watcher para recibir cantidades desde el componente padre
+  watch(() => props.modelValue, (newVal) => {
+    if (newVal > 0) {
+      console.log(`📥 Recibiendo modelValue para servicio ${servicio.value.servicios_id}: ${newVal}`)
+      // Distribuir la cantidad en la primera categoría disponible
+      const primeraCategoria = categoriasDelServicio.value[0]
+      if (primeraCategoria && primeraCategoria.id) {
+        cantidadesPorCategoria[primeraCategoria.id] = newVal
+        console.log(`✅ Cantidad aplicada a categoría ${primeraCategoria.id}: ${newVal}`)
+        actualizarCantidad(primeraCategoria.id)
+      }
+    }
+  }, { immediate: true })
+
+  // ✅ NUEVO: Watcher para datos globales de duplicación
+  watch(() => {
+    const servicioId = servicio.value.servicios_id
+    return window.categoriasDetallePorServicio?.[servicioId]
+  }, (nuevasCategorias) => {
+    if (nuevasCategorias && Array.isArray(nuevasCategorias)) {
+      console.log(`📥 Recibiendo categorías detalladas para servicio ${servicio.value.servicios_id}:`, nuevasCategorias)
+      
+      nuevasCategorias.forEach(categoria => {
+        if (categoria.cantidad > 0) {
+          const categoriaId = categoria.categoria_id || categoria.id
+          console.log(`🎯 Aplicando cantidad ${categoria.cantidad} a categoría ${categoriaId}`)
+          cantidadesPorCategoria[categoriaId] = categoria.cantidad
+        }
+      })
+      
+      // Forzar actualización
+      const primeraCategoria = nuevasCategorias[0]
+      if (primeraCategoria) {
+        const categoriaId = primeraCategoria.categoria_id || primeraCategoria.id
+        actualizarCantidad(categoriaId)
+      }
+    }
+  }, { deep: true, immediate: true })
+
+  // ✅ NUEVO: Escuchar evento personalizado de cantidades actualizadas
+  onMounted(() => {
+    const handleCantidadesActualizadas = (event) => {
+      const { cantidadesPorCategoria: nuevasCantidades, servicioId } = event.detail
+      
+      if (servicioId === servicio.value.servicios_id) {
+        console.log(`📥 Evento personalizado - actualizando cantidades para servicio ${servicioId}:`, nuevasCantidades)
+        
+        Object.keys(nuevasCantidades).forEach(categoriaId => {
+          const cantidad = nuevasCantidades[categoriaId]
+          if (cantidad > 0) {
+            cantidadesPorCategoria[categoriaId] = cantidad
+            console.log(`✅ Cantidad aplicada via evento: categoría ${categoriaId} = ${cantidad}`)
+          }
+        })
+        
+        // Forzar re-render
+        nextTick(() => {
+          const primeraCategoria = Object.keys(nuevasCantidades)[0]
+          if (primeraCategoria) {
+            actualizarCantidad(parseInt(primeraCategoria))
+          }
+        })
+      }
+    }
+    
+    window.addEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
+    
+    // Cleanup en unmount
+    onUnmounted(() => {
+      window.removeEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
+    })
+  })
+
   return {
     // Estados
     precioVentaLocal,
     cantidadesPorCategoria,
     
-    // ✅ NUEVO: Computed para múltiples categorías
+    // ✅ Computed para múltiples categorías
     categoriasDelServicio,
     unidadesMedida,
     cantidadesPorTipo,
     
-    // ✅ NUEVOS: Validación de límites
+    // ✅ Validación de límites
     validacionLimites,
     tieneErroresLimites,
     infoLimites,
@@ -569,13 +648,13 @@ setup(props, { emit }) {
     esPrecioBajoMinimo,
     totalUnidadesPorTipo,
     
-    // ✅ NUEVO: Métodos helper
+    // ✅ Métodos helper
     obtenerEtiquetaCategoria,
     obtenerPlaceholderCategoria,
     obtenerIconoTipo,
     obtenerStepTipo,
     
-    // ✅ NUEVAS: Funciones de cálculo
+    // ✅ Funciones de cálculo
     calcularSubtotalMensual,
     calcularSubtotalAnual,
     calcularTotalContrato,
@@ -584,15 +663,16 @@ setup(props, { emit }) {
     formatCurrency,
     validarPrecioMinimo,
     
-    // ✅ CORREGIDO: Métodos para múltiples categorías con validación
+    // ✅ Métodos para múltiples categorías con validación
     incrementarCantidad,
     decrementarCantidad,
     actualizarCantidad,
     actualizarPrecioVenta,
     inicializarCantidades,
     
-    // ✅ NUEVO
-    mostrarNotificacion
+    // ✅ Métodos de comunicación con el padre
+    mostrarNotificacion,
+    actualizarDesdeElPadre
   }
 }
 }
