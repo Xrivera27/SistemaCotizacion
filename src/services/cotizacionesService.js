@@ -311,6 +311,139 @@ class CotizacionesService {
      };
    }
  }
+
+ // Aplicar descuento a cotización
+ async aplicarDescuento(id, descuentoPorcentaje, comentario) {
+   try {
+     
+     if (!descuentoPorcentaje || descuentoPorcentaje <= 0 || descuentoPorcentaje > 100) {
+       return {
+         success: false,
+         message: 'El porcentaje de descuento debe estar entre 0.01% y 100%'
+       };
+     }
+
+     if (!comentario || comentario.trim().length === 0) {
+       return {
+         success: false,
+         message: 'El comentario del descuento es obligatorio'
+       };
+     }
+
+     const data = {
+       descuento_porcentaje: parseFloat(descuentoPorcentaje),
+       comentario_descuento: comentario.trim()
+     };
+
+     const response = await api.patch(`/cotizaciones/${id}/aplicar-descuento`, data);
+
+     if (response.data.success) {
+       return {
+         success: true,
+         message: response.data.message,
+         cotizacion: response.data.cotizacion
+       };
+     }
+
+     return {
+       success: false,
+       message: response.data.message || 'Error aplicando descuento'
+     };
+
+   } catch (error) {
+     console.error('❌ Error aplicando descuento:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // 🆕 NUEVO: Aplicar meses gratis a cotización
+ async aplicarMesesGratis(id, mesesGratis, comentario) {
+   try {
+     
+     if (!mesesGratis || mesesGratis <= 0) {
+       return {
+         success: false,
+         message: 'La cantidad de meses gratis debe ser mayor a 0'
+       };
+     }
+
+     if (!comentario || comentario.trim().length === 0) {
+       return {
+         success: false,
+         message: 'El comentario de los meses gratis es obligatorio'
+       };
+     }
+
+     const data = {
+       meses_gratis: parseInt(mesesGratis),
+       comentario_descuento: comentario.trim() // Usar el mismo campo según tu requerimiento
+     };
+
+     const response = await api.patch(`/cotizaciones/${id}/aplicar-meses-gratis`, data);
+
+     if (response.data.success) {
+       return {
+         success: true,
+         message: response.data.message,
+         cotizacion: response.data.cotizacion
+       };
+     }
+
+     return {
+       success: false,
+       message: response.data.message || 'Error aplicando meses gratis'
+     };
+
+   } catch (error) {
+     console.error('❌ Error aplicando meses gratis:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
+
+ // 🆕 NUEVO: Actualizar observaciones de cotización
+ async actualizarObservaciones(id, observaciones) {
+   try {
+     
+     if (!observaciones || observaciones.trim().length === 0) {
+       return {
+         success: false,
+         message: 'Las observaciones no pueden estar vacías'
+       };
+     }
+
+     const data = {
+       observaciones: observaciones.trim()
+     };
+
+     const response = await api.patch(`/cotizaciones/${id}/observaciones`, data);
+
+     if (response.data.success) {
+       return {
+         success: true,
+         message: response.data.message,
+         cotizacion: response.data.cotizacion
+       };
+     }
+
+     return {
+       success: false,
+       message: response.data.message || 'Error actualizando observaciones'
+     };
+
+   } catch (error) {
+     console.error('❌ Error actualizando observaciones:', error);
+     return {
+       success: false,
+       message: error.response?.data?.message || 'Error de conexión'
+     };
+   }
+ }
  
  // Helper para formatear datos de cotización para mostrar
  formatCotizacionDisplay(cotizacion) {
@@ -701,98 +834,70 @@ class CotizacionesService {
    return queryParams.toString();
  }
 
-async marcarComoEfectiva(cotizacion) {
-  try {
-    // Usar la ruta de cambio de estado general
-    const response = await this.cotizacionService.cambiarEstado(cotizacion.id, 'efectiva');
-    
-    if (response.success) {
-      this.mostrarMensaje('Cotización marcada como efectiva', 'success');
-      await this.cargarDatos();
-      if (this.modalCotizacion && this.modalCotizacion.id === cotizacion.id) {
-        this.cerrarModal();
-      }
-    } else {
-      this.mostrarMensaje(response.message, 'error');
-    }
-  } catch (error) {
-    this.mostrarMensaje('Error cambiando estado', 'error');
-    console.error('Error:', error);
-  }
-}
- 
-// Aplicar descuento a cotización
-async aplicarDescuento(id, descuentoPorcentaje, comentario) {
-  try {
-    
-    if (!descuentoPorcentaje || descuentoPorcentaje <= 0 || descuentoPorcentaje > 100) {
-      return {
-        success: false,
-        message: 'El porcentaje de descuento debe estar entre 0.01% y 100%'
-      };
-    }
+ // Helper para formatear información de descuento
+ formatDescuentoInfo(cotizacion) {
+   if (!cotizacion.tiene_descuento) {
+     return null;
+   }
 
-    if (!comentario || comentario.trim().length === 0) {
-      return {
-        success: false,
-        message: 'El comentario del descuento es obligatorio'
-      };
-    }
+   const totalOriginal = parseFloat(cotizacion.total_original || 0);
+   const totalConDescuento = parseFloat(cotizacion.total || 0);
+   const porcentajeDescuento = parseFloat(cotizacion.descuento_porcentaje || 0);
+   const montoDescuento = totalOriginal - totalConDescuento;
 
-    const data = {
-      descuento_porcentaje: parseFloat(descuentoPorcentaje),
-      comentario_descuento: comentario.trim()
-    };
+   return {
+     tieneDescuento: true,
+     porcentaje: porcentajeDescuento,
+     totalOriginal: totalOriginal,
+     montoDescuento: montoDescuento,
+     totalConDescuento: totalConDescuento,
+     comentario: cotizacion.comentario_descuento,
+     otorgadoPor: cotizacion.descuento_otorgado_por_nombre,
+     fechaDescuento: cotizacion.fecha_descuento,
+     ahorroTexto: `Ahorro: $${this.formatPrice(montoDescuento)} (${porcentajeDescuento}%)`
+   };
+ }
 
-    const response = await api.patch(`/cotizaciones/${id}/aplicar-descuento`, data);
-
-    if (response.data.success) {
-      return {
-        success: true,
-        message: response.data.message,
-        cotizacion: response.data.cotizacion
-      };
-    }
-
-    return {
-      success: false,
-      message: response.data.message || 'Error aplicando descuento'
-    };
-
-  } catch (error) {
-    console.error('❌ Error aplicando descuento:', error);
-    return {
-      success: false,
-      message: error.response?.data?.message || 'Error de conexión'
-    };
-  }
-}
-
-// Helper para formatear información de descuento
-formatDescuentoInfo(cotizacion) {
-  if (!cotizacion.tiene_descuento) {
+ // 🆕 Helper para formatear información de meses gratis
+formatMesesGratisInfo(cotizacion) {
+  if (!cotizacion.tiene_meses_gratis) {
     return null;
   }
 
-  const totalOriginal = parseFloat(cotizacion.total_original || 0);
-  const totalConDescuento = parseFloat(cotizacion.total || 0);
-  const porcentajeDescuento = parseFloat(cotizacion.descuento_porcentaje || 0);
-  const montoDescuento = totalOriginal - totalConDescuento;
+  const mesesGratis = parseInt(cotizacion.meses_gratis || 0);
 
   return {
-    tieneDescuento: true,
-    porcentaje: porcentajeDescuento,
-    totalOriginal: totalOriginal,
-    montoDescuento: montoDescuento,
-    totalConDescuento: totalConDescuento,
-    comentario: cotizacion.comentario_descuento,
-    otorgadoPor: cotizacion.descuento_otorgado_por_nombre,
-    fechaDescuento: cotizacion.fecha_descuento,
-    ahorroTexto: `Ahorro: $${this.formatPrice(montoDescuento)} (${porcentajeDescuento}%)`
+    tieneMesesGratis: true,
+    cantidad: mesesGratis,
+    comentario: cotizacion.comentario_descuento, // Mismo campo según tu requerimiento
+    otorgadoPor: cotizacion.meses_gratis_otorgado_por_nombre,
+    fechaMesesGratis: cotizacion.fecha_meses_gratis,
+    beneficioTexto: `${mesesGratis} mes${mesesGratis > 1 ? 'es' : ''} gratis otorgados`
   };
+}
+
+// Método legacy para compatibilidad
+async marcarComoEfectiva(cotizacion) {
+  try {
+    // Usar la ruta de cambio de estado general
+    const response = await this.cambiarEstado(cotizacion.id, 'efectiva');
+    
+    if (response.success) {
+      return response;
+    } else {
+      return response;
+    }
+  } catch (error) {
+    console.error('Error cambiando estado:', error);
+    return {
+      success: false,
+      message: 'Error cambiando estado'
+    };
+  }
 }
 
 }
 
 // Exportar instancia única
 export default new CotizacionesService();
+     

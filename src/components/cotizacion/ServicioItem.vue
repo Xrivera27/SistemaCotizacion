@@ -7,7 +7,7 @@
     <h3>{{ servicio.nombre }}</h3>
   </div>
 
-  <!-- ✅ NUEVO: Información de límites y unidades en fila -->
+  <!-- Información de límites y unidades en fila - SIN CAMBIOS -->
   <div class="info-horizontal">
     <div class="limites-info">
       <div class="limites-badge">
@@ -16,7 +16,6 @@
       </div>
     </div>
 
-    <!-- ✅ Mostrar TODAS las unidades de medida del servicio -->
     <div v-if="unidadesMedida.length > 0" class="unidades-info">
       <div v-for="unidad in unidadesMedida" :key="unidad.id" class="unidad-badge" :class="`tipo-${unidad.tipo}`">
         <i :class="obtenerIconoTipo(unidad.tipo)"></i>
@@ -25,7 +24,7 @@
     </div>
   </div>
 
-  <!-- ✅ CORREGIDO: Precios del backend con /mes -->
+  <!-- Precios del backend con /mes - SIN CAMBIOS -->
   <div class="precios-servicio">
     <div class="precio-item">
       <span class="precio-label">Mínimo:</span>
@@ -41,20 +40,16 @@
     </div>
   </div>
 
-  <!-- ✅ NUEVA: Información del contrato con precios mensuales y anuales -->
+  <!-- CAMBIO: Información del contrato con precios solo mensuales -->
   <div class="contrato-info">
-    <div class="contrato-años">
+    <div class="contrato-meses">
       <i class="fas fa-calendar-alt"></i>
-      <span class="años-valor">{{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}</span>
+      <span class="meses-valor">{{ mesesContrato }} mes{{ mesesContrato > 1 ? 'es' : '' }}</span>
     </div>
     <div class="precios-calculados">
       <div class="precio-mensual-total">
         <span class="precio-label">Mensual:</span>
         <span class="precio-valor">{{ formatCurrency(calcularSubtotalMensual()) }}/mes</span>
-      </div>
-      <div class="precio-anual-total">
-        <span class="precio-label">Anual:</span>
-        <span class="precio-valor">{{ formatCurrency(calcularSubtotalAnual()) }}/año</span>
       </div>
       <div class="precio-total">
         <span class="total-label">Total contrato:</span>
@@ -63,6 +58,7 @@
     </div>
   </div>
 
+  <!-- Precio de venta container - SIN CAMBIOS -->
   <div class="precio-venta-container">
     <label>Precio de Venta Mensual (opcional):</label>
     <input 
@@ -84,7 +80,7 @@
     </small>
   </div>
   
-  <!-- ✅ ACTUALIZADO: Controles en fila horizontal -->
+  <!-- Controles en fila horizontal - SIN CAMBIOS -->
   <div class="cantidades-container-horizontal" :data-categorias="categoriasDelServicio.length">
     
     <div v-for="categoria in categoriasDelServicio" :key="categoria.id" 
@@ -130,7 +126,7 @@
         </button>
       </div>
       
-      <!-- ✅ NUEVO: Mensaje de validación por categoría -->
+      <!-- Mensaje de validación por categoría - SIN CAMBIOS -->
       <div v-if="validacionLimites[categoria.id]?.mensaje" 
            class="validacion-mensaje"
            :class="validacionLimites[categoria.id]?.tipo">
@@ -169,22 +165,22 @@ props: {
     type: Number,
     default: 0
   },
-  añosContrato: {
+  mesesContrato: { // CAMBIO: de añosContrato a mesesContrato
     type: Number,
     default: 1
   }
 },
 emits: ['update:modelValue', 'update:cantidadEquipos', 'update:precioVenta', 'update:cantidadesPorTipo', 'mostrar-notificacion'],
 setup(props, { emit }) {
-  const { servicio, precioVenta, añosContrato } = toRefs(props)
+  const { servicio, precioVenta, mesesContrato } = toRefs(props) // CAMBIO: usar mesesContrato
   
   // Estados reactivos
   const precioVentaLocal = ref(precioVenta.value || 0)
   
-  // ✅ CORREGIDO: Objeto reactivo para manejar cantidades POR CATEGORÍA
+  // Objeto reactivo para manejar cantidades POR CATEGORÍA
   const cantidadesPorCategoria = reactive({})
 
-  // ✅ CORREGIDO: Computed para obtener TODAS las categorías del servicio
+  // Computed para obtener TODAS las categorías del servicio - SIN CAMBIOS
   const categoriasDelServicio = computed(() => {
     const categorias = []
     
@@ -202,7 +198,6 @@ setup(props, { emit }) {
       
       if (categoria.unidad_medida) {
         const categoriaInfo = {
-          // ✅ CORRECCIÓN: Usar múltiples opciones para el ID
           id: categoria.id || categoria.categorias_id || categoria.categoria_id,
           nombre: categoria.nombre,
           unidad_id: categoria.unidad_medida.unidades_medida_id,
@@ -217,7 +212,7 @@ setup(props, { emit }) {
         
         categorias.push(categoriaInfo)
         
-        // ✅ Inicializar cantidad para esta categoría si no existe
+        // Inicializar cantidad para esta categoría si no existe
         if (categoriaInfo.id && !(categoriaInfo.id in cantidadesPorCategoria)) {
           cantidadesPorCategoria[categoriaInfo.id] = 0
         }
@@ -227,7 +222,9 @@ setup(props, { emit }) {
     return categorias
   })
 
-  // ✅ NUEVO: Computed para unidades de medida únicas (para badges)
+  // RESTO DE COMPUTED Y FUNCIONES SIN CAMBIOS HASTA LAS FUNCIONES DE CÁLCULO...
+
+  // Computed para unidades de medida únicas (para badges) - SIN CAMBIOS
   const unidadesMedida = computed(() => {
     const unidades = []
     const unidadesVistas = new Set()
@@ -237,435 +234,479 @@ setup(props, { emit }) {
         unidades.push({
           id: categoria.unidad_id,
           nombre: categoria.unidad_nombre,
-          abreviacion: categoria.unidad_abreviacion,
-          tipo: categoria.unidad_tipo
-        })
-        unidadesVistas.add(categoria.unidad_id)
-      }
-    })
-    
-    return unidades
-  })
+         abreviacion: categoria.unidad_abreviacion,
+         tipo: categoria.unidad_tipo
+       })
+       unidadesVistas.add(categoria.unidad_id)
+     }
+   })
+   
+   return unidades
+ })
 
-  // ✅ NUEVO: Computed para validar límites por categoría
-  const validacionLimites = computed(() => {
-    const errores = {}
-    
-    categoriasDelServicio.value.forEach(categoria => {
-      const cantidad = cantidadesPorCategoria[categoria.id] || 0
-      const limiteMin = servicio.value.limite_minimo || 1
-      const limiteMax = servicio.value.limite_maximo
-      
-      const validacion = {
-        esValido: true,
-        mensaje: '',
-        tipo: 'success' // success, warning, error
-      }
-      
-      // Validar límite mínimo
-      if (cantidad > 0 && cantidad < limiteMin) {
-        validacion.esValido = false
-        validacion.tipo = 'error'
-      }
-      // Validar límite máximo
-      else if (limiteMax && cantidad > limiteMax) {
-        validacion.esValido = false
-        validacion.tipo = 'error'
-      }
-      // Advertencia si está cerca del límite máximo
-      else if (limiteMax && cantidad > 0 && cantidad > (limiteMax * 0.8)) {
-        validacion.tipo = 'warning'
-      }
-      // Éxito
-      else if (cantidad > 0) {
-        validacion.tipo = 'success'
-      }
-      
-      errores[categoria.id] = validacion
-    })
-    
-    return errores
-  })
+ // Computed para validar límites por categoría - SIN CAMBIOS
+ const validacionLimites = computed(() => {
+   const errores = {}
+   
+   categoriasDelServicio.value.forEach(categoria => {
+     const cantidad = cantidadesPorCategoria[categoria.id] || 0
+     const limiteMin = servicio.value.limite_minimo || 1
+     const limiteMax = servicio.value.limite_maximo
+     
+     const validacion = {
+       esValido: true,
+       mensaje: '',
+       tipo: 'success'
+     }
+     
+     if (cantidad > 0 && cantidad < limiteMin) {
+       validacion.esValido = false
+       validacion.tipo = 'error'
+     } else if (limiteMax && cantidad > limiteMax) {
+       validacion.esValido = false
+       validacion.tipo = 'error'
+     } else if (limiteMax && cantidad > 0 && cantidad > (limiteMax * 0.8)) {
+       validacion.tipo = 'warning'
+     } else if (cantidad > 0) {
+       validacion.tipo = 'success'
+     }
+     
+     errores[categoria.id] = validacion
+   })
+   
+   return errores
+ })
 
-  // ✅ NUEVO: Computed para saber si hay errores de validación
-  const tieneErroresLimites = computed(() => {
-    return Object.values(validacionLimites.value).some(val => !val.esValido)
-  })
+ // Computed para saber si hay errores de validación - SIN CAMBIOS
+ const tieneErroresLimites = computed(() => {
+   return Object.values(validacionLimites.value).some(val => !val.esValido)
+ })
 
-  // ✅ NUEVO: Computed para mostrar info de límites del servicio
-  const infoLimites = computed(() => {
-    const limiteMin = servicio.value.limite_minimo || 1
-    const limiteMax = servicio.value.limite_maximo
-    
-    if (!limiteMax) {
-      return `Mínimo: ${limiteMin}`
-    }
-    return `Límites: ${limiteMin} - ${limiteMax}`
-  })
+ // Computed para mostrar info de límites del servicio - SIN CAMBIOS
+ const infoLimites = computed(() => {
+   const limiteMin = servicio.value.limite_minimo || 1
+   const limiteMax = servicio.value.limite_maximo
+   
+   if (!limiteMax) {
+     return `Mínimo: ${limiteMin}`
+   }
+   return `Límites: ${limiteMin} - ${limiteMax}`
+ })
 
-  // ✅ CORREGIDO: Funciones helper para categorías
-  const obtenerEtiquetaCategoria = (categoria) => {
-    // ✅ CAMBIAR: Usar el nombre de la UNIDAD DE MEDIDA, no de la categoría
-    const nombreUnidad = categoria.unidad_medida.nombre
-    const tipoUnidad = categoria.unidad_medida.tipo
-    const abreviacion = categoria.unidad_medida.abreviacion
-    
-    switch (tipoUnidad) {
-      case 'capacidad':
-        return `${nombreUnidad} (${abreviacion})`
-      case 'usuarios':
-        return `${nombreUnidad}`
-      case 'sesiones':
-        return `${nombreUnidad}`
-      case 'tiempo':
-        return `${nombreUnidad} (${abreviacion})`
-      case 'cantidad':
-      default:
-        return nombreUnidad
-    }
-  }
+ // Funciones helper para categorías - SIN CAMBIOS
+ const obtenerEtiquetaCategoria = (categoria) => {
+   const nombreUnidad = categoria.unidad_medida.nombre
+   const tipoUnidad = categoria.unidad_medida.tipo
+   const abreviacion = categoria.unidad_medida.abreviacion
+   
+   switch (tipoUnidad) {
+     case 'capacidad':
+       return `${nombreUnidad} (${abreviacion})`
+     case 'usuarios':
+       return `${nombreUnidad}`
+     case 'sesiones':
+       return `${nombreUnidad}`
+     case 'tiempo':
+       return `${nombreUnidad} (${abreviacion})`
+     case 'cantidad':
+     default:
+       return nombreUnidad
+   }
+ }
 
-  const obtenerPlaceholderCategoria = (categoria) => {
-    const tipoUnidad = categoria.unidad_medida.tipo
-    const abreviacion = categoria.unidad_medida.abreviacion
-    
-    switch (tipoUnidad) {
-      case 'capacidad':
-        return `0 ${abreviacion}`
-      case 'usuarios':
-        return '0 usuarios'
-      case 'sesiones':
-        return '0 sesiones'
-      case 'tiempo':
-        return `0 ${abreviacion}`
-      default:
-        return '0'
-    }
-  }
+ const obtenerPlaceholderCategoria = (categoria) => {
+   const tipoUnidad = categoria.unidad_medida.tipo
+   const abreviacion = categoria.unidad_medida.abreviacion
+   
+   switch (tipoUnidad) {
+     case 'capacidad':
+       return `0 ${abreviacion}`
+     case 'usuarios':
+       return '0 usuarios'
+     case 'sesiones':
+       return '0 sesiones'
+     case 'tiempo':
+       return `0 ${abreviacion}`
+     default:
+       return '0'
+   }
+ }
 
-  const obtenerIconoTipo = (tipo) => {
-    switch (tipo) {
-      case 'capacidad':
-        return 'fas fa-hdd'
-      case 'usuarios':
-        return 'fas fa-users'
-      case 'sesiones':
-        return 'fas fa-link'
-      case 'tiempo':
-        return 'fas fa-clock'
-      case 'cantidad':
-      default:
-        return 'fas fa-boxes'
-    }
-  }
+ const obtenerIconoTipo = (tipo) => {
+   switch (tipo) {
+     case 'capacidad':
+       return 'fas fa-hdd'
+     case 'usuarios':
+       return 'fas fa-users'
+     case 'sesiones':
+       return 'fas fa-link'
+     case 'tiempo':
+       return 'fas fa-clock'
+     case 'cantidad':
+     default:
+       return 'fas fa-boxes'
+   }
+ }
 
-  const obtenerStepTipo = (tipo) => {
-    switch (tipo) {
-      case 'capacidad':
-        return 1
-      case 'tiempo':
-        return 0.5
-      default:
-        return 1
-    }
-  }
+ const obtenerStepTipo = (tipo) => {
+   switch (tipo) {
+     case 'capacidad':
+       return 1
+     case 'tiempo':
+       return 0.5
+     default:
+       return 1
+   }
+ }
 
-  // Computed properties existentes
-  const esPrecioBajoMinimo = computed(() => {
-    if (!precioVentaLocal.value) return false
-    const precioMinimo = servicio.value.precio_minimo || servicio.value.precioMinimo || 0
-    return precioVentaLocal.value < precioMinimo
-  })
+ // Computed properties existentes - SIN CAMBIOS
+ const esPrecioBajoMinimo = computed(() => {
+   if (!precioVentaLocal.value) return false
+   const precioMinimo = servicio.value.precio_minimo || servicio.value.precioMinimo || 0
+   return precioVentaLocal.value < precioMinimo
+ })
 
-  // ✅ CORREGIDO: Total de unidades para cálculo de precio
-  const totalUnidadesPorTipo = computed(() => {
-    let totalParaPrecio = 0
-    
-    categoriasDelServicio.value.forEach(categoria => {
-      const cantidad = cantidadesPorCategoria[categoria.id] || 0
-      totalParaPrecio += cantidad
-    })
-    
-    return Math.max(totalParaPrecio, 1)
-  })
+ // Total de unidades para cálculo de precio - SIN CAMBIOS
+ const totalUnidadesPorTipo = computed(() => {
+   let totalParaPrecio = 0
+   
+   categoriasDelServicio.value.forEach(categoria => {
+     const cantidad = cantidadesPorCategoria[categoria.id] || 0
+     totalParaPrecio += cantidad
+   })
+   
+   return Math.max(totalParaPrecio, 1)
+ })
 
-  // ✅ NUEVO: Computed para obtener cantidades por tipo
-  const cantidadesPorTipo = computed(() => {
-    const cantidades = {}
-    
-    categoriasDelServicio.value.forEach(categoria => {
-      const cantidad = cantidadesPorCategoria[categoria.id] || 0
-      const tipo = categoria.unidad_tipo
-      
-      if (!cantidades[tipo]) {
-        cantidades[tipo] = 0
-      }
-      cantidades[tipo] += cantidad
-    })
-    
-    return cantidades
-  })
+ // Computed para obtener cantidades por tipo - SIN CAMBIOS
+ const cantidadesPorTipo = computed(() => {
+   const cantidades = {}
+   
+   categoriasDelServicio.value.forEach(categoria => {
+     const cantidad = cantidadesPorCategoria[categoria.id] || 0
+     const tipo = categoria.unidad_tipo
+     
+     if (!cantidades[tipo]) {
+       cantidades[tipo] = 0
+     }
+     cantidades[tipo] += cantidad
+   })
+   
+   return cantidades
+ })
 
-  // ✅ NUEVAS: Funciones para calcular precios mensuales y anuales
-  const calcularSubtotalMensual = () => {
-    const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
-    return precio * totalUnidadesPorTipo.value
-  }
+ // CAMBIO: Funciones para calcular precios solo mensuales
+ const calcularSubtotalMensual = () => {
+   const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
+   return precio * totalUnidadesPorTipo.value
+ }
 
-  const calcularSubtotalAnual = () => {
-    return calcularSubtotalMensual() * 12
-  }
+ const calcularTotalContrato = () => {
+   return calcularSubtotalMensual() * mesesContrato.value // CAMBIO: usar meses en lugar de años
+ }
 
-  const calcularTotalContrato = () => {
-    return calcularSubtotalAnual() * añosContrato.value
-  }
+ // Función de formateo - SIN CAMBIOS
+ const formatCurrency = (amount) => {
+   const valor = amount || 0
+   return `$${valor.toLocaleString('en-US', {
+     minimumFractionDigits: 2,
+     maximumFractionDigits: 2
+   })}`
+ }
 
-  // Función de formateo
-  const formatCurrency = (amount) => {
-    const valor = amount || 0
-    return `$${valor.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`
-  }
+ const validarPrecioMinimo = () => {
+   if (precioVentaLocal.value) {
+     const precioMinimo = servicio.value.precio_minimo || servicio.value.precioMinimo || 0
+     if (precioVentaLocal.value < precioMinimo) {
+       console.warn(`⚠️ Precio ${precioVentaLocal.value} está por debajo del mínimo ${precioMinimo} para ${servicio.value.nombre}`)
+     }
+   }
+ }
 
-  const validarPrecioMinimo = () => {
-    if (precioVentaLocal.value) {
-      const precioMinimo = servicio.value.precio_minimo || servicio.value.precioMinimo || 0
-      if (precioVentaLocal.value < precioMinimo) {
-        console.warn(`⚠️ Precio ${precioVentaLocal.value} está por debajo del mínimo ${precioMinimo} para ${servicio.value.nombre}`)
-      }
-    }
-  }
+ // Función para mostrar notificaciones - SIN CAMBIOS
+ const mostrarNotificacion = (mensaje, tipo = 'info') => {
+   emit('mostrar-notificacion', { mensaje, tipo })
+ }
 
-  // ✅ NUEVO: Función para mostrar notificaciones
-  const mostrarNotificacion = (mensaje, tipo = 'info') => {
-    // Emitir evento para mostrar toast en el componente padre
-    emit('mostrar-notificacion', { mensaje, tipo })
-  }
+ // Métodos para manejar cantidades POR CATEGORÍA con validación - SIN CAMBIOS
+ const incrementarCantidad = (categoriaId) => {
+   const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
+   if (categoria) {
+     const step = obtenerStepTipo(categoria.unidad_tipo)
+     const limiteMax = servicio.value.limite_maximo
+     
+     if (limiteMax && cantidadesPorCategoria[categoriaId] >= limiteMax) {
+       mostrarNotificacion(`Cantidad máxima alcanzada: ${limiteMax}`, 'warning')
+       return
+     }
+     
+     cantidadesPorCategoria[categoriaId] = (cantidadesPorCategoria[categoriaId] || 0) + step
+     actualizarCantidad(categoriaId)
+   }
+ }
 
-  // ✅ CORREGIDO: Métodos para manejar cantidades POR CATEGORÍA con validación
-  const incrementarCantidad = (categoriaId) => {
-    const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
-    if (categoria) {
-      const step = obtenerStepTipo(categoria.unidad_tipo)
-      const limiteMax = servicio.value.limite_maximo
-      
-      // Verificar límite máximo antes de incrementar
-      if (limiteMax && cantidadesPorCategoria[categoriaId] >= limiteMax) {
-        mostrarNotificacion(`Cantidad máxima alcanzada: ${limiteMax}`, 'warning')
-        return
-      }
-      
-      cantidadesPorCategoria[categoriaId] = (cantidadesPorCategoria[categoriaId] || 0) + step
-      actualizarCantidad(categoriaId)
-    }
-  }
+ const decrementarCantidad = (categoriaId) => {
+   const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
+   if (categoria) {
+     const step = obtenerStepTipo(categoria.unidad_tipo)
+     if (cantidadesPorCategoria[categoriaId] >= step) {
+       cantidadesPorCategoria[categoriaId] = cantidadesPorCategoria[categoriaId] - step
+       actualizarCantidad(categoriaId)
+     }
+   }
+ }
 
-  const decrementarCantidad = (categoriaId) => {
-    const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
-    if (categoria) {
-      const step = obtenerStepTipo(categoria.unidad_tipo)
-      if (cantidadesPorCategoria[categoriaId] >= step) {
-        cantidadesPorCategoria[categoriaId] = cantidadesPorCategoria[categoriaId] - step
-        actualizarCantidad(categoriaId)
-      }
-    }
-  }
+ // Método actualizarCantidad - SIN CAMBIOS
+ const actualizarCantidad = (categoriaId) => {
+   if (cantidadesPorCategoria[categoriaId] < 0) {
+     cantidadesPorCategoria[categoriaId] = 0
+   }
+   
+   const cantidad = cantidadesPorCategoria[categoriaId]
+   const limiteMax = servicio.value.limite_maximo
+   
+   if (cantidad > 0 && limiteMax && cantidad > limiteMax) {
+     cantidadesPorCategoria[categoriaId] = limiteMax
+     mostrarNotificacion(`Cantidad ajustada al límite máximo: ${limiteMax}`, 'warning')
+   }
+   
+   const datosParaEmitir = {
+     servicioId: servicio.value.servicios_id,
+     cantidadesPorCategoria: { ...cantidadesPorCategoria },
+     cantidadesPorTipo: cantidadesPorTipo.value,
+     totalUnidades: totalUnidadesPorTipo.value,
+     categoriasDetalle: categoriasDelServicio.value.map(cat => ({
+       id: cat.id,
+       categorias_id: cat.id,
+       nombre: cat.nombre,
+       unidad_id: cat.unidad_id,
+       unidad_nombre: cat.unidad_nombre,
+       unidad_tipo: cat.unidad_tipo,
+       unidad_abreviacion: cat.unidad_abreviacion,
+       cantidad: cantidadesPorCategoria[cat.id] || 0
+     })),
+     validacion: {
+       tieneErrores: tieneErroresLimites.value,
+       errores: validacionLimites.value
+     }
+   }
 
-  // ✅ CORREGIDO: Método actualizarCantidad
-  const actualizarCantidad = (categoriaId) => {
-    if (cantidadesPorCategoria[categoriaId] < 0) {
-      cantidadesPorCategoria[categoriaId] = 0
-    }
-    
-    // ✅ VALIDAR LÍMITES EN TIEMPO REAL
-    const cantidad = cantidadesPorCategoria[categoriaId]
-    const limiteMax = servicio.value.limite_maximo
-    
-    // Corregir automáticamente si excede límites
-    if (cantidad > 0 && limiteMax && cantidad > limiteMax) {
-      cantidadesPorCategoria[categoriaId] = limiteMax
-      mostrarNotificacion(`Cantidad ajustada al límite máximo: ${limiteMax}`, 'warning')
-    }
-    
-    // ✅ ENVIAR DATOS ESTRUCTURADOS CORRECTAMENTE
-    const datosParaEmitir = {
-      servicioId: servicio.value.servicios_id,
-      cantidadesPorCategoria: { ...cantidadesPorCategoria },
-      cantidadesPorTipo: cantidadesPorTipo.value,
-      totalUnidades: totalUnidadesPorTipo.value,
-      // ✅ AGREGAR: Información detallada de categorías
-      categoriasDetalle: categoriasDelServicio.value.map(cat => ({
-        id: cat.id,
-        categorias_id: cat.id, // ✅ Para compatibilidad con backend
-        nombre: cat.nombre,
-        unidad_id: cat.unidad_id,
-        unidad_nombre: cat.unidad_nombre,
-        unidad_tipo: cat.unidad_tipo,
-        unidad_abreviacion: cat.unidad_abreviacion,
-        cantidad: cantidadesPorCategoria[cat.id] || 0
-      })),
-      // ✅ NUEVO: Agregar información de validación
-      validacion: {
-        tieneErrores: tieneErroresLimites.value,
-        errores: validacionLimites.value
-      }
-    }
+   emit('update:cantidadesPorTipo', datosParaEmitir)
+ }
 
-    emit('update:cantidadesPorTipo', datosParaEmitir)
-    
-  }
+ const actualizarPrecioVenta = () => {
+   emit('update:precioVenta', precioVentaLocal.value || 0)
+ }
 
-  const actualizarPrecioVenta = () => {
-    emit('update:precioVenta', precioVentaLocal.value || 0)
-  }
+ // Inicialización simplificada - SIN CAMBIOS
+ const inicializarCantidades = () => {
+   categoriasDelServicio.value.forEach(categoria => {
+     if (categoria.id && !(categoria.id in cantidadesPorCategoria)) {
+       cantidadesPorCategoria[categoria.id] = 0
+     }
+   })
+ }
 
-  // ✅ CORREGIDO: Inicialización simplificada
-  const inicializarCantidades = () => {
-    // Solo inicializar las cantidades a 0 si no existen
-    categoriasDelServicio.value.forEach(categoria => {
-      if (categoria.id && !(categoria.id in cantidadesPorCategoria)) {
-        cantidadesPorCategoria[categoria.id] = 0
-      }
-    })
-  }
+ // Método para actualizar desde el padre - SIN CAMBIOS
+ const actualizarDesdeElPadre = (cantidades) => {
+   Object.assign(cantidadesPorCategoria, cantidades)
+ }
 
-  // ✅ NUEVO: Método para actualizar desde el padre
-  const actualizarDesdeElPadre = (cantidades) => {
+ // Watchers - CAMBIO: usar mesesContrato
+ watch(precioVenta, (newVal) => {
+   precioVentaLocal.value = newVal || 0
+ })
 
-    Object.assign(cantidadesPorCategoria, cantidades)
-  }
+ watch(categoriasDelServicio, (newCategorias) => {
+   console.log('🔄 Categorías del servicio actualizadas:', newCategorias)
+   inicializarCantidades()
+ }, { immediate: true })
 
-  // Watchers
-  watch(precioVenta, (newVal) => {
-    precioVentaLocal.value = newVal || 0
-  })
+ watch(() => props.modelValue, (newVal) => {
+   if (newVal > 0) {
+     const primeraCategoria = categoriasDelServicio.value[0]
+     if (primeraCategoria && primeraCategoria.id) {
+       cantidadesPorCategoria[primeraCategoria.id] = newVal
+       actualizarCantidad(primeraCategoria.id)
+     }
+   }
+ }, { immediate: true })
 
-  // ✅ NUEVO: Watcher para categorías del servicio
-  watch(categoriasDelServicio, (newCategorias) => {
-    console.log('🔄 Categorías del servicio actualizadas:', newCategorias)
-    inicializarCantidades()
-  }, { immediate: true })
+ // Watcher para datos globales de duplicación - SIN CAMBIOS
+ watch(() => {
+   const servicioId = servicio.value.servicios_id
+   return window.categoriasDetallePorServicio?.[servicioId]
+ }, (nuevasCategorias) => {
+   if (nuevasCategorias && Array.isArray(nuevasCategorias)) {
+     
+     nuevasCategorias.forEach(categoria => {
+       if (categoria.cantidad > 0) {
+         const categoriaId = categoria.categoria_id || categoria.id
+         cantidadesPorCategoria[categoriaId] = categoria.cantidad
+       }
+     })
+     
+     const primeraCategoria = nuevasCategorias[0]
+     if (primeraCategoria) {
+       const categoriaId = primeraCategoria.categoria_id || primeraCategoria.id
+       actualizarCantidad(categoriaId)
+     }
+   }
+ }, { deep: true, immediate: true })
 
-  // ✅ NUEVO: Watcher para recibir cantidades desde el componente padre
-  watch(() => props.modelValue, (newVal) => {
-    if (newVal > 0) {
-      // Distribuir la cantidad en la primera categoría disponible
-      const primeraCategoria = categoriasDelServicio.value[0]
-      if (primeraCategoria && primeraCategoria.id) {
-        cantidadesPorCategoria[primeraCategoria.id] = newVal
-        actualizarCantidad(primeraCategoria.id)
-      }
-    }
-  }, { immediate: true })
+ // Escuchar evento personalizado de cantidades actualizadas - SIN CAMBIOS
+ onMounted(() => {
+   const handleCantidadesActualizadas = (event) => {
+     const { cantidadesPorCategoria: nuevasCantidades, servicioId } = event.detail
+     
+     if (servicioId === servicio.value.servicios_id) {
+       
+       Object.keys(nuevasCantidades).forEach(categoriaId => {
+         const cantidad = nuevasCantidades[categoriaId]
+         if (cantidad > 0) {
+           cantidadesPorCategoria[categoriaId] = cantidad
+         }
+       })
+       
+       nextTick(() => {
+         const primeraCategoria = Object.keys(nuevasCantidades)[0]
+         if (primeraCategoria) {
+           actualizarCantidad(parseInt(primeraCategoria))
+         }
+       })
+     }
+   }
+   
+   window.addEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
+   
+   onUnmounted(() => {
+     window.removeEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
+   })
+ })
 
-  // ✅ NUEVO: Watcher para datos globales de duplicación
-  watch(() => {
-    const servicioId = servicio.value.servicios_id
-    return window.categoriasDetallePorServicio?.[servicioId]
-  }, (nuevasCategorias) => {
-    if (nuevasCategorias && Array.isArray(nuevasCategorias)) {
-      
-      nuevasCategorias.forEach(categoria => {
-        if (categoria.cantidad > 0) {
-          const categoriaId = categoria.categoria_id || categoria.id
-          cantidadesPorCategoria[categoriaId] = categoria.cantidad
-        }
-      })
-      
-      // Forzar actualización
-      const primeraCategoria = nuevasCategorias[0]
-      if (primeraCategoria) {
-        const categoriaId = primeraCategoria.categoria_id || primeraCategoria.id
-        actualizarCantidad(categoriaId)
-      }
-    }
-  }, { deep: true, immediate: true })
-
-  // ✅ NUEVO: Escuchar evento personalizado de cantidades actualizadas
-  onMounted(() => {
-    const handleCantidadesActualizadas = (event) => {
-      const { cantidadesPorCategoria: nuevasCantidades, servicioId } = event.detail
-      
-      if (servicioId === servicio.value.servicios_id) {
-        
-        Object.keys(nuevasCantidades).forEach(categoriaId => {
-          const cantidad = nuevasCantidades[categoriaId]
-          if (cantidad > 0) {
-            cantidadesPorCategoria[categoriaId] = cantidad
-          }
-        })
-        
-        // Forzar re-render
-        nextTick(() => {
-          const primeraCategoria = Object.keys(nuevasCantidades)[0]
-          if (primeraCategoria) {
-            actualizarCantidad(parseInt(primeraCategoria))
-          }
-        })
-      }
-    }
-    
-    window.addEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
-    
-    // Cleanup en unmount
-    onUnmounted(() => {
-      window.removeEventListener('cantidadesActualizadas', handleCantidadesActualizadas)
-    })
-  })
-
-  return {
-    // Estados
-    precioVentaLocal,
-    cantidadesPorCategoria,
-    
-    // ✅ Computed para múltiples categorías
-    categoriasDelServicio,
-    unidadesMedida,
-    cantidadesPorTipo,
-    
-    // ✅ Validación de límites
-    validacionLimites,
-    tieneErroresLimites,
-    infoLimites,
-    
-    // Computed existentes
-    esPrecioBajoMinimo,
-    totalUnidadesPorTipo,
-    
-    // ✅ Métodos helper
-    obtenerEtiquetaCategoria,
-    obtenerPlaceholderCategoria,
-    obtenerIconoTipo,
-    obtenerStepTipo,
-    
-    // ✅ Funciones de cálculo
-    calcularSubtotalMensual,
-    calcularSubtotalAnual,
-    calcularTotalContrato,
-    
-    // Métodos
-    formatCurrency,
-    validarPrecioMinimo,
-    
-    // ✅ Métodos para múltiples categorías con validación
-    incrementarCantidad,
-    decrementarCantidad,
-    actualizarCantidad,
-    actualizarPrecioVenta,
-    inicializarCantidades,
-    
-    // ✅ Métodos de comunicación con el padre
-    mostrarNotificacion,
-    actualizarDesdeElPadre
-  }
+ return {
+   // Estados
+   precioVentaLocal,
+   cantidadesPorCategoria,
+   
+   // Computed para múltiples categorías
+   categoriasDelServicio,
+   unidadesMedida,
+   cantidadesPorTipo,
+   
+   // Validación de límites
+   validacionLimites,
+   tieneErroresLimites,
+   infoLimites,
+   
+   // Computed existentes
+   esPrecioBajoMinimo,
+   totalUnidadesPorTipo,
+   
+   // Métodos helper
+   obtenerEtiquetaCategoria,
+   obtenerPlaceholderCategoria,
+   obtenerIconoTipo,
+   obtenerStepTipo,
+   
+   // CAMBIO: Funciones de cálculo solo mensual
+   calcularSubtotalMensual,
+   calcularTotalContrato,
+   
+   // Métodos
+   formatCurrency,
+   validarPrecioMinimo,
+   
+   // Métodos para múltiples categorías con validación
+   incrementarCantidad,
+   decrementarCantidad,
+   actualizarCantidad,
+   actualizarPrecioVenta,
+   inicializarCantidades,
+   
+   // Métodos de comunicación con el padre
+   mostrarNotificacion,
+   actualizarDesdeElPadre
+ }
 }
 }
 </script>
 
+
+
+
 <style scoped>
 /* ✅ NUEVOS ESTILOS para validación de límites */
+/* CAMBIO: Estilos para contrato-meses en lugar de contrato-años */
+.contrato-info {
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+padding: 0.6rem;
+border-radius: 6px;
+margin-bottom: 0.75rem;
+border: 1px solid #ced4da;
+border-left: 3px solid #007bff;
+flex-shrink: 0;
+}
+
+.contrato-meses {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 0.3rem;
+}
+
+.contrato-meses i {
+color: #007bff;
+margin-right: 0.25rem;
+}
+
+.meses-valor {
+font-size: 0.8rem;
+color: #495057;
+font-weight: 600;
+background: white;
+padding: 0.2rem 0.4rem;
+border-radius: 4px;
+border: 1px solid #ced4da;
+}
+
+.precios-calculados {
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+
+.precio-mensual-total {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.precio-total {
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-top: 1px solid #ced4da;
+padding-top: 0.25rem;
+margin-top: 0.25rem;
+}
+
+.total-label {
+font-size: 0.75rem;
+color: #495057;
+font-weight: 600;
+}
+
+.total-valor {
+font-size: 0.8rem;
+color: #495057;
+font-weight: 700;
+background: white;
+padding: 0.2rem 0.4rem;
+border-radius: 4px;
+border: 1px solid #ced4da;
+}
+
 
 /* Información de límites */
 .limites-info {

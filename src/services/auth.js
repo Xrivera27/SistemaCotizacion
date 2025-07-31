@@ -2,6 +2,11 @@
 import api from './api';
 
 class AuthService {
+  constructor() {
+    this.heartbeatInterval = null;
+    this.tokenCheckInterval = null;
+    this.isHeartbeatRunning = false;
+  }
   
   // Login con el backend real
   async login(usuario, password, recordar = false) {
@@ -33,6 +38,9 @@ class AuthService {
         } else {
           sessionStorage.setItem('cloudtech_user', JSON.stringify(userToStore));
         }
+
+        // 🆕 Iniciar heartbeat optimizado después del login exitoso
+        this.startOptimizedHeartbeat();
 
         return {
           success: true,
@@ -107,7 +115,8 @@ class AuthService {
     } catch (error) {
       console.error('❌ Error en logout:', error);
     } finally {
-      // Siempre limpiar datos locales
+      // 🆕 Siempre limpiar datos locales y detener heartbeat
+      this.stopHeartbeat();
       this.clearLocalUserData();
     }
   }
@@ -120,11 +129,55 @@ class AuthService {
     } catch (error) {
       console.error('❌ Error en logout all:', error);
     } finally {
+      // 🆕 Detener heartbeat y limpiar datos
+      this.stopHeartbeat();
       this.clearLocalUserData();
     }
   }
 
-  // Renovar token (heartbeat)
+  // 🆕 PING AL SERVIDOR (SIN BD)
+  async pingServer() {
+    try {
+      // Usar endpoint que NO toca la base de datos
+      const response = await api.get('/auth/ping');
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          needsRenewal: response.data.needsRenewal,
+          expiresIn: response.data.expiresIn
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error en ping:', error);
+      return {
+        success: false,
+        message: 'Error conectando al servidor'
+      };
+    }
+  }
+
+  // 🆕 RENOVAR TOKEN SOLO CUANDO SEA NECESARIO
+  async renewTokenWhenNeeded() {
+    try {
+      const response = await api.post('/auth/renew');
+      
+      if (response.data.success) {
+        return {
+          success: true,
+          expiresAt: response.data.data.expiresAt
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error renovando token:', error);
+      return {
+        success: false,
+        message: 'Error renovando sesión'
+      };
+    }
+  }
+
+  // Renovar token (heartbeat) - MÉTODO ORIGINAL MANTENIDO PARA COMPATIBILIDAD
   async renewToken() {
     try {
       const response = await api.get('/auth/heartbeat');
@@ -142,6 +195,90 @@ class AuthService {
         message: 'Error renovando sesión'
       };
     }
+  }
+
+  // 🆕 HEARTBEAT INTELIGENTE Y OPTIMIZADO
+  startOptimizedHeartbeat() {
+    // Limpiar intervals previos
+    this.stopHeartbeat();
+    
+    if (this.isHeartbeatRunning) return;
+    this.isHeartbeatRunning = true;
+
+    console.log('🔄 Iniciando heartbeat optimizado');
+
+    // 1. Ping ligero cada 30 segundos (sin BD)
+    this.heartbeatInterval = setInterval(async () => {
+      if (!this.isAuthenticated()) {
+        this.stopHeartbeat();
+        return;
+      }
+
+      // Solo hacer ping si la pestaña está visible
+      if (document.hidden) return;
+
+      const pingResult = await this.pingServer();
+      
+      if (!pingResult.success) {
+        console.warn('⚠️ Ping falló - posible problema de conexión');
+        // No hacer logout inmediato, dar una segunda oportunidad
+        return;
+      }
+
+      // Si el token necesita renovación, renovarlo
+      if (pingResult.needsRenewal) {
+        console.log('🔄 Token necesita renovación');
+        const renewResult = await this.renewTokenWhenNeeded();
+        
+        if (!renewResult.success) {
+          console.warn('⚠️ No se pudo renovar token, cerrando sesión');
+          await this.logout();
+          this.redirectToLogin();
+        }
+      }
+
+    }, 30000); // 30 segundos para ping
+
+    // 2. Verificación completa cada 10 minutos
+    this.tokenCheckInterval = setInterval(async () => {
+      if (!this.isAuthenticated() || document.hidden) return;
+
+      const authCheck = await this.checkAuth();
+      if (!authCheck.success) {
+        console.warn('⚠️ Verificación de auth falló, cerrando sesión');
+        await this.logout();
+        this.redirectToLogin();
+      }
+    }, 600000); // 10 minutos
+  }
+
+  // Detener heartbeat
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    
+    if (this.tokenCheckInterval) {
+      clearInterval(this.tokenCheckInterval);
+      this.tokenCheckInterval = null;
+    }
+    
+    this.isHeartbeatRunning = false;
+    console.log('🛑 Heartbeat detenido');
+  }
+
+  // 🆕 Método auxiliar para redirección
+  redirectToLogin() {
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
+  // 🆕 REEMPLAZAR el método startHeartbeat original
+  startHeartbeat() {
+    console.warn('⚠️ startHeartbeat deprecado, usando startOptimizedHeartbeat');
+    this.startOptimizedHeartbeat();
   }
 
   // Obtener sesiones activas
@@ -244,71 +381,36 @@ class AuthService {
     return redirects[tipoUsuario] || '/vendedor/dashboard';
   }
 
-  // Iniciar heartbeat automático
-  startHeartbeat(intervalMinutes = 5) {
-    // Limpiar interval previo si existe
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
+  // Forgot Password - MÉTODO EXISTENTE
+  async forgotPassword(email) {
+    try {
+      
+      const response = await api.post('/auth/forgot-password', {
+        email
+      });
 
-    this.heartbeatInterval = setInterval(async () => {
-      if (this.isAuthenticated()) {
-        const result = await this.renewToken();
-        
-        if (!result.success) {
-          console.warn('⚠️ Heartbeat falló, cerrando sesión');
-          await this.logout();
-          
-          // Redirigir a login
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
-        }
+      if (response.data.success) {
+        return {
+          success: true,
+          message: response.data.message
+        };
       }
-    }, intervalMinutes * 60 * 1000);
-
-  }
-
-  // Detener heartbeat
-  stopHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-  }
-
-  // Forgot Password - NUEVO MÉTODO
-async forgotPassword(email) {
-  try {
-    
-    const response = await api.post('/auth/forgot-password', {
-      email
-    });
-
-    if (response.data.success) {
+      
+    } catch (error) {
+      console.error('❌ Error en forgot password:', error);
+      
+      let message = 'Error enviando email de recuperación';
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
       return {
-        success: true,
-        message: response.data.message
+        success: false,
+        message: message
       };
     }
-    
-  } catch (error) {
-    console.error('❌ Error en forgot password:', error);
-    
-    let message = 'Error enviando email de recuperación';
-    if (error.response?.data?.message) {
-      message = error.response.data.message;
-    }
-    
-    return {
-      success: false,
-      message: message
-    };
   }
 }
-}
-
-
 
 // Exportar instancia única
 export default new AuthService();

@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_URL || 'https://sistemacotizacionbackend.onrender.com/api',
+  baseURL: 'http://localhost:3000/api', // ✅ Verifica que sea la URL correcta
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'

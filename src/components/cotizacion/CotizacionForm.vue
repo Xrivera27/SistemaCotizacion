@@ -8,37 +8,36 @@
     </div>
   </div>
 
-  <!-- Selector de años global -->
-  <div class="años-selector">
-    <div class="años-container">
-      <label for="años-contrato">
+  <!-- Selector de meses global -->
+  <div class="meses-selector">
+    <div class="meses-container">
+      <label for="meses-contrato">
         <i class="fas fa-calendar-alt"></i>
-        Duración del contrato (años):
+        Duración del contrato (meses):
       </label>
-      <div class="años-controls">
-        <button @click="decrementarAños" :disabled="añosContrato <= 1" class="btn-años">
+      <div class="meses-controls">
+        <button @click="decrementarMeses" :disabled="mesesContrato <= 1" class="btn-meses">
           <i class="fas fa-minus"></i>
         </button>
         <input 
-          v-model.number="añosContrato" 
+          v-model.number="mesesContrato" 
           type="number" 
-          min="1" 
-          max="10"
-          class="input-años"
-          @input="validarAños"
+          min="1"
+          class="input-meses"
+          @input="validarMeses"
         >
-        <button @click="incrementarAños" :disabled="añosContrato >= 10" class="btn-años">
+        <button @click="incrementarMeses" class="btn-meses">
           <i class="fas fa-plus"></i>
         </button>
       </div>
-      <small class="años-info">
+      <small class="meses-info">
         <i class="fas fa-info-circle"></i>
-        Todos los servicios se contratarán por {{ añosContrato }} año{{ añosContrato > 1 ? 's' : '' }}
+        Todos los servicios se contratarán por {{ mesesContrato }} mes{{ mesesContrato > 1 ? 'es' : '' }}
       </small>
     </div>
   </div>
 
-  <!-- Filtros y búsqueda -->
+  <!-- Filtros y búsqueda - SIN CAMBIOS -->
   <div class="filtros-container">
     <div class="filtros-header">
       <h3>
@@ -87,7 +86,7 @@
         </select>
       </div>
 
-      <!-- Filtro por precio ACTUALIZADO -->
+      <!-- Filtro por precio -->
       <div class="precio-filter">
         <label>
           <i class="fas fa-dollar-sign"></i>
@@ -111,7 +110,7 @@
     </div>
   </div>
 
-  <!-- Grid de servicios con paginación -->
+  <!-- Grid de servicios con paginación - SIN CAMBIOS -->
   <div class="servicios-section">
     <div class="servicios-header">
       <h3>
@@ -147,7 +146,7 @@
         v-model="cantidades[servicio.servicios_id]"
         :cantidadEquipos="cantidadesEquipos[servicio.servicios_id]"
         :precioVenta="preciosVenta[servicio.servicios_id]"
-        :añosContrato="añosContrato"
+        :mesesContrato="mesesContrato"
         @update:cantidadEquipos="actualizarCantidadEquipos(servicio.servicios_id, $event)"
         @update:precioVenta="actualizarPrecioVenta(servicio.servicios_id, $event)"
         @update:cantidadesPorTipo="actualizarCantidadesPorTipo($event)"
@@ -155,7 +154,7 @@
       />
     </div>
 
-    <!-- Mensaje cuando no hay resultados -->
+    <!-- Mensaje cuando no hay resultados - SIN CAMBIOS -->
     <div v-else class="no-resultados">
       <div class="no-resultados-content">
         <i class="fas fa-search"></i>
@@ -168,7 +167,7 @@
       </div>
     </div>
 
-    <!-- Paginación inferior -->
+    <!-- Paginación inferior - SIN CAMBIOS -->
     <div class="paginacion-container" v-if="totalPaginas > 1">
       <div class="paginacion">
         <!-- Botón anterior -->
@@ -241,7 +240,7 @@
     </div>
   </div>
 
-  <!-- Mostrar errores de límites globales -->
+  <!-- Mostrar errores de límites globales - SIN CAMBIOS -->
   <div v-if="tieneErroresGlobales" class="errores-limites">
     <div class="error-header">
       <i class="fas fa-exclamation-triangle"></i>
@@ -277,12 +276,12 @@
 
   <ResultadoCotizacion
     :servicios-seleccionados="serviciosSeleccionados"
-    :años-contrato="añosContrato"
+    :meses-contrato="mesesContrato"
     @reiniciar="limpiarFormulario"
     @limpiar-formulario="limpiarFormulario"
   />
 
-  <!-- TOAST DE NOTIFICACIONES -->
+  <!-- TOAST DE NOTIFICACIONES - SIN CAMBIOS -->
   <div v-if="showToast" class="toast-notification" :class="toastType">
     <i :class="toastIcon"></i>
     <span>{{ toastMessage }}</span>
@@ -325,7 +324,7 @@ setup() {
   const formularioKey = ref(0)
   
   const serviciosSeleccionados = ref([])
-  const añosContrato = ref(1)
+  const mesesContrato = ref(1) // CAMBIO: de añosContrato a mesesContrato
   
   // Estados para duplicación
   const esDuplicacion = ref(false)
@@ -475,8 +474,9 @@ const cargarDatosParaDuplicar = async () => {
 
 const precargarFormulario = async (datos) => {
   try {
+    // CAMBIO: Cargar meses en lugar de años
     if (datos.servicios && datos.servicios.length > 0) {
-      añosContrato.value = datos.servicios[0].cantidadAnos || 1
+      mesesContrato.value = datos.servicios[0].cantidadMeses || datos.servicios[0].cantidadAnos || 1 // Mantener compatibilidad
     }
     
     // ✅ VERIFICAR QUE LOS SERVICIOS ESTÉN CARGADOS
@@ -763,441 +763,541 @@ const precargarFormulario = async (datos) => {
       { 
         value: 'economico', 
         label: ` ($${min.toFixed(2)} - $${q1.toFixed(2)})`,
-        min: min,
-        max: q1
-      },
-      { 
-        value: 'medio_bajo', 
-        label: `($${q1.toFixed(2)} - $${q2.toFixed(2)})`,
-        min: q1,
-        max: q2
-      },
-      { 
-        value: 'medio_alto', 
-        label: ` ($${q2.toFixed(2)} - $${q3.toFixed(2)})`,
-        min: q2,
-        max: q3
-      },
-      { 
-        value: 'premium', 
-        label: ` ($${q3.toFixed(2)} - $${max.toFixed(2)})`,
-        min: q3,
-        max: max
-      }
-    ]
-  })
+       min: min,
+       max: q1
+     },
+     { 
+       value: 'medio_bajo', 
+       label: `($${q1.toFixed(2)} - $${q2.toFixed(2)})`,
+       min: q1,
+       max: q2
+     },
+     { 
+       value: 'medio_alto', 
+       label: ` ($${q2.toFixed(2)} - $${q3.toFixed(2)})`,
+       min: q2,
+       max: q3
+     },
+     { 
+       value: 'premium', 
+       label: ` ($${q3.toFixed(2)} - $${max.toFixed(2)})`,
+       min: q3,
+       max: max
+     }
+   ]
+ })
 
-  const serviciosFiltrados = computed(() => {
-    let filtrados = [...servicios.value]
-    
-    if (filtros.categoria) {
-      filtrados = filtrados.filter(servicio => 
-        (servicio.categoria?.nombre || 'Sin categoría') === filtros.categoria
-      )
-    }
-    
-    if (filtros.tipoUnidad) {
-      filtrados = filtrados.filter(servicio => {
-        // Verificar en categoría principal
-        if (servicio.categoria?.unidad_medida?.tipo === filtros.tipoUnidad) {
-          return true
-        }
-        
-        // Verificar en categorías completas
-        if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
-          return servicio.categorias_completas.some(categoria => 
-            categoria.unidad_medida?.tipo === filtros.tipoUnidad
-          )
-        }
-        
-        return false
-      })
-    }
-    
-    // ✅ ACTUALIZADO: Filtro de precio dinámico
-    if (filtros.rangoPrecio) {
-      const rangoSeleccionado = rangosPrecioDisponibles.value.find(r => r.value === filtros.rangoPrecio)
-      
-      if (rangoSeleccionado) {
-        filtrados = filtrados.filter(servicio => {
-          const precio = parseFloat(servicio.precio_minimo) || 0
-          return precio >= rangoSeleccionado.min && precio <= rangoSeleccionado.max
-        })
-      }
-    }
-    
-    return filtrados
-  })
-
-  const totalPaginas = computed(() => {
-    return Math.ceil(serviciosFiltrados.value.length / serviciosPorPagina.value)
-  })
-
-  const serviciosPaginados = computed(() => {
-    const inicio = (paginaActual.value - 1) * serviciosPorPagina.value
-    const fin = inicio + serviciosPorPagina.value
-    return serviciosFiltrados.value.slice(inicio, fin)
-  })
-
-  const paginasVisibles = computed(() => {
-    const total = totalPaginas.value
-    const actual = paginaActual.value
-    const rango = 2
-    let inicio = Math.max(1, actual - rango)
-    let fin = Math.min(total, actual + rango)
-    if (fin - inicio < rango * 2) {
-      if (inicio === 1) {
-        fin = Math.min(total, inicio + rango * 2)
-      } else if (fin === total) {
-        inicio = Math.max(1, fin - rango * 2)
-      }
-    }
-    const paginas = []
-    for (let i = inicio; i <= fin; i++) {
-      paginas.push(i)
-    }
-    return paginas
-  })
-
-  const hayFiltrosActivos = computed(() => {
-    return filtros.busqueda || filtros.categoria || filtros.tipoUnidad || filtros.rangoPrecio
-  })
-
-  // Verificar servicios usando cantidades por categoría y validación
-  const hayServicios = computed(() => {
-    const cantidadesPorCategoriaTotales = Object.values(cantidadesPorCategoria).some(categoriasServicio => 
-      Object.values(categoriasServicio).some(cantidad => cantidad > 0)
-    )
-    
-    return cantidadesPorCategoriaTotales && !tieneErroresGlobales.value
-  })
-
-  // Método para actualizar cantidades por categoría con validación
-  const actualizarCantidadesPorTipo = (datosActualizacion) => {
-    const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle, validacion } = datosActualizacion
-
-    
-    cantidadesPorCategoria[servicioId] = { ...categorias }
-    
-    if (validacion) {
-      validacionErrores[servicioId] = validacion.errores || {}
-    }
-    
-    if (!window.categoriasDetallePorServicio) {
-      window.categoriasDetallePorServicio = {}
-    }
-    window.categoriasDetallePorServicio[servicioId] = categoriasDetalle || []
+ const serviciosFiltrados = computed(() => {
+   let filtrados = [...servicios.value]
    
-  }
+   if (filtros.categoria) {
+     filtrados = filtrados.filter(servicio => 
+       (servicio.categoria?.nombre || 'Sin categoría') === filtros.categoria
+     )
+   }
+   
+   if (filtros.tipoUnidad) {
+     filtrados = filtrados.filter(servicio => {
+       // Verificar en categoría principal
+       if (servicio.categoria?.unidad_medida?.tipo === filtros.tipoUnidad) {
+         return true
+       }
+       
+       // Verificar en categorías completas
+       if (servicio.categorias_completas && Array.isArray(servicio.categorias_completas)) {
+         return servicio.categorias_completas.some(categoria => 
+           categoria.unidad_medida?.tipo === filtros.tipoUnidad
+         )
+       }
+       
+       return false
+     })
+   }
+   
+   // ✅ ACTUALIZADO: Filtro de precio dinámico
+   if (filtros.rangoPrecio) {
+     const rangoSeleccionado = rangosPrecioDisponibles.value.find(r => r.value === filtros.rangoPrecio)
+     
+     if (rangoSeleccionado) {
+       filtrados = filtrados.filter(servicio => {
+         const precio = parseFloat(servicio.precio_minimo) || 0
+         return precio >= rangoSeleccionado.min && precio <= rangoSeleccionado.max
+       })
+     }
+   }
+   
+   return filtrados
+ })
 
-  // Métodos existentes
-  const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
-    cantidadesEquipos[servicioId] = nuevaCantidad || 0
-  }
+ const totalPaginas = computed(() => {
+   return Math.ceil(serviciosFiltrados.value.length / serviciosPorPagina.value)
+ })
+
+ const serviciosPaginados = computed(() => {
+   const inicio = (paginaActual.value - 1) * serviciosPorPagina.value
+   const fin = inicio + serviciosPorPagina.value
+   return serviciosFiltrados.value.slice(inicio, fin)
+ })
+
+ const paginasVisibles = computed(() => {
+   const total = totalPaginas.value
+   const actual = paginaActual.value
+   const rango = 2
+   let inicio = Math.max(1, actual - rango)
+   let fin = Math.min(total, actual + rango)
+   if (fin - inicio < rango * 2) {
+     if (inicio === 1) {
+       fin = Math.min(total, inicio + rango * 2)
+     } else if (fin === total) {
+       inicio = Math.max(1, fin - rango * 2)
+     }
+   }
+   const paginas = []
+   for (let i = inicio; i <= fin; i++) {
+     paginas.push(i)
+   }
+   return paginas
+ })
+
+ const hayFiltrosActivos = computed(() => {
+   return filtros.busqueda || filtros.categoria || filtros.tipoUnidad || filtros.rangoPrecio
+ })
+
+ // Verificar servicios usando cantidades por categoría y validación
+ const hayServicios = computed(() => {
+   const cantidadesPorCategoriaTotales = Object.values(cantidadesPorCategoria).some(categoriasServicio => 
+     Object.values(categoriasServicio).some(cantidad => cantidad > 0)
+   )
+   
+   return cantidadesPorCategoriaTotales && !tieneErroresGlobales.value
+ })
+
+ // Método para actualizar cantidades por categoría con validación
+ const actualizarCantidadesPorTipo = (datosActualizacion) => {
+   const { servicioId, cantidadesPorCategoria: categorias, categoriasDetalle, validacion } = datosActualizacion
+
+   
+   cantidadesPorCategoria[servicioId] = { ...categorias }
+   
+   if (validacion) {
+     validacionErrores[servicioId] = validacion.errores || {}
+   }
+   
+   if (!window.categoriasDetallePorServicio) {
+     window.categoriasDetallePorServicio = {}
+   }
+   window.categoriasDetallePorServicio[servicioId] = categoriasDetalle || []
   
-  const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
-    preciosVenta[servicioId] = nuevoPrecio || 0
-  }
-  
-  const incrementarAños = () => {
-    if (añosContrato.value < 10) {
-      añosContrato.value++
-    }
-  }
-  
-  const decrementarAños = () => {
-    if (añosContrato.value > 1) {
-      añosContrato.value--
-    }
-  }
-  
-  const validarAños = () => {
-    if (añosContrato.value < 1) {
-      añosContrato.value = 1
-    } else if (añosContrato.value > 10) {
-      añosContrato.value = 10
-    }
-  }
+ }
 
-  const limpiarBusqueda = () => {
-    filtros.busqueda = ''
-    servicios.value = [...serviciosOriginales.value]
-    aplicarFiltros()
-    mostrarToast('Búsqueda limpiada', 'info')
-  }
+ // Métodos existentes
+ const actualizarCantidadEquipos = (servicioId, nuevaCantidad) => {
+   cantidadesEquipos[servicioId] = nuevaCantidad || 0
+ }
+ 
+ const actualizarPrecioVenta = (servicioId, nuevoPrecio) => {
+   preciosVenta[servicioId] = nuevoPrecio || 0
+ }
+ 
+ // CAMBIO: Funciones de meses en lugar de años
+ const incrementarMeses = () => {
+   mesesContrato.value++
+ }
+ 
+ const decrementarMeses = () => {
+   if (mesesContrato.value > 1) {
+     mesesContrato.value--
+   }
+ }
+ 
+ const validarMeses = () => {
+   if (mesesContrato.value < 1) {
+     mesesContrato.value = 1
+   }
+ }
 
-  const limpiarFiltros = () => {
-    filtros.busqueda = ''
-    filtros.categoria = ''
-    filtros.tipoUnidad = ''
-    filtros.rangoPrecio = ''
-    servicios.value = [...serviciosOriginales.value]
-    resetearPaginacion()
-    mostrarToast('Filtros limpiados', 'info')
-  }
+ const limpiarBusqueda = () => {
+   filtros.busqueda = ''
+   servicios.value = [...serviciosOriginales.value]
+   aplicarFiltros()
+   mostrarToast('Búsqueda limpiada', 'info')
+ }
 
-  const cambiarPagina = (pagina) => {
-    if (pagina >= 1 && pagina <= totalPaginas.value) {
-      paginaActual.value = pagina
-      paginaInput.value = pagina
-      nextTick(() => {
-        const elemento = document.querySelector('.servicios-section')
-        if (elemento) {
-          elemento.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-      })
-    }
-  }
+ const limpiarFiltros = () => {
+   filtros.busqueda = ''
+   filtros.categoria = ''
+   filtros.tipoUnidad = ''
+   filtros.rangoPrecio = ''
+   servicios.value = [...serviciosOriginales.value]
+   resetearPaginacion()
+   mostrarToast('Filtros limpiados', 'info')
+ }
 
-  const irAPagina = () => {
-    if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
-      cambiarPagina(paginaInput.value)
-    } else {
-      mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
-      paginaInput.value = paginaActual.value
-    }
-  }
+ const cambiarPagina = (pagina) => {
+   if (pagina >= 1 && pagina <= totalPaginas.value) {
+     paginaActual.value = pagina
+     paginaInput.value = pagina
+     nextTick(() => {
+       const elemento = document.querySelector('.servicios-section')
+       if (elemento) {
+         elemento.scrollIntoView({ behavior: 'smooth', block: 'start' })
+       }
+     })
+   }
+ }
 
-  // calcularCotizacion con validación de límites
-  const calcularCotizacion = () => {
-    if (tieneErroresGlobales.value) {
-      mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
-      return
-    }
+ const irAPagina = () => {
+   if (paginaInput.value >= 1 && paginaInput.value <= totalPaginas.value) {
+     cambiarPagina(paginaInput.value)
+   } else {
+     mostrarToast(`Por favor ingresa un número entre 1 y ${totalPaginas.value}`, 'warning')
+     paginaInput.value = paginaActual.value
+   }
+ }
 
-    serviciosSeleccionados.value = servicios.value
-      .filter(servicio => {
-        const id = servicio.servicios_id
-        const categorias = cantidadesPorCategoria[id] || {}
-        const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
-        return tieneCantidades
-      })
-      .map(servicio => {
-        const id = servicio.servicios_id
-        const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
-        const categorias = cantidadesPorCategoria[id] || {}
-        
-        const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
-        
-        const datosServicio = {
-          servicio: {
-            servicios_id: id,
-            nombre: servicio.nombre,
-            categoria: servicio.categoria?.nombre || 'Sin categoría',
-            precioMinimo: servicio.precio_minimo,
-            precio_recomendado: servicio.precio_recomendado,
-            descripcion: servicio.descripcion,
-            unidad_medida: servicio.categoria?.unidad_medida
-          },
-          precioVentaFinal,
-          añosContrato: añosContrato.value
-        }
-        
-        let cantidadServidores = 0
-        let cantidadEquipos = 0
-        let cantidadGb = 0
-        let cantidadUsuarios = 0
-        let cantidadSesiones = 0
-        let cantidadTiempo = 0
-        
-        categoriasDetalle.forEach(categoria => {
-          if (categoria.cantidad > 0) {
-            
-            switch (categoria.unidad_tipo) {
-              case 'capacidad':
-                cantidadGb = categoria.cantidad
-                cantidadServidores = categoria.cantidad
-                break
-              case 'usuarios':
-                cantidadUsuarios = categoria.cantidad
-                cantidadServidores = categoria.cantidad
-                break
-              case 'sesiones':
-                cantidadSesiones = categoria.cantidad
-                cantidadServidores = categoria.cantidad
-                break
-              case 'tiempo':
-                cantidadTiempo = categoria.cantidad
-                cantidadServidores = categoria.cantidad
-                break
-              case 'cantidad':
-              default:
-                if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
-                  cantidadEquipos = categoria.cantidad
-                } else {
-                  cantidadServidores = categoria.cantidad
-                }
-                break
-            }
-          }
-        })
-        
-        datosServicio.cantidadServidores = cantidadServidores
-        datosServicio.cantidadEquipos = cantidadEquipos
-        datosServicio.cantidadGb = cantidadGb
-        datosServicio.cantidadUsuarios = cantidadUsuarios
-        datosServicio.cantidadSesiones = cantidadSesiones
-        datosServicio.cantidadTiempo = cantidadTiempo
-        
-        datosServicio.cantidadesPorCategoria = categorias
-        datosServicio.categoriasDetalle = categoriasDetalle
-        datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
-        
-        return datosServicio
-      })
-    
-    if (serviciosSeleccionados.value.length > 0) {
-      mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
-    } else {
-      mostrarToast('Debes seleccionar al menos un servicio', 'warning')
-    }
-  }
+ // CAMBIO: calcularCotizacion con validación de límites - usando meses
+ const calcularCotizacion = () => {
+   if (tieneErroresGlobales.value) {
+     mostrarToast('Corrige los errores de límites de cantidad antes de continuar', 'error')
+     return
+   }
 
-  // limpiarFormulario con key reactivo
-  const limpiarFormulario = () => {
-    servicios.value.forEach(servicio => {
-      const id = servicio.servicios_id
-      cantidades[id] = 0
-      cantidadesEquipos[id] = 0
-      preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
-      cantidadesPorCategoria[id] = {}
-    })
-    
-    serviciosSeleccionados.value = []
-    añosContrato.value = 1
-    esDuplicacion.value = false
-    cotizacionOrigen.value = null
-    
-    if (window.categoriasDetallePorServicio) {
-      window.categoriasDetallePorServicio = {}
-    }
-    
-    Object.keys(validacionErrores).forEach(key => {
-      delete validacionErrores[key]
-    })
-    
-    formularioKey.value++
-    
-    mostrarToast('Formulario limpiado correctamente', 'success')
-  }
+   serviciosSeleccionados.value = servicios.value
+     .filter(servicio => {
+       const id = servicio.servicios_id
+       const categorias = cantidadesPorCategoria[id] || {}
+       const tieneCantidades = Object.values(categorias).some(cantidad => cantidad > 0)
+       return tieneCantidades
+     })
+     .map(servicio => {
+       const id = servicio.servicios_id
+       const precioVentaFinal = preciosVenta[id] || servicio.precio_recomendado || servicio.precio_minimo
+       const categorias = cantidadesPorCategoria[id] || {}
+       
+       const categoriasDetalle = window.categoriasDetallePorServicio?.[id] || []
+       
+       const datosServicio = {
+         servicio: {
+           servicios_id: id,
+           nombre: servicio.nombre,
+           categoria: servicio.categoria?.nombre || 'Sin categoría',
+           precioMinimo: servicio.precio_minimo,
+           precio_recomendado: servicio.precio_recomendado,
+           descripcion: servicio.descripcion,
+           unidad_medida: servicio.categoria?.unidad_medida
+         },
+         precioVentaFinal,
+         mesesContrato: mesesContrato.value // CAMBIO: usar meses
+       }
+       
+       let cantidadServidores = 0
+       let cantidadEquipos = 0
+       let cantidadGb = 0
+       let cantidadUsuarios = 0
+       let cantidadSesiones = 0
+       let cantidadTiempo = 0
+       
+       categoriasDetalle.forEach(categoria => {
+         if (categoria.cantidad > 0) {
+           
+           switch (categoria.unidad_tipo) {
+             case 'capacidad':
+               cantidadGb = categoria.cantidad
+               cantidadServidores = categoria.cantidad
+               break
+             case 'usuarios':
+               cantidadUsuarios = categoria.cantidad
+               cantidadServidores = categoria.cantidad
+               break
+             case 'sesiones':
+               cantidadSesiones = categoria.cantidad
+               cantidadServidores = categoria.cantidad
+               break
+             case 'tiempo':
+               cantidadTiempo = categoria.cantidad
+               cantidadServidores = categoria.cantidad
+               break
+             case 'cantidad':
+             default:
+               if (categoria.unidad_nombre.toLowerCase().includes('equipo')) {
+                 cantidadEquipos = categoria.cantidad
+               } else {
+                 cantidadServidores = categoria.cantidad
+               }
+               break
+           }
+         }
+       })
+       
+       datosServicio.cantidadServidores = cantidadServidores
+       datosServicio.cantidadEquipos = cantidadEquipos
+       datosServicio.cantidadGb = cantidadGb
+       datosServicio.cantidadUsuarios = cantidadUsuarios
+       datosServicio.cantidadSesiones = cantidadSesiones
+       datosServicio.cantidadTiempo = cantidadTiempo
+       
+       datosServicio.cantidadesPorCategoria = categorias
+       datosServicio.categoriasDetalle = categoriasDetalle
+       datosServicio.totalUnidadesParaPrecio = Object.values(categorias).reduce((sum, cant) => sum + cant, 0)
+       
+       return datosServicio
+     })
+   
+   if (serviciosSeleccionados.value.length > 0) {
+     mostrarToast(`Cotización calculada con ${serviciosSeleccionados.value.length} servicio${serviciosSeleccionados.value.length > 1 ? 's' : ''}`, 'success')
+   } else {
+     mostrarToast('Debes seleccionar al menos un servicio', 'warning')
+   }
+ }
 
-  // ===== CICLO DE VIDA =====
-  onMounted(async () => {
-    
-    await verificarDuplicacion()
-  })
+ // CAMBIO: limpiarFormulario con key reactivo - usando meses
+ const limpiarFormulario = () => {
+   servicios.value.forEach(servicio => {
+     const id = servicio.servicios_id
+     cantidades[id] = 0
+     cantidadesEquipos[id] = 0
+     preciosVenta[id] = servicio.precio_recomendado || servicio.precio_minimo || 0
+     cantidadesPorCategoria[id] = {}
+   })
+   
+   serviciosSeleccionados.value = []
+   mesesContrato.value = 1 // CAMBIO: resetear a 1 mes
+   esDuplicacion.value = false
+   cotizacionOrigen.value = null
+   
+   if (window.categoriasDetallePorServicio) {
+     window.categoriasDetallePorServicio = {}
+   }
+   
+   Object.keys(validacionErrores).forEach(key => {
+     delete validacionErrores[key]
+   })
+   
+   formularioKey.value++
+   
+   mostrarToast('Formulario limpiado correctamente', 'success')
+ }
 
-  // Watchers
-  watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
-    if (filtros.busqueda) {
-      const terminoBusqueda = filtros.busqueda
-      filtros.busqueda = ''
-      nextTick(() => {
-        filtros.busqueda = terminoBusqueda
-        buscarServicios()
-      })
-    }
-  })
+ // ===== CICLO DE VIDA =====
+ onMounted(async () => {
+   
+   await verificarDuplicacion()
+ })
 
-  watch(paginaActual, (newVal) => {
-    paginaInput.value = newVal
-  })
+ // Watchers
+ watch([() => filtros.categoria, () => filtros.tipoUnidad, () => filtros.rangoPrecio], () => {
+   if (filtros.busqueda) {
+     const terminoBusqueda = filtros.busqueda
+     filtros.busqueda = ''
+     nextTick(() => {
+       filtros.busqueda = terminoBusqueda
+       buscarServicios()
+     })
+   }
+ })
 
-  return {
-    // Estados
-    servicios,
-    serviciosOriginales,
-    loading,
-    loadingServicios,
-    loadingMessage,
-    cantidades,
-    cantidadesEquipos,
-    preciosVenta,
-    serviciosSeleccionados,
-    añosContrato,
-    filtros,
-    paginaActual,
-    serviciosPorPagina,
-    paginaInput,
-    
-    // Estados de cantidades por categoría
-    cantidadesPorCategoria,
-    formularioKey,
-    
-    // Estados de validación
-    validacionErrores,
-    tieneErroresGlobales,
-    
-    // Estados de duplicación
-    esDuplicacion,
-    cotizacionOrigen,
-    
-    // TOAST STATES
-    showToast,
-    toastMessage,
-    toastType,
-    
-    // Computed
-    categoriasDisponibles,
-    tiposUnidadDisponibles,
-    rangosPrecioDisponibles, // ✅ NUEVO
-    serviciosFiltrados,
-    totalPaginas,
-    serviciosPaginados,
-    paginasVisibles,
-    hayFiltrosActivos,
-    hayServicios,
-    toastIcon,
-    
-    // Funciones
-    cargarServicios,
-    buscarServicios,
-    aplicarFiltros,
-    filtrarPorCategoria,
-    filtrarPorTipoUnidad,
-    filtrarPorPrecio,
-    inicializarDatos,
-    recargarServicios,
-    resetearPaginacion,
-    reinicializarPrecios,
-    actualizarCantidadEquipos,
-    actualizarPrecioVenta,
-    incrementarAños,
-    decrementarAños,
-    validarAños,
-    limpiarBusqueda,
-    limpiarFiltros,
-    cambiarPagina,
-    irAPagina,
-    calcularCotizacion,
-    limpiarFormulario,
-    
-    // Función para manejar cantidades por categoría
-    actualizarCantidadesPorTipo,
-    
-    // Funciones de duplicación
-    verificarDuplicacion,
-    cargarDatosParaDuplicar,
-    precargarFormulario,
-    
-    // TOAST METHODS
-    mostrarToast,
-    hideToast,
-    
-    // Funciones de validación
-    obtenerNombreServicio,
-    mostrarNotificacionHijo,
-    
-    // HELPERS
-    obtenerTipoUnidad
-  }
+ watch(paginaActual, (newVal) => {
+   paginaInput.value = newVal
+ })
+
+ return {
+   // Estados
+   servicios,
+   serviciosOriginales,
+   loading,
+   loadingServicios,
+   loadingMessage,
+   cantidades,
+   cantidadesEquipos,
+   preciosVenta,
+   serviciosSeleccionados,
+   mesesContrato, // CAMBIO: usar meses
+   filtros,
+   paginaActual,
+   serviciosPorPagina,
+   paginaInput,
+   
+   // Estados de cantidades por categoría
+   cantidadesPorCategoria,
+   formularioKey,
+   
+   // Estados de validación
+   validacionErrores,
+   tieneErroresGlobales,
+   
+   // Estados de duplicación
+   esDuplicacion,
+   cotizacionOrigen,
+   
+   // TOAST STATES
+   showToast,
+   toastMessage,
+   toastType,
+   
+   // Computed
+   categoriasDisponibles,
+   tiposUnidadDisponibles,
+   rangosPrecioDisponibles,
+   serviciosFiltrados,
+   totalPaginas,
+   serviciosPaginados,
+   paginasVisibles,
+   hayFiltrosActivos,
+   hayServicios,
+   toastIcon,
+   
+   // Funciones
+   cargarServicios,
+   buscarServicios,
+   aplicarFiltros,
+   filtrarPorCategoria,
+   filtrarPorTipoUnidad,
+   filtrarPorPrecio,
+   inicializarDatos,
+   recargarServicios,
+   resetearPaginacion,
+   reinicializarPrecios,
+   actualizarCantidadEquipos,
+   actualizarPrecioVenta,
+   incrementarMeses, // CAMBIO: funciones de meses
+   decrementarMeses, // CAMBIO: funciones de meses
+   validarMeses, // CAMBIO: funciones de meses
+   limpiarBusqueda,
+   limpiarFiltros,
+   cambiarPagina,
+   irAPagina,
+   calcularCotizacion,
+   limpiarFormulario,
+   
+   // Función para manejar cantidades por categoría
+   actualizarCantidadesPorTipo,
+   
+   // Funciones de duplicación
+   verificarDuplicacion,
+   cargarDatosParaDuplicar,
+   precargarFormulario,
+   
+   // TOAST METHODS
+   mostrarToast,
+   hideToast,
+   
+   // Funciones de validación
+   obtenerNombreServicio,
+   mostrarNotificacionHijo,
+   
+   // HELPERS
+   obtenerTipoUnidad
+ }
 }
 }
 </script>
 
 <style scoped>
 /* ✅ NUEVOS ESTILOS para errores de validación */
+/* CAMBIO: Estilos de meses en lugar de años */
+.meses-selector {
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+border-radius: 12px;
+padding: 1.5rem;
+margin-bottom: 2rem;
+border: 1px solid #dee2e6;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 
+.meses-container {
+text-align: center;
+}
+
+.meses-container label {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+color: #495057;
+font-size: clamp(1rem, 3vw, 1.2rem);
+font-weight: 600;
+margin-bottom: 1rem;
+}
+
+.meses-container label i {
+color: #6c757d;
+font-size: 1.1em;
+}
+
+.meses-controls {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 1rem;
+margin-bottom: 0.75rem;
+}
+
+.btn-meses {
+width: 3rem;
+height: 3rem;
+border: 2px solid #6c757d;
+background: white;
+color: #495057;
+border-radius: 8px;
+cursor: pointer;
+font-size: 1.2rem;
+font-weight: bold;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.3s ease;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-meses:hover:not(:disabled) {
+background: #f8f9fa;
+border-color: #495057;
+transform: translateY(-1px);
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-meses:disabled {
+opacity: 0.4;
+cursor: not-allowed;
+transform: none;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+color: #adb5bd;
+border-color: #dee2e6;
+}
+
+.input-meses {
+width: 4rem;
+height: 3rem;
+text-align: center;
+border: 2px solid #ced4da;
+border-radius: 8px;
+font-size: 1.3rem;
+font-weight: 600;
+background: white;
+color: #495057;
+box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.input-meses:focus {
+outline: none;
+border-color: #007bff;
+box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.meses-info {
+color: #6c757d;
+font-size: clamp(0.85rem, 2.5vw, 1rem);
+font-style: normal;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.5rem;
+}
+
+.meses-info i {
+color: #007bff;
+font-size: 0.9em;
+}
 /* Errores de límites globales */
 .errores-limites {
  background: linear-gradient(135deg, #f8d7da, #f5c2c7);
