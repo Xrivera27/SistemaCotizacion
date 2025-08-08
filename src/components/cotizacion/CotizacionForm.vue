@@ -705,48 +705,52 @@ const precargarFormulario = async (datos) => {
    }
  }
 
- // ===== FUNCIÓN BUSCAR =====
- const buscarServicios = async () => {
-   const termino = filtros.busqueda.trim()
-   
-   if (timeoutBusqueda.value) {
-     clearTimeout(timeoutBusqueda.value)
-   }
-   
-   if (!termino) {
-     servicios.value = [...serviciosOriginales.value]
-     aplicarFiltros()
-     return
-   }
-   
-   if (cacheResultados[termino]) {
-     servicios.value = cacheResultados[termino]
-     aplicarFiltros()
-     return
-   }
-   
-   timeoutBusqueda.value = setTimeout(async () => {
-     try {
-       loadingServicios.value = true
-       
-       const resultado = await serviciosService.searchServicios(termino, 50)
-       
-       if (resultado.success) {
-         const serviciosConPreciosCorrectos = resultado.servicios.map(servicioEncontrado => {
-           const servicioOriginal = serviciosOriginales.value.find(
-             orig => orig.servicios_id === servicioEncontrado.servicios_id
-           )
-           
-           if (servicioOriginal) {
-             return {
-               ...servicioEncontrado,
-               precio_minimo: servicioOriginal.precio_minimo,
-               precio_recomendado: servicioOriginal.precio_recomendado,
-               precioMinimo: servicioOriginal.precioMinimo || servicioOriginal.precio_minimo,
-               precioRecomendado: servicioOriginal.precioRecomendado || servicioOriginal.precio_recomendado
+// ===== FUNCIÓN BUSCAR CORREGIDA =====
+const buscarServicios = async () => {
+  const termino = filtros.busqueda.trim()
+  
+  if (timeoutBusqueda.value) {
+    clearTimeout(timeoutBusqueda.value)
+  }
+  
+  if (!termino) {
+    servicios.value = [...serviciosOriginales.value]
+    aplicarFiltros()
+    return
+  }
+  
+  if (cacheResultados[termino]) {
+    servicios.value = cacheResultados[termino]
+    aplicarFiltros()
+    return
+  }
+  
+  timeoutBusqueda.value = setTimeout(async () => {
+    try {
+      loadingServicios.value = true
+      
+      const resultado = await serviciosService.searchServicios(termino, 50)
+      
+      if (resultado.success) {
+        // ✅ CORRECCIÓN PRINCIPAL: usar servicioOriginal completo
+        const serviciosConPreciosCorrectos = resultado.servicios.map(servicioEncontrado => {
+          const servicioOriginal = serviciosOriginales.value.find(
+            orig => orig.servicios_id === servicioEncontrado.servicios_id
+          )
+          
+          if (servicioOriginal) {
+            return {
+              ...servicioOriginal, // ✅ USAR EL ORIGINAL COMPLETO (tiene categorías)
+              // Solo sobrescribir campos específicos si es necesario
+              precio_minimo: servicioOriginal.precio_minimo,
+              precio_recomendado: servicioOriginal.precio_recomendado,
+              precioMinimo: servicioOriginal.precioMinimo || servicioOriginal.precio_minimo,
+              precioRecomendado: servicioOriginal.precioRecomendado || servicioOriginal.precio_recomendado
             }
           }
           
+          // ⚠️ FALLBACK: si no está en originales, usar el encontrado (puede no tener categorías completas)
+          console.warn(`⚠️ Servicio ${servicioEncontrado.servicios_id} no encontrado en originales`)
           return servicioEncontrado
         })
         
