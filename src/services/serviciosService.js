@@ -971,14 +971,21 @@ prepareServicioDataForAPI(servicioData) {
    return text.substring(0, maxLength).trim() + '...';
  }
  
- // Helper para formatear precios
- formatPrice(price) {
-   if (!price) return '$0.00';
-   return new Intl.NumberFormat('en-US', {
-     style: 'currency',
-     currency: 'USD'
-   }).format(price);
- }
+// Actualizar formatPrice para mostrar 4 decimales cuando sea necesario
+formatPrice(price) {
+  if (!price) return '$0.00';
+  
+  // Mostrar 4 decimales solo si los tiene, sino mostrar 2
+  const hasMoreThan2Decimals = (price * 10000) % 100 !== 0;
+  const decimals = hasMoreThan2Decimals ? 4 : 2;
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: decimals
+  }).format(price);
+}
  
  // Helper para obtener rango de precio
  getPriceRange(price) {
@@ -1023,11 +1030,11 @@ prepareServicioDataForAPI(servicioData) {
  validatePrecios(precioMinimo, precioRecomendado) {
    const errors = [];
    
-   if (!precioMinimo || precioMinimo <= 0) {
+   if (!precioMinimo || precioMinimo <= 0.0001) {
      errors.push({ field: 'precio_minimo', message: 'El precio mínimo es requerido y debe ser mayor a 0' });
    }
    
-   if (!precioRecomendado || precioRecomendado <= 0) {
+   if (!precioRecomendado || precioRecomendado <= 0.0001) {
      errors.push({ field: 'precio_recomendado', message: 'El precio recomendado es requerido y debe ser mayor a 0' });
    }
    

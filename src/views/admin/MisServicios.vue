@@ -704,57 +704,58 @@
                <div class="form-group">
                  <label for="precio_minimo">Precio Mínimo (USD) *</label>
                  <input 
-                   id="precio_minimo"
-                   v-model.number="formulario.precio_minimo" 
-                   type="number" 
-                   required 
-                   min="0"
-                   step="0.01"
-                   class="form-input"
-                   placeholder="0.00"
-                 >
+  id="precio_minimo"
+  v-model.number="formulario.precio_minimo" 
+  type="number" 
+  required 
+  min="0.0001"
+  step="0.0001"
+  class="form-input"
+  placeholder="0.0000"
+>
                </div>
                
                <div class="form-group">
                  <label for="precio_recomendado">Precio Recomendado (USD) *</label>
                  <input 
-                   id="precio_recomendado"
-                   v-model.number="formulario.precio_recomendado" 
-                   type="number" 
-                   required 
-                   min="0"
-                   step="0.01"
-                   class="form-input"
-                   placeholder="0.00"
-                   >
+  id="precio_recomendado"
+  v-model.number="formulario.precio_recomendado" 
+  type="number" 
+  required 
+  min="0.0001"
+  step="0.0001"
+  class="form-input"
+  placeholder="0.0000"
+>
               </div>
 
               <!-- Campos de límites -->
               <div class="form-group">
                 <label for="limite_minimo">Límite Mínimo</label>
                 <input 
-                  id="limite_minimo"
-                  v-model.number="formulario.limite_minimo" 
-                  type="number" 
-                  min="0.01"
-                  step="0.01"
-                  class="form-input"
-                  placeholder="1.00"
-                >
+  id="limite_minimo"
+  v-model.number="formulario.limite_minimo" 
+  type="number" 
+  min="0.0001"
+  step="0.0001"
+  class="form-input"
+  placeholder="1.0000"
+>
+
                 <small class="form-help">Cantidad mínima permitida para este servicio</small>
               </div>
               
               <div class="form-group">
                 <label for="limite_maximo">Límite Máximo</label>
                 <input 
-                  id="limite_maximo"
-                  v-model.number="formulario.limite_maximo" 
-                  type="number" 
-                  min="0.01"
-                  step="0.01"
-                  class="form-input"
-                  placeholder="Dejar vacío para sin límite"
-                >
+  id="limite_maximo"
+  v-model.number="formulario.limite_maximo" 
+  type="number" 
+  min="0.0001"
+  step="0.0001"
+  class="form-input"
+  placeholder="Dejar vacío para sin límite"
+>
                 <small class="form-help">Cantidad máxima permitida (vacío = sin límite)</small>
               </div>
               
@@ -968,7 +969,7 @@ return {
  paginaSalto: 1,
  itemsPorPagina: 25,
 
- // 🆕 NUEVO: Estados para múltiples categorías
+ // Estados para múltiples categorías
  showCategoriasDropdown: false,
 
  // Datos reales del backend
@@ -981,13 +982,13 @@ return {
    inactivos: 0,
    precio_promedio: 0,
    servicios_con_multiples_categorias: 0,
-   limites: { // 🆕 NUEVO
+   limites: {
      con_limites: 0,
      sin_limites: 0
    }
  },
 
- // 🔧 ACTUALIZADO: Filtros con múltiples categorías
+ // Filtros con múltiples categorías
  filtros: {
    busqueda: '',
    categoriasSeleccionadas: [],
@@ -995,7 +996,7 @@ return {
    estado: ''
  },
 
- // 🔧 ACTUALIZADO: Formulario con múltiples categorías y límites
+ // Formulario con múltiples categorías y límites
  formulario: {
    nombre: '',
    categoriasSeleccionadas: [],
@@ -1003,8 +1004,8 @@ return {
    descripcion: '',
    precio_minimo: '',
    precio_recomendado: '',
-   limite_minimo: '', // 🆕 NUEVO
-   limite_maximo: '', // 🆕 NUEVO
+   limite_minimo: '',
+   limite_maximo: '',
    estado: 'activo'
  },
 
@@ -1061,7 +1062,7 @@ watch: {
 }
 },
 
-// 🆕 NUEVO: Cerrar dropdown al hacer clic fuera
+// Cerrar dropdown al hacer clic fuera
 mounted() {
 document.addEventListener('click', this.handleClickOutside);
 this.cargarDatosIniciales();
@@ -1099,7 +1100,7 @@ async cargarDatosIniciales() {
  }
 },
 
-// 🔧 ACTUALIZADO: Cargar servicios con categorías expandidas
+// Cargar servicios con categorías expandidas
 async cargarServicios() {
  try {
    const params = {
@@ -1111,7 +1112,7 @@ async cargarServicios() {
      rango_precio: this.filtros.rangoPrecio || undefined
    };
    
-   // 🆕 NUEVO: Usar endpoint con categorías expandidas
+   // Usar endpoint con categorías expandidas
    const result = await serviciosService.getServiciosWithExpandedCategories(params);
    
    if (result.success) {
@@ -1199,7 +1200,7 @@ limpiarFiltros() {
  this.aplicarFiltros();
 },
 
-// 🆕 NUEVO: Métodos para filtro de múltiples categorías
+// Métodos para filtro de múltiples categorías
 toggleCategoriasDropdown() {
  this.showCategoriasDropdown = !this.showCategoriasDropdown;
 },
@@ -1310,7 +1311,7 @@ editarServicio(servicio) {
  this.modalServicio = null;
 },
 
-// 🔧 ACTUALIZADO: Guardar servicio con múltiples categorías y límites
+// Guardar servicio con múltiples categorías y límites
 async guardarServicio() {
   if (this.guardandoServicio) return;
   
@@ -1365,7 +1366,7 @@ async guardarServicio() {
  }
 },
 
-// 🔧 ACTUALIZADO: Validación de formulario con múltiples categorías y límites
+// 🔧 ACTUALIZADO: Validación de formulario - 4 decimales
 validarFormulario() {
  const errores = [];
  
@@ -1402,12 +1403,13 @@ validarFormulario() {
    errores.push({ field: 'descripcion', message: 'La descripción no puede exceder 1000 caracteres' });
  }
  
- if (!this.formulario.precio_minimo || this.formulario.precio_minimo < 0) {
-   errores.push({ field: 'precio_minimo', message: 'El precio mínimo es requerido y debe ser mayor a 0' });
+ // 🔧 ACTUALIZADO: Validación para 4 decimales
+ if (!this.formulario.precio_minimo || this.formulario.precio_minimo < 0.0001) {
+   errores.push({ field: 'precio_minimo', message: 'El precio mínimo es requerido y debe ser mayor a 0.0001' });
  }
  
- if (!this.formulario.precio_recomendado || this.formulario.precio_recomendado < 0) {
-   errores.push({ field: 'precio_recomendado', message: 'El precio recomendado es requerido y debe ser mayor a 0' });
+ if (!this.formulario.precio_recomendado || this.formulario.precio_recomendado < 0.0001) {
+   errores.push({ field: 'precio_recomendado', message: 'El precio recomendado es requerido y debe ser mayor a 0.0001' });
  }
  
  if (this.formulario.precio_recomendado && this.formulario.precio_minimo && 
@@ -1415,7 +1417,7 @@ validarFormulario() {
    errores.push({ field: 'precio_recomendado', message: 'El precio recomendado debe ser mayor o igual al precio mínimo' });
  }
 
- // 🆕 NUEVO: Validar límites
+ // Validar límites
  if (this.formulario.limite_minimo && this.formulario.limite_minimo <= 0) {
    errores.push({ field: 'limite_minimo', message: 'El límite mínimo debe ser mayor a 0' });
  }
@@ -1439,7 +1441,7 @@ validarFormulario() {
  return true;
 },
 
-// 🔧 ACTUALIZADO: Llenar formulario con múltiples categorías y límites
+// Llenar formulario con múltiples categorías y límites
 llenarFormulario(servicio) {
  // Obtener categorías del servicio
  let categoriasSeleccionadas = [];
@@ -1459,8 +1461,8 @@ llenarFormulario(servicio) {
    descripcion: servicio.descripcion || '',
    precio_minimo: servicio.precio_minimo,
    precio_recomendado: servicio.precio_recomendado,
-   limite_minimo: servicio.limite_minimo || '', // 🆕 NUEVO
-   limite_maximo: servicio.limite_maximo || '', // 🆕 NUEVO
+   limite_minimo: servicio.limite_minimo || '',
+   limite_maximo: servicio.limite_maximo || '',
    estado: servicio.estado
  };
 },
@@ -1473,14 +1475,14 @@ limpiarFormulario() {
    descripcion: '',
    precio_minimo: '',
    precio_recomendado: '',
-   limite_minimo: '', // 🆕 NUEVO
-   limite_maximo: '', // 🆕 NUEVO
+   limite_minimo: '',
+   limite_maximo: '',
    estado: 'activo'
  };
  this.erroresFormulario = [];
 },
 
-// 🆕 NUEVO: Métodos para manejar categorías en el formulario
+// Métodos para manejar categorías en el formulario
 onCategoriaChange() {
  // Si se desmarca la categoría principal, seleccionar otra
  if (this.formulario.categoriaPrincipal && 
@@ -1582,7 +1584,7 @@ obtenerNombreCategoria(categoriaId) {
  return categoria.nombre;
 },
 
-// 🆕 NUEVO: Obtener categorías adicionales (excluyendo la principal)
+// Obtener categorías adicionales (excluyendo la principal)
 getCategoriasAdicionales(servicio) {
  if (!servicio.categorias_completas || servicio.categorias_completas.length <= 1) {
    return [];
@@ -1593,7 +1595,7 @@ getCategoriasAdicionales(servicio) {
  );
 },
 
-// 🆕 NUEVO: Formatear límites para mostrar
+// Formatear límites para mostrar
 formatearLimites(servicio) {
  if (!servicio) return 'Sin límites';
  
@@ -1611,7 +1613,7 @@ formatearLimites(servicio) {
  return 'Sin límites';
 },
 
-// 🆕 NUEVO: Formatear límites del formulario
+// Formatear límites del formulario
 formatearLimitesFormulario() {
  const min = this.formulario.limite_minimo;
  const max = this.formulario.limite_maximo;
@@ -1643,12 +1645,25 @@ formatearFecha(fecha) {
  }
 },
 
+// 🔧 ACTUALIZADO: Formatear moneda con soporte para 4 decimales
 formatearMoneda(monto) {
- if (monto === null || monto === undefined) return '$0.00';
- return new Intl.NumberFormat('en-US', {
-   style: 'currency',
-   currency: 'USD'
- }).format(monto);
+  if (monto === null || monto === undefined) return '$0.00';
+  
+  // Convertir a número para hacer las verificaciones
+  const numero = parseFloat(monto);
+  
+  // Verificar si tiene más de 2 decimales significativos
+  const tieneDecimalesExtras = (numero * 10000) % 100 !== 0;
+  
+  // Si tiene decimales extras (más de 2), mostrar 4 decimales, sino mostrar 2
+  const decimales = tieneDecimalesExtras ? 4 : 2;
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: decimales
+  }).format(numero);
 },
 
 getEstadoTexto(estado) {

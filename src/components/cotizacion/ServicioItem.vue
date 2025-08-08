@@ -62,16 +62,17 @@
   <div class="precio-venta-container">
     <label>Precio de Venta Mensual (opcional):</label>
     <input 
-      v-model.number="precioVentaLocal" 
-      type="number" 
-      :min="servicio.precio_minimo || servicio.precioMinimo || 0" 
-      step="0.01"
-      :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}/mes`"
-      class="input-precio-venta"
-      :class="{ 'precio-bajo-minimo': esPrecioBajoMinimo }"
-      @input="actualizarPrecioVenta"
-      @blur="validarPrecioMinimo"
-    >
+  v-model.number="precioVentaLocal" 
+  type="number" 
+  :min="servicio.precio_minimo || servicio.precioMinimo || 0" 
+  step="0.01"
+  lang="en-US"
+  :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}/mes`"
+  class="input-precio-venta"
+  :class="{ 'precio-bajo-minimo': esPrecioBajoMinimo }"
+  @input="actualizarPrecioVenta"
+  @blur="validarPrecioMinimo"
+>
     <small v-if="!precioVentaLocal || precioVentaLocal === 0" class="precio-defecto">
       Se usará precio recomendado: {{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}/mes
     </small>
@@ -165,14 +166,14 @@ props: {
     type: Number,
     default: 0
   },
-  mesesContrato: { // CAMBIO: de añosContrato a mesesContrato
+  mesesContrato: {
     type: Number,
     default: 1
   }
 },
 emits: ['update:modelValue', 'update:cantidadEquipos', 'update:precioVenta', 'update:cantidadesPorTipo', 'mostrar-notificacion'],
 setup(props, { emit }) {
-  const { servicio, precioVenta, mesesContrato } = toRefs(props) // CAMBIO: usar mesesContrato
+  const { servicio, precioVenta, mesesContrato } = toRefs(props)
   
   // Estados reactivos
   const precioVentaLocal = ref(precioVenta.value || 0)
@@ -180,7 +181,7 @@ setup(props, { emit }) {
   // Objeto reactivo para manejar cantidades POR CATEGORÍA
   const cantidadesPorCategoria = reactive({})
 
-  // Computed para obtener TODAS las categorías del servicio - SIN CAMBIOS
+  // Computed para obtener TODAS las categorías del servicio
   const categoriasDelServicio = computed(() => {
     const categorias = []
     
@@ -222,9 +223,7 @@ setup(props, { emit }) {
     return categorias
   })
 
-  // RESTO DE COMPUTED Y FUNCIONES SIN CAMBIOS HASTA LAS FUNCIONES DE CÁLCULO...
-
-  // Computed para unidades de medida únicas (para badges) - SIN CAMBIOS
+  // Computed para unidades de medida únicas (para badges)
   const unidadesMedida = computed(() => {
     const unidades = []
     const unidadesVistas = new Set()
@@ -244,7 +243,7 @@ setup(props, { emit }) {
    return unidades
  })
 
- // Computed para validar límites por categoría - SIN CAMBIOS
+ // Computed para validar límites por categoría
  const validacionLimites = computed(() => {
    const errores = {}
    
@@ -277,12 +276,12 @@ setup(props, { emit }) {
    return errores
  })
 
- // Computed para saber si hay errores de validación - SIN CAMBIOS
+ // Computed para saber si hay errores de validación
  const tieneErroresLimites = computed(() => {
    return Object.values(validacionLimites.value).some(val => !val.esValido)
  })
 
- // Computed para mostrar info de límites del servicio - SIN CAMBIOS
+ // Computed para mostrar info de límites del servicio
  const infoLimites = computed(() => {
    const limiteMin = servicio.value.limite_minimo || 1
    const limiteMax = servicio.value.limite_maximo
@@ -293,7 +292,7 @@ setup(props, { emit }) {
    return `Límites: ${limiteMin} - ${limiteMax}`
  })
 
- // Funciones helper para categorías - SIN CAMBIOS
+ // Funciones helper para categorías
  const obtenerEtiquetaCategoria = (categoria) => {
    const nombreUnidad = categoria.unidad_medida.nombre
    const tipoUnidad = categoria.unidad_medida.tipo
@@ -359,14 +358,14 @@ setup(props, { emit }) {
    }
  }
 
- // Computed properties existentes - SIN CAMBIOS
+ // Computed properties existentes
  const esPrecioBajoMinimo = computed(() => {
    if (!precioVentaLocal.value) return false
    const precioMinimo = servicio.value.precio_minimo || servicio.value.precioMinimo || 0
    return precioVentaLocal.value < precioMinimo
  })
 
- // Total de unidades para cálculo de precio - SIN CAMBIOS
+ // Total de unidades para cálculo de precio
  const totalUnidadesPorTipo = computed(() => {
    let totalParaPrecio = 0
    
@@ -378,7 +377,7 @@ setup(props, { emit }) {
    return Math.max(totalParaPrecio, 1)
  })
 
- // Computed para obtener cantidades por tipo - SIN CAMBIOS
+ // Computed para obtener cantidades por tipo
  const cantidadesPorTipo = computed(() => {
    const cantidades = {}
    
@@ -395,23 +394,35 @@ setup(props, { emit }) {
    return cantidades
  })
 
- // CAMBIO: Funciones para calcular precios solo mensuales
+ // 🔧 ACTUALIZADO: Funciones para calcular precios solo mensuales con 4 decimales
  const calcularSubtotalMensual = () => {
    const precio = precioVentaLocal.value || servicio.value.precio_recomendado || servicio.value.precioRecomendado || 0
    return precio * totalUnidadesPorTipo.value
  }
 
  const calcularTotalContrato = () => {
-   return calcularSubtotalMensual() * mesesContrato.value // CAMBIO: usar meses en lugar de años
+   return calcularSubtotalMensual() * mesesContrato.value
  }
 
- // Función de formateo - SIN CAMBIOS
+ // 🔧 ACTUALIZADO: Función de formateo con soporte para 4 decimales
  const formatCurrency = (amount) => {
-   const valor = amount || 0
-   return `$${valor.toLocaleString('en-US', {
+   if (amount === null || amount === undefined) return '$0.00';
+   
+   // Convertir a número para hacer las verificaciones
+   const numero = parseFloat(amount);
+   
+   // Verificar si tiene más de 2 decimales significativos
+   const tieneDecimalesExtras = (numero * 10000) % 100 !== 0;
+   
+   // Si tiene decimales extras (más de 2), mostrar 4 decimales, sino mostrar 2
+   const decimales = tieneDecimalesExtras ? 4 : 2;
+   
+   return new Intl.NumberFormat('en-US', {
+     style: 'currency',
+     currency: 'USD',
      minimumFractionDigits: 2,
-     maximumFractionDigits: 2
-   })}`
+     maximumFractionDigits: decimales
+   }).format(numero);
  }
 
  const validarPrecioMinimo = () => {
@@ -423,12 +434,12 @@ setup(props, { emit }) {
    }
  }
 
- // Función para mostrar notificaciones - SIN CAMBIOS
+ // Función para mostrar notificaciones
  const mostrarNotificacion = (mensaje, tipo = 'info') => {
    emit('mostrar-notificacion', { mensaje, tipo })
  }
 
- // Métodos para manejar cantidades POR CATEGORÍA con validación - SIN CAMBIOS
+ // Métodos para manejar cantidades POR CATEGORÍA con validación
  const incrementarCantidad = (categoriaId) => {
    const categoria = categoriasDelServicio.value.find(c => c.id === categoriaId)
    if (categoria) {
@@ -456,7 +467,7 @@ setup(props, { emit }) {
    }
  }
 
- // Método actualizarCantidad - SIN CAMBIOS
+ // Método actualizarCantidad
  const actualizarCantidad = (categoriaId) => {
    if (cantidadesPorCategoria[categoriaId] < 0) {
      cantidadesPorCategoria[categoriaId] = 0
@@ -476,15 +487,16 @@ setup(props, { emit }) {
      cantidadesPorTipo: cantidadesPorTipo.value,
      totalUnidades: totalUnidadesPorTipo.value,
      categoriasDetalle: categoriasDelServicio.value.map(cat => ({
-       id: cat.id,
-       categorias_id: cat.id,
-       nombre: cat.nombre,
-       unidad_id: cat.unidad_id,
-       unidad_nombre: cat.unidad_nombre,
-       unidad_tipo: cat.unidad_tipo,
-       unidad_abreviacion: cat.unidad_abreviacion,
-       cantidad: cantidadesPorCategoria[cat.id] || 0
-     })),
+      
+  id: cat.id, // ← ESTE ID DEBE EXISTIR Y SER VÁLIDO
+  categorias_id: cat.id, // También como backup
+  nombre: cat.nombre,
+  unidad_id: cat.unidad_id,
+  unidad_nombre: cat.unidad_nombre,
+  unidad_tipo: cat.unidad_tipo,
+  unidad_abreviacion: cat.unidad_abreviacion,
+  cantidad: cantidadesPorCategoria[cat.id] || 0
+})),
      validacion: {
        tieneErrores: tieneErroresLimites.value,
        errores: validacionLimites.value
@@ -498,7 +510,7 @@ setup(props, { emit }) {
    emit('update:precioVenta', precioVentaLocal.value || 0)
  }
 
- // Inicialización simplificada - SIN CAMBIOS
+ // Inicialización simplificada
  const inicializarCantidades = () => {
    categoriasDelServicio.value.forEach(categoria => {
      if (categoria.id && !(categoria.id in cantidadesPorCategoria)) {
@@ -507,12 +519,12 @@ setup(props, { emit }) {
    })
  }
 
- // Método para actualizar desde el padre - SIN CAMBIOS
+ // Método para actualizar desde el padre
  const actualizarDesdeElPadre = (cantidades) => {
    Object.assign(cantidadesPorCategoria, cantidades)
  }
 
- // Watchers - CAMBIO: usar mesesContrato
+ // Watchers - usar mesesContrato
  watch(precioVenta, (newVal) => {
    precioVentaLocal.value = newVal || 0
  })
@@ -532,7 +544,19 @@ setup(props, { emit }) {
    }
  }, { immediate: true })
 
- // Watcher para datos globales de duplicación - SIN CAMBIOS
+ // En ServicioItem.vue, agregar este watcher en setup()
+watch(precioVentaLocal, (nuevoPrecio) => {
+  emit('update:precioVenta', nuevoPrecio || 0)
+  
+  // Si hay cantidades válidas, triggear actualización automática
+  const tieneCantidades = Object.values(cantidadesPorCategoria).some(cantidad => cantidad > 0)
+  if (tieneCantidades) {
+    // Simular actualización para triggear el método automático
+    actualizarCantidad(Object.keys(cantidadesPorCategoria)[0])
+  }
+}, { immediate: false })
+
+ // Watcher para datos globales de duplicación
  watch(() => {
    const servicioId = servicio.value.servicios_id
    return window.categoriasDetallePorServicio?.[servicioId]
@@ -554,7 +578,7 @@ setup(props, { emit }) {
    }
  }, { deep: true, immediate: true })
 
- // Escuchar evento personalizado de cantidades actualizadas - SIN CAMBIOS
+ // Escuchar evento personalizado de cantidades actualizadas
  onMounted(() => {
    const handleCantidadesActualizadas = (event) => {
      const { cantidadesPorCategoria: nuevasCantidades, servicioId } = event.detail
@@ -609,11 +633,11 @@ setup(props, { emit }) {
    obtenerIconoTipo,
    obtenerStepTipo,
    
-   // CAMBIO: Funciones de cálculo solo mensual
+   // 🔧 ACTUALIZADO: Funciones de cálculo solo mensual con 4 decimales
    calcularSubtotalMensual,
    calcularTotalContrato,
    
-   // Métodos
+   // 🔧 ACTUALIZADO: Método de formateo
    formatCurrency,
    validarPrecioMinimo,
    
@@ -710,768 +734,771 @@ border: 1px solid #ced4da;
 
 /* Información de límites */
 .limites-info {
- margin-bottom: 0;
+margin-bottom: 0;
 }
 
 .limites-badge {
- display: inline-flex;
- align-items: center;
- gap: 0.25rem;
- padding: 0.25rem 0.5rem;
- background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- border: 1px solid #ced4da;
- border-radius: 10px;
- font-size: 0.7rem;
- font-weight: 600;
- color: #495057;
+display: inline-flex;
+align-items: center;
+gap: 0.25rem;
+padding: 0.25rem 0.5rem;
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+border: 1px solid #ced4da;
+border-radius: 10px;
+font-size: 0.7rem;
+font-weight: 600;
+color: #495057;
 }
 
 .limites-badge i {
- color: #6c757d;
+color: #6c757d;
 }
 
 /* ✅ NUEVO: Contenedor horizontal para límites y unidades */
 .info-horizontal {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.75rem;
- gap: 0.5rem;
- flex-wrap: wrap;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 0.75rem;
+gap: 0.5rem;
+flex-wrap: wrap;
 }
 
 /* Estados de validación para controles */
 .servicio-controls-horizontal.error {
- background: rgba(220, 53, 69, 0.1);
- border-radius: 4px;
- padding: 0.25rem;
- margin: -0.25rem;
- border: 1px solid rgba(220, 53, 69, 0.3);
+background: rgba(220, 53, 69, 0.1);
+border-radius: 4px;
+padding: 0.25rem;
+margin: -0.25rem;
+border: 1px solid rgba(220, 53, 69, 0.3);
 }
 
 .servicio-controls-horizontal.warning {
- background: rgba(255, 193, 7, 0.1);
- border-radius: 4px;
- padding: 0.25rem;
- margin: -0.25rem;
- border: 1px solid rgba(255, 193, 7, 0.3);
+background: rgba(255, 193, 7, 0.1);
+border-radius: 4px;
+padding: 0.25rem;
+margin: -0.25rem;
+border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
 .servicio-controls-horizontal.success {
- background: rgba(40, 167, 69, 0.1);
- border-radius: 4px;
- padding: 0.25rem;
- margin: -0.25rem;
- border: 1px solid rgba(40, 167, 69, 0.3);
+background: rgba(40, 167, 69, 0.1);
+border-radius: 4px;
+padding: 0.25rem;
+margin: -0.25rem;
+border: 1px solid rgba(40, 167, 69, 0.3);
 }
 
 /* Estados de validación para inputs */
 .input-cantidad.error {
- border-color: #dc3545 !important;
- background: #fff5f5;
- box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+border-color: #dc3545 !important;
+background: #fff5f5;
+box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
 }
 
 .input-cantidad.warning {
- border-color: #ffc107 !important;
- background: #fffbf0;
- box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+border-color: #ffc107 !important;
+background: #fffbf0;
+box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
 }
 
 .input-cantidad.success {
- border-color: #28a745 !important;
- background: #f8fff8;
- box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+border-color: #28a745 !important;
+background: #f8fff8;
+box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
 }
 
 /* Mensajes de validación */
 .validacion-mensaje {
- display: flex;
- align-items: center;
- gap: 0.25rem;
- font-size: 0.6rem;
- margin-top: 0.25rem;
- padding: 0.15rem 0.3rem;
- border-radius: 4px;
- font-weight: 600;
- text-align: center;
- justify-content: center;
+display: flex;
+align-items: center;
+gap: 0.25rem;
+font-size: 0.6rem;
+margin-top: 0.25rem;
+padding: 0.15rem 0.3rem;
+border-radius: 4px;
+font-weight: 600;
+text-align: center;
+justify-content: center;
 }
 
 .validacion-mensaje.error {
- background: rgba(220, 53, 69, 0.1);
- color: #721c24;
- border: 1px solid rgba(220, 53, 69, 0.2);
+background: rgba(220, 53, 69, 0.1);
+color: #721c24;
+border: 1px solid rgba(220, 53, 69, 0.2);
 }
 
 .validacion-mensaje.warning {
- background: rgba(255, 193, 7, 0.1);
- color: #856404;
- border: 1px solid rgba(255, 193, 7, 0.2);
+background: rgba(255, 193, 7, 0.1);
+color: #856404;
+border: 1px solid rgba(255, 193, 7, 0.2);
 }
 
 .validacion-mensaje.success {
- background: rgba(40, 167, 69, 0.1);
- color: #155724;
- border: 1px solid rgba(40, 167, 69, 0.2);
+background: rgba(40, 167, 69, 0.1);
+color: #155724;
+border: 1px solid rgba(40, 167, 69, 0.2);
 }
 
 .validacion-mensaje i {
- font-size: 0.55rem;
+font-size: 0.55rem;
 }
 
 /* Estado de error general para la tarjeta */
 .servicio-card.tiene-errores {
- border-color: #dc3545;
- box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+border-color: #dc3545;
+box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
 }
 
 .servicio-card.tiene-errores .servicio-header h3 {
- color: #dc3545;
+color: #dc3545;
 }
 
 /* Botones deshabilitados por límites */
 .btn-cantidad:disabled.limite-alcanzado {
- background: #f8d7da;
- border-color: #dc3545;
- color: #721c24;
- cursor: not-allowed;
+background: #f8d7da;
+border-color: #dc3545;
+color: #721c24;
+cursor: not-allowed;
 }
 
 .btn-cantidad.limite-alcanzado {
- background: #f8d7da;
- border-color: #dc3545;
- color: #721c24;
- cursor: not-allowed;
+background: #f8d7da;
+border-color: #dc3545;
+color: #721c24;
+cursor: not-allowed;
 }
 
 /* ✅ MANTENER todos los estilos existentes pero con ALTURAS CORREGIDAS */
 .servicio-card {
- border: 1px solid #dee2e6;
- border-radius: 8px;
- padding: 1rem;
- background: white;
- box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
- transition: all 0.2s ease;
- height: 100%;
- display: flex;
- flex-direction: column;
- box-sizing: border-box;
- /* ✅ CAMBIO PRINCIPAL: Aumentar alturas para evitar cortes */
- min-height: 520px; /* Aumentado de 380px */
- max-height: 580px; /* Aumentado de 420px */
+border: 1px solid #dee2e6;
+border-radius: 8px;
+padding: 1rem;
+background: white;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+transition: all 0.2s ease;
+height: 100%;
+display: flex;
+flex-direction: column;
+box-sizing: border-box;
+/* ✅ CAMBIO PRINCIPAL: Aumentar alturas para evitar cortes */
+min-height: 520px; /* Aumentado de 380px */
+max-height: 580px; /* Aumentado de 420px */
 }
 
 .servicio-card:hover {
- transform: translateY(-2px);
- box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
- border-color: #007bff;
+transform: translateY(-2px);
+box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+border-color: #007bff;
 }
 
 .servicio-header {
- display: flex;
- align-items: center;
- margin-bottom: 0.75rem;
- gap: 0.5rem;
- padding-bottom: 0.5rem;
- border-bottom: 1px solid #e9ecef;
- flex-shrink: 0; /* ✅ No permitir que el header se comprima */
+display: flex;
+align-items: center;
+margin-bottom: 0.75rem;
+gap: 0.5rem;
+padding-bottom: 0.5rem;
+border-bottom: 1px solid #e9ecef;
+flex-shrink: 0; /* ✅ No permitir que el header se comprima */
 }
 
 .servicio-icon {
- font-size: 1.2rem;
- flex-shrink: 0;
- color: #495057;
+font-size: 1.2rem;
+flex-shrink: 0;
+color: #495057;
 }
 
 .servicio-header h3 {
- margin: 0;
- color: #495057;
- font-size: 1rem;
- line-height: 1.2;
- flex: 1;
- min-width: 0;
- font-weight: 600;
+margin: 0;
+color: #495057;
+font-size: 1rem;
+line-height: 1.2;
+flex: 1;
+min-width: 0;
+font-weight: 600;
 }
 
 /* ✅ NUEVOS ESTILOS para múltiples unidades */
 .unidades-info {
- margin-bottom: 0;
- display: flex;
- flex-wrap: wrap;
- gap: 0.2rem;
- justify-content: center;
+margin-bottom: 0;
+display: flex;
+flex-wrap: wrap;
+gap: 0.2rem;
+justify-content: center;
 }
 
 .unidad-badge {
- display: inline-flex;
- align-items: center;
- gap: 0.25rem;
- padding: 0.2rem 0.4rem;
- border-radius: 10px;
- font-size: 0.65rem;
- font-weight: 600;
- text-transform: uppercase;
- letter-spacing: 0.3px;
+display: inline-flex;
+align-items: center;
+gap: 0.25rem;
+padding: 0.2rem 0.4rem;
+border-radius: 10px;
+font-size: 0.65rem;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 0.3px;
 }
 
 .unidad-badge.tipo-capacidad {
- background: linear-gradient(135deg, #e3f2fd, #bbdefb);
- color: #1565c0;
- border: 1px solid #90caf9;
+background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+color: #1565c0;
+border: 1px solid #90caf9;
 }
 
 .unidad-badge.tipo-usuarios {
- background: linear-gradient(135deg, #f3e5f5, #e1bee7);
- color: #7b1fa2;
- border: 1px solid #ce93d8;
+background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+color: #7b1fa2;
+border: 1px solid #ce93d8;
 }
 
 .unidad-badge.tipo-sesiones {
- background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
- color: #2e7d32;
- border: 1px solid #a5d6a7;
+background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+color: #2e7d32;
+border: 1px solid #a5d6a7;
 }
 
 .unidad-badge.tipo-tiempo {
- background: linear-gradient(135deg, #fff3e0, #ffe0b2);
- color: #ef6c00;
- border: 1px solid #ffcc02;
+background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+color: #ef6c00;
+border: 1px solid #ffcc02;
 }
 
 .unidad-badge.tipo-cantidad {
- background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- color: #495057;
- border: 1px solid #ced4da;
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+color: #495057;
+border: 1px solid #ced4da;
 }
 
 .precios-servicio {
- display: flex;
- gap: 0.25rem;
- margin-bottom: 0.75rem;
- flex-wrap: wrap;
- flex-shrink: 0; /* ✅ No permitir compresión */
+display: flex;
+gap: 0.25rem;
+margin-bottom: 0.75rem;
+flex-wrap: wrap;
+flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .precio-item {
- flex: 1;
- min-width: 60px;
- display: flex;
- flex-direction: column;
- align-items: center;
- padding: 0.3rem; /* ✅ Aumentado para más espacio */
- border-radius: 4px;
- border: 1px solid;
- background: white;
- font-size: 0.75rem;
+flex: 1;
+min-width: 60px;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0.3rem; /* ✅ Aumentado para más espacio */
+border-radius: 4px;
+border: 1px solid;
+background: white;
+font-size: 0.75rem;
 }
 
 .precio-item:first-child {
- border-color: #dc3545;
- color: #721c24;
+border-color: #dc3545;
+color: #721c24;
 }
 
 .precio-item:nth-child(2) {
- border-color: #ffc107;
- color: #856404;
+border-color: #ffc107;
+color: #856404;
 }
 
 .precio-item:last-child {
- border-color: #28a745;
- color: #155724;
+border-color: #28a745;
+color: #155724;
 }
 
 .precio-label {
- font-size: 0.6rem;
- font-weight: 600;
- margin-bottom: 0.15rem;
- text-transform: uppercase;
- letter-spacing: 0.5px;
+font-size: 0.6rem;
+font-weight: 600;
+margin-bottom: 0.15rem;
+text-transform: uppercase;
+letter-spacing: 0.5px;
 }
 
 .precio-valor {
- font-weight: 700;
- font-size: 0.7rem;
- text-align: center;
- line-height: 1;
+font-weight: 700;
+font-size: 0.7rem;
+text-align: center;
+line-height: 1;
 }
 
 .precio-venta-container {
- margin-bottom: 0.75rem;
- background: #f8f9fa;
- padding: 0.6rem; /* ✅ Aumentado para más espacio */
- border-radius: 6px;
- border: 1px solid #ced4da;
- flex-shrink: 0; /* ✅ No permitir compresión */
+margin-bottom: 0.75rem;
+background: #f8f9fa;
+padding: 0.6rem; /* ✅ Aumentado para más espacio */
+border-radius: 6px;
+border: 1px solid #ced4da;
+flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .precio-venta-container label {
- display: block;
- margin-bottom: 0.3rem; /* ✅ Más espacio */
- font-weight: 600;
- color: #495057;
- font-size: 0.8rem;
+display: block;
+margin-bottom: 0.3rem; /* ✅ Más espacio */
+font-weight: 600;
+color: #495057;
+font-size: 0.8rem;
 }
 
 .input-precio-venta {
- width: 100%;
- height: 2.2rem; /* ✅ Aumentado de 2rem */
- padding: 0.3rem 0.5rem; /* ✅ Más padding */
- border: 1px solid #ced4da;
- border-radius: 4px;
- font-size: 0.85rem;
- box-sizing: border-box;
- background: white;
- color: #495057;
+width: 100%;
+height: 2.2rem; /* ✅ Aumentado de 2rem */
+padding: 0.3rem 0.5rem; /* ✅ Más padding */
+border: 1px solid #ced4da;
+border-radius: 4px;
+font-size: 0.85rem;
+box-sizing: border-box;
+background: white;
+color: #495057;
 }
 
 .input-precio-venta:focus {
- outline: none;
- border-color: #007bff;
- box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+outline: none;
+border-color: #007bff;
+box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .precio-bajo-minimo {
- border-color: #dc3545 !important;
- background: #fff5f5 !important;
+border-color: #dc3545 !important;
+background: #fff5f5 !important;
 }
 
 .precio-defecto {
- display: block;
- margin-top: 0.3rem; /* ✅ Más espacio */
- color: #6c757d;
- font-size: 0.7rem;
- font-weight: 500;
- text-align: center;
+display: block;
+margin-top: 0.3rem; /* ✅ Más espacio */
+color: #6c757d;
+font-size: 0.7rem;
+font-weight: 500;
+text-align: center;
 }
 
 .precio-advertencia {
- display: block;
- margin-top: 0.3rem; /* ✅ Más espacio */
- color: #dc3545;
- font-size: 0.7rem;
- font-weight: 600;
- text-align: center;
+display: block;
+margin-top: 0.3rem; /* ✅ Más espacio */
+color: #dc3545;
+font-size: 0.7rem;
+font-weight: 600;
+text-align: center;
 }
 
 .contrato-info {
- background: linear-gradient(135deg, #f8f9fa, #e9ecef);
- padding: 0.6rem; /* ✅ Aumentado para más espacio */
- border-radius: 6px;
- margin-bottom: 0.75rem;
- border: 1px solid #ced4da;
- border-left: 3px solid #007bff;
- flex-shrink: 0; /* ✅ No permitir compresión */
+background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+padding: 0.6rem; /* ✅ Aumentado para más espacio */
+border-radius: 6px;
+margin-bottom: 0.75rem;
+border: 1px solid #ced4da;
+border-left: 3px solid #007bff;
+flex-shrink: 0; /* ✅ No permitir compresión */
 }
 
 .contrato-años {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 0.3rem; /* ✅ Más espacio */
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 0.3rem; /* ✅ Más espacio */
 }
 
 .contrato-años i {
- color: #007bff;
- margin-right: 0.25rem;
+color: #007bff;
+margin-right: 0.25rem;
 }
 
 .años-valor {
- font-size: 0.8rem;
- color: #495057;
- font-weight: 600;
- background: white;
- padding: 0.2rem 0.4rem; /* ✅ Más padding */
- border-radius: 4px;
- border: 1px solid #ced4da;
+font-size: 0.8rem;
+color: #495057;
+font-weight: 600;
+background: white;
+padding: 0.2rem 0.4rem; /* ✅ Más padding */
+border-radius: 4px;
+border: 1px solid #ced4da;
 }
 
 .precios-calculados {
- display: flex;
- flex-direction: column;
- gap: 0.25rem; /* ✅ Espacio entre elementos */
+display: flex;
+flex-direction: column;
+gap: 0.25rem; /* ✅ Espacio entre elementos */
 }
 
 .precio-mensual-total,
 .precio-anual-total {
- display: flex;
- justify-content: space-between;
- align-items: center;
+display: flex;
+justify-content: space-between;
+align-items: center;
 }
 
 .precio-total {
- display: flex;
- justify-content: space-between;
- align-items: center;
- border-top: 1px solid #ced4da;
- padding-top: 0.25rem;
- margin-top: 0.25rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-top: 1px solid #ced4da;
+padding-top: 0.25rem;
+margin-top: 0.25rem;
 }
 
 .total-label {
- font-size: 0.75rem;
- color: #495057;
- font-weight: 600;
+font-size: 0.75rem;
+color: #495057;
+font-weight: 600;
 }
 
 .total-valor {
- font-size: 0.8rem;
- color: #495057;
- font-weight: 700;
- background: white;
- padding: 0.2rem 0.4rem; /* ✅ Más padding */
- border-radius: 4px;
- border: 1px solid #ced4da;
+font-size: 0.8rem;
+color: #495057;
+font-weight: 700;
+background: white;
+padding: 0.2rem 0.4rem; /* ✅ Más padding */
+border-radius: 4px;
+border: 1px solid #ced4da;
 }
 
 /* ✅ NUEVO: Controles en fila horizontal con MÁS ESPACIO */
 .cantidades-container-horizontal {
- margin-top: auto;
- background: #f8f9fa;
- padding: 0.7rem; /* ✅ Aumentado para más espacio */
- border-radius: 6px;
- border: 1px solid #ced4da;
- display: flex;
- flex-direction: row;
- gap: 0.6rem; /* ✅ Más gap */
- align-items: flex-start; /* ✅ Cambio para mejor alineación */
- flex-wrap: wrap;
- justify-content: space-around;
- min-height: 80px; /* ✅ Altura mínima para evitar cortes */
+margin-top: auto;
+background: #f8f9fa;
+padding: 0.7rem; /* ✅ Aumentado para más espacio */
+border-radius: 6px;
+border: 1px solid #ced4da;
+display: flex;
+flex-direction: row;
+gap: 0.6rem; /* ✅ Más gap */
+align-items: flex-start; /* ✅ Cambio para mejor alineación */
+flex-wrap: wrap;
+justify-content: space-around;
+min-height: 80px; /* ✅ Altura mínima para evitar cortes */
 }
 
 .servicio-controls-horizontal {
- display: flex;
- flex-direction: column;
- align-items: center;
- min-width: 110px; /* ✅ Aumentado */
- flex: 1;
- padding: 0.3rem; /* ✅ Padding interno */
+display: flex;
+flex-direction: column;
+align-items: center;
+min-width: 110px; /* ✅ Aumentado */
+flex: 1;
+padding: 0.3rem; /* ✅ Padding interno */
 }
 
 .servicio-controls-horizontal label {
- font-weight: 600;
- color: #495057;
- font-size: 0.75rem; /* ✅ Ligeramente más grande */
- margin-bottom: 0.3rem; /* ✅ Más margen */
- text-align: center;
- line-height: 1.2; /* ✅ Mejor line-height */
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
- max-width: 100%;
+font-weight: 600;
+color: #495057;
+font-size: 0.75rem; /* ✅ Ligeramente más grande */
+margin-bottom: 0.3rem; /* ✅ Más margen */
+text-align: center;
+line-height: 1.2; /* ✅ Mejor line-height */
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+max-width: 100%;
 }
 
 /* ✅ ESTILOS específicos por tipo de control */
 .control-capacidad label {
- color: #1565c0;
+color: #1565c0;
 }
 
 .control-usuarios label {
- color: #7b1fa2;
+color: #7b1fa2;
 }
 
 .control-sesiones label {
- color: #2e7d32;
+color: #2e7d32;
 }
 
 .control-tiempo label {
- color: #ef6c00;
+color: #ef6c00;
 }
 
 .cantidad-controls {
- display: flex;
- align-items: center;
- gap: 0.3rem; /* ✅ Más gap */
- justify-content: center;
- margin-bottom: 0.25rem; /* ✅ Margen para mensajes de validación */
+display: flex;
+align-items: center;
+gap: 0.3rem; /* ✅ Más gap */
+justify-content: center;
+margin-bottom: 0.25rem; /* ✅ Margen para mensajes de validación */
 }
 
 .btn-cantidad {
- width: 1.4rem; /* ✅ Ligeramente más grande */
- height: 1.4rem; /* ✅ Ligeramente más grande */
- border: 1px solid #007bff;
- background: white;
- color: #007bff;
- border-radius: 3px;
- cursor: pointer;
- font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
- font-weight: 700;
- display: flex;
- align-items: center;
- justify-content: center;
- transition: all 0.2s ease;
- flex-shrink: 0;
+width: 1.4rem; /* ✅ Ligeramente más grande */
+height: 1.4rem; /* ✅ Ligeramente más grande */
+border: 1px solid #007bff;
+background: white;
+color: #007bff;
+border-radius: 3px;
+cursor: pointer;
+font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
+font-weight: 700;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.2s ease;
+flex-shrink: 0;
 }
 
 .btn-cantidad:hover:not(:disabled) {
- background: #007bff;
- color: white;
+background: #007bff;
+color: white;
 }
 
 .btn-cantidad:disabled {
- opacity: 0.4;
- cursor: not-allowed;
- color: #6c757d;
- border-color: #ced4da;
+opacity: 0.4;
+cursor: not-allowed;
+color: #6c757d;
+border-color: #ced4da;
 }
 
+/* ✅ ACTUALIZADO: Input de cantidad MÁS GRANDE para números hasta 5000 */
 .input-cantidad {
- width: 2.2rem; /* ✅ Ligeramente más ancho */
- height: 1.4rem; /* ✅ Ligeramente más alto */
- text-align: center;
- border: 1px solid #007bff;
- border-radius: 3px;
- font-size: 0.75rem; /* ✅ Fuente ligeramente más grande */
- font-weight: 600;
- flex-shrink: 0;
- background: white;
- color: #495057;
+width: 3.5rem; /* ✅ AUMENTADO para números hasta 5000 */
+height: 1.4rem; /* ✅ Ligeramente más alto */
+text-align: center;
+border: 1px solid #007bff;
+border-radius: 3px;
+font-size: 0.75rem; /* ✅ Fuente ligeramente más grande */
+font-weight: 600;
+flex-shrink: 0;
+background: white;
+color: #495057;
 }
 
 .input-cantidad:focus {
- outline: none;
- border-color: #0056b3;
- box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
+outline: none;
+border-color: #0056b3;
+box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
 }
 
-/* ✅ NUEVOS: Estilos específicos por tipo de input */
+/* ✅ ACTUALIZADOS: Estilos específicos por tipo de input MÁS GRANDES */
 .input-capacidad {
- border-color: #1565c0 !important;
- width: 2.4rem !important; /* ✅ Más ancho */
+border-color: #1565c0 !important;
+width: 3.5rem !important; /* ✅ AUMENTADO */
 }
 
 .input-usuarios {
- border-color: #7b1fa2 !important;
- width: 2.4rem !important; /* ✅ Más ancho */
+border-color: #7b1fa2 !important;
+width: 3.5rem !important; /* ✅ AUMENTADO */
 }
 
 .input-sesiones {
- border-color: #2e7d32 !important;
- width: 2.4rem !important; /* ✅ Más ancho */
+border-color: #2e7d32 !important;
+width: 3.5rem !important; /* ✅ AUMENTADO */
 }
 
 .input-tiempo {
- border-color: #ef6c00 !important;
- width: 2.4rem !important; /* ✅ Más ancho */
+border-color: #ef6c00 !important;
+width: 3.5rem !important; /* ✅ AUMENTADO */
 }
 
 /* ✅ Responsive MEJORADO para diseño horizontal */
 @media (max-width: 768px) {
- .servicio-card {
-   min-height: 500px; /* ✅ Aumentado para móvil */
-   max-height: 560px; /* ✅ Aumentado para móvil */
-   padding: 0.9rem; /* ✅ Más padding en móvil */
- }
- 
- .cantidades-container-horizontal {
-   flex-direction: column;
-   gap: 0.5rem;
-   padding: 0.8rem; /* ✅ Más padding */
-   min-height: 120px; /* ✅ Más altura en móvil */
- }
- 
- .servicio-controls-horizontal {
-   min-width: auto;
-   width: 100%;
-   padding: 0.4rem; /* ✅ Más padding */
- }
- 
- .servicio-controls-horizontal label {
-   font-size: 0.7rem;
-   white-space: normal;
-   margin-bottom: 0.4rem; /* ✅ Más margen */
- }
- 
- .info-horizontal {
-   flex-direction: column;
-   align-items: stretch;
-   gap: 0.6rem; /* ✅ Más gap */
- }
- 
- .unidades-info {
-   justify-content: center;
- }
- 
- .validacion-mensaje {
-   font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
-   padding: 0.2rem 0.3rem; /* ✅ Más padding */
- }
- 
- .limites-badge {
-   font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
-   padding: 0.3rem 0.5rem; /* ✅ Más padding */
- }
+.servicio-card {
+  min-height: 500px; /* ✅ Aumentado para móvil */
+  max-height: 560px; /* ✅ Aumentado para móvil */
+  padding: 0.9rem; /* ✅ Más padding en móvil */
+}
+
+.cantidades-container-horizontal {
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem; /* ✅ Más padding */
+  min-height: 120px; /* ✅ Más altura en móvil */
+}
+
+.servicio-controls-horizontal {
+  min-width: auto;
+  width: 100%;
+  padding: 0.4rem; /* ✅ Más padding */
+}
+
+.servicio-controls-horizontal label {
+  font-size: 0.7rem;
+  white-space: normal;
+  margin-bottom: 0.4rem; /* ✅ Más margen */
+}
+
+.info-horizontal {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem; /* ✅ Más gap */
+}
+
+.unidades-info {
+  justify-content: center;
+}
+
+.validacion-mensaje {
+  font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
+  padding: 0.2rem 0.3rem; /* ✅ Más padding */
+}
+
+.limites-badge {
+  font-size: 0.7rem; /* ✅ Fuente ligeramente más grande */
+  padding: 0.3rem 0.5rem; /* ✅ Más padding */
+}
 }
 
 @media (max-width: 480px) {
- .servicio-card {
-   padding: 0.8rem;
-   min-height: 480px; /* ✅ Aumentado para móvil pequeño */
-   max-height: 540px; /* ✅ Aumentado para móvil pequeño */
- }
- 
- .precios-servicio {
-   flex-direction: column;
-   gap: 0.3rem; /* ✅ Más gap */
- }
- 
- .precio-item {
-   flex-direction: row;
-   justify-content: space-between;
-   padding: 0.3rem 0.6rem; /* ✅ Más padding */
- }
- 
- .servicio-controls-horizontal {
-   flex-direction: row;
-   justify-content: space-between;
-   align-items: center;
-   padding: 0.5rem; /* ✅ Más padding */
- }
- 
- .servicio-controls-horizontal label {
-   margin-bottom: 0;
-   margin-right: 0.6rem; /* ✅ Más margen */
-   font-size: 0.65rem;
- }
- 
- .unidades-info {
-   gap: 0.3rem; /* ✅ Más gap */
- }
- 
- .unidad-badge {
-   font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
-   padding: 0.2rem 0.4rem; /* ✅ Más padding */
- }
- 
- .cantidad-controls {
-   gap: 0.2rem;
- }
- 
- .btn-cantidad {
-   width: 1.2rem;
-   height: 1.2rem;
-   font-size: 0.65rem;
- }
- 
- .input-cantidad {
-   width: 2rem;
-   height: 1.2rem;
-   font-size: 0.7rem;
- }
- 
- .input-capacidad,
- .input-usuarios,
- .input-sesiones,
- .input-tiempo {
-   width: 2.2rem !important; /* ✅ Más ancho en móvil */
- }
- 
- .validacion-mensaje {
-   font-size: 0.6rem;
-   padding: 0.2rem 0.3rem; /* ✅ Más padding */
- }
- 
- .cantidades-container-horizontal {
-   min-height: 140px; /* ✅ Más altura en móvil pequeño */
-   padding: 0.9rem; /* ✅ Más padding */
- }
+.servicio-card {
+  padding: 0.8rem;
+  min-height: 480px; /* ✅ Aumentado para móvil pequeño */
+  max-height: 540px; /* ✅ Aumentado para móvil pequeño */
+}
+
+.precios-servicio {
+  flex-direction: column;
+  gap: 0.3rem; /* ✅ Más gap */
+}
+
+.precio-item {
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 0.3rem 0.6rem; /* ✅ Más padding */
+}
+
+.servicio-controls-horizontal {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem; /* ✅ Más padding */
+}
+
+.servicio-controls-horizontal label {
+  margin-bottom: 0;
+  margin-right: 0.6rem; /* ✅ Más margen */
+  font-size: 0.65rem;
+}
+
+.unidades-info {
+  gap: 0.3rem; /* ✅ Más gap */
+}
+
+.unidad-badge {
+  font-size: 0.6rem; /* ✅ Fuente ligeramente más grande */
+  padding: 0.2rem 0.4rem; /* ✅ Más padding */
+}
+
+.cantidad-controls {
+  gap: 0.2rem;
+}
+
+.btn-cantidad {
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 0.65rem;
+}
+
+/* ✅ ACTUALIZADO: Input de cantidad para móvil MÁS GRANDE */
+.input-cantidad {
+  width: 3rem; /* ✅ AUMENTADO para móvil */
+  height: 1.2rem;
+  font-size: 0.7rem;
+}
+
+/* ✅ ACTUALIZADOS: Estilos específicos para móvil MÁS GRANDES */
+.input-capacidad,
+.input-usuarios,
+.input-sesiones,
+.input-tiempo {
+  width: 3.2rem !important; /* ✅ AUMENTADO para móvil */
+}
+
+.validacion-mensaje {
+  font-size: 0.6rem;
+  padding: 0.2rem 0.3rem; /* ✅ Más padding */
+}
+
+.cantidades-container-horizontal {
+  min-height: 140px; /* ✅ Más altura en móvil pequeño */
+  padding: 0.9rem; /* ✅ Más padding */
+}
 }
 
 /* Animaciones suaves */
 .cantidades-container-horizontal {
- transition: all 0.3s ease;
+transition: all 0.3s ease;
 }
 
 .servicio-controls-horizontal {
- transition: all 0.2s ease;
+transition: all 0.2s ease;
 }
 
 .unidad-badge {
- transition: all 0.2s ease;
+transition: all 0.2s ease;
 }
 
 .unidad-badge:hover {
- transform: scale(1.05);
+transform: scale(1.05);
 }
 
 /* Mejoras visuales para focus */
 .servicio-controls-horizontal:focus-within label {
- color: #007bff;
- font-weight: 700;
+color: #007bff;
+font-weight: 700;
 }
 
 .control-capacidad:focus-within label {
- color: #1565c0;
+color: #1565c0;
 }
 
 .control-usuarios:focus-within label {
- color: #7b1fa2;
+color: #7b1fa2;
 }
 
 .control-sesiones:focus-within label {
- color: #2e7d32;
+color: #2e7d32;
 }
 
 .control-tiempo:focus-within label {
- color: #ef6c00;
+color: #ef6c00;
 }
 
 /* Hover effects mejorados */
 .servicio-controls-horizontal:hover {
- background: rgba(0, 123, 255, 0.05);
- border-radius: 4px;
- padding: 0.3rem; /* ✅ Más padding en hover */
- margin: -0.3rem; /* ✅ Compensar el padding */
+background: rgba(0, 123, 255, 0.05);
+border-radius: 4px;
+padding: 0.3rem; /* ✅ Más padding en hover */
+margin: -0.3rem; /* ✅ Compensar el padding */
 }
 
 .control-capacidad:hover {
- background: rgba(21, 101, 192, 0.05);
+background: rgba(21, 101, 192, 0.05);
 }
 
 .control-usuarios:hover {
- background: rgba(123, 31, 162, 0.05);
+background: rgba(123, 31, 162, 0.05);
 }
 
 .control-sesiones:hover {
- background: rgba(46, 125, 50, 0.05);
+background: rgba(46, 125, 50, 0.05);
 }
 
 .control-tiempo:hover {
- background: rgba(239, 108, 0, 0.05);
+background: rgba(239, 108, 0, 0.05);
 }
 
 /* ✅ NUEVO: Asegurar que el contenido no se desborde */
 .servicio-card > * {
- flex-shrink: 0;
+flex-shrink: 0;
 }
 
 .cantidades-container-horizontal {
- flex-shrink: 1; /* ✅ Permitir que se ajuste si es necesario */
- overflow: visible; /* ✅ Asegurar que el contenido sea visible */
+flex-shrink: 1; /* ✅ Permitir que se ajuste si es necesario */
+overflow: visible; /* ✅ Asegurar que el contenido sea visible */
 }
 
 /* ✅ NUEVO: Mejorar el scroll si es necesario */
 .servicio-card {
- overflow-y: auto;
- overflow-x: hidden;
+overflow-y: auto;
+overflow-x: hidden;
 }
 
 .servicio-card::-webkit-scrollbar {
- width: 4px;
+width: 4px;
 }
 
 .servicio-card::-webkit-scrollbar-track {
- background: #f1f1f1;
- border-radius: 2px;
+background: #f1f1f1;
+border-radius: 2px;
 }
 
 .servicio-card::-webkit-scrollbar-thumb {
- background: #c1c1c1;
- border-radius: 2px;
+background: #c1c1c1;
+border-radius: 2px;
 }
 
 .servicio-card::-webkit-scrollbar-thumb:hover {
- background: #a8a8a8;
+background: #a8a8a8;
 }
 </style>

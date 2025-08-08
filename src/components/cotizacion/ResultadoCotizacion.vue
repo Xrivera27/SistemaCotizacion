@@ -263,25 +263,46 @@ export default {
      type: Array,
      required: true
    },
-   mesesContrato: { // CAMBIO: de añosContrato a mesesContrato
+   mesesContrato: {
      type: Number,
      default: 1
    }
  },
  emits: ['reiniciar', 'limpiar-formulario'],
  setup(props, { emit }) {
-   // Estados reactivos - SIN CAMBIOS
+   // Estados reactivos
    const precioSeleccionadoPDF = ref('venta')
    const mostrarModalConfirmacion = ref(false)
    const loading = ref(false)
    const loadingMessage = ref('')
    
-   // TOAST SYSTEM - Estados - SIN CAMBIOs
+   // TOAST SYSTEM - Estados
    const showToast = ref(false)
   const toastMessage = ref('')
-  const toastType = ref('success') // success, error, warning, info
+  const toastType = ref('success')
 
-  // MÉTODOS HELPER PARA MOSTRAR CATEGORÍAS CORRECTAMENTE - SIN CAMBIOS
+  // 🔧 ACTUALIZADO: Función de formateo con soporte para 4 decimales
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined) return '$0.00';
+    
+    // Convertir a número para hacer las verificaciones
+    const numero = parseFloat(amount);
+    
+    // Verificar si tiene más de 2 decimales significativos
+    const tieneDecimalesExtras = (numero * 10000) % 100 !== 0;
+    
+    // Si tiene decimales extras (más de 2), mostrar 4 decimales, sino mostrar 2
+    const decimales = tieneDecimalesExtras ? 4 : 2;
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: decimales
+    }).format(numero);
+  }
+
+  // MÉTODOS HELPER PARA MOSTRAR CATEGORÍAS CORRECTAMENTE
   const obtenerUnidadesUnicasDelServicio = (item) => {
     if (!item.categoriasDetalle) return []
     
@@ -355,7 +376,7 @@ export default {
     }
   }
 
-  // CAMBIO: Métodos de formateo de cálculos solo mensual
+  // Métodos de formateo de cálculos solo mensual
   const formatearCalculoMensual = (item) => {
     const categorias = obtenerCantidadesPorCategoria(item)
     const precio = item.precioVentaFinal || 0
@@ -375,7 +396,7 @@ export default {
 
   const formatearCalculoTotal = (item) => {
     const costoMensual = calcularSubtotalMensual(item)
-    const meses = props.mesesContrato // CAMBIO: usar meses
+    const meses = props.mesesContrato
     
     if (meses > 1) {
       return `${formatCurrency(costoMensual)}/mes × ${meses} meses = ${formatCurrency(costoMensual * meses)}`
@@ -384,7 +405,7 @@ export default {
     }
   }
 
-  // MÉTODOS TRADICIONALES COMO FALLBACK - SIN CAMBIOS
+  // MÉTODOS TRADICIONALES COMO FALLBACK
   const obtenerTipoUnidadTradicional = (item) => {
     return item.servicio.unidad_medida?.tipo || item.tipoUnidad || 'cantidad'
   }
@@ -421,450 +442,442 @@ export default {
   const formatearCantidadPrincipalTradicional = (item) => {
     const tipo = obtenerTipoUnidadTradicional(item)
     const unidad = item.servicio.unidad_medida
-    
-    switch (tipo) {
-      case 'capacidad': {
-        const cantidadGB = item.cantidadGB || item.cantidadServidores || 0
-        return `${cantidadGB} ${unidad?.abreviacion || 'GB'}`
-      }
-      case 'usuarios': {
-        const cantidadUsuarios = item.cantidadUsuarios || item.cantidadServidores || 0
-        return `${cantidadUsuarios} usuarios`
-      }
-      case 'sesiones': {
-        const cantidadSesiones = item.cantidadSesiones || item.cantidadServidores || 0
-        return `${cantidadSesiones} sesiones`
-      }
-      case 'tiempo': {
-        const cantidadTiempo = item.cantidadTiempo || item.cantidadServidores || 0
-        return `${cantidadTiempo} ${unidad?.abreviacion || 'h'}`
-      }
-      case 'cantidad':
-      default: {
-        return `${item.cantidadServidores || 0} servidores`
-      }
-    }
-  }
+   
+   switch (tipo) {
+     case 'capacidad': {
+       const cantidadGB = item.cantidadGB || item.cantidadServidores || 0
+       return `${cantidadGB} ${unidad?.abreviacion || 'GB'}`
+     }
+     case 'usuarios': {
+       const cantidadUsuarios = item.cantidadUsuarios || item.cantidadServidores || 0
+       return `${cantidadUsuarios} usuarios`
+     }
+     case 'sesiones': {
+       const cantidadSesiones = item.cantidadSesiones || item.cantidadServidores || 0
+       return `${cantidadSesiones} sesiones`
+     }
+     case 'tiempo': {
+       const cantidadTiempo = item.cantidadTiempo || item.cantidadServidores || 0
+       return `${cantidadTiempo} ${unidad?.abreviacion || 'h'}`
+     }
+     case 'cantidad':
+     default: {
+       return `${item.cantidadServidores || 0} servidores`
+     }
+   }
+ }
 
-  const formatearCalculoMensualTradicional = (item) => {
-    const totalUnidadesItem = calcularTotalUnidades(item)
-    const precio = item.precioVentaFinal || 0
-    
-    return `${totalUnidadesItem} unidad(es) × ${formatCurrency(precio)}/mes = ${formatCurrency(totalUnidadesItem * precio)}/mes`
-  }
+ const formatearCalculoMensualTradicional = (item) => {
+   const totalUnidadesItem = calcularTotalUnidades(item)
+   const precio = item.precioVentaFinal || 0
+   
+   return `${totalUnidadesItem} unidad(es) × ${formatCurrency(precio)}/mes = ${formatCurrency(totalUnidadesItem * precio)}/mes`
+ }
 
-  const calcularTotalUnidades = (item) => {
-    if (item.totalUnidadesParaPrecio) {
-      return item.totalUnidadesParaPrecio
-    }
-    
-    const categorias = obtenerCantidadesPorCategoria(item)
-    if (categorias.length > 0) {
-      return categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
-    }
-    
-    return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
-  }
+ const calcularTotalUnidades = (item) => {
+   if (item.totalUnidadesParaPrecio) {
+     return item.totalUnidadesParaPrecio
+   }
+   
+   const categorias = obtenerCantidadesPorCategoria(item)
+   if (categorias.length > 0) {
+     return categorias.reduce((sum, cat) => sum + cat.cantidad, 0)
+   }
+   
+   return (item.cantidadServidores || 0) + (item.cantidadEquipos || 0)
+ }
 
-  // CAMBIO: Métodos de cálculo solo mensual
-  const calcularSubtotalMensual = (item) => {
-    const totalUnidadesItem = calcularTotalUnidades(item)
-    return totalUnidadesItem * (item.precioVentaFinal || 0) // Precio mensual
-  }
+ // Métodos de cálculo solo mensual
+ const calcularSubtotalMensual = (item) => {
+   const totalUnidadesItem = calcularTotalUnidades(item)
+   return totalUnidadesItem * (item.precioVentaFinal || 0) // Precio mensual
+ }
 
-  const calcularSubtotalTotal = (item) => {
-    return calcularSubtotalMensual(item) * props.mesesContrato // × meses
-  }
+ const calcularSubtotalTotal = (item) => {
+   return calcularSubtotalMensual(item) * props.mesesContrato // × meses
+ }
 
-  const formatCurrency = (amount) => {
-    const valor = amount || 0
-    return `$${valor.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`
-  }
+ // COMPUTED PARA TOAST
+ const toastIcon = computed(() => {
+   const iconos = {
+     success: 'fas fa-check-circle',
+     error: 'fas fa-exclamation-circle',
+     warning: 'fas fa-exclamation-triangle',
+     info: 'fas fa-info-circle'
+   };
+   return iconos[toastType.value] || 'fas fa-info-circle';
+ })
 
-  // COMPUTED PARA TOAST - SIN CAMBIOS
-  const toastIcon = computed(() => {
-    const iconos = {
-      success: 'fas fa-check-circle',
-      error: 'fas fa-exclamation-circle',
-      warning: 'fas fa-exclamation-triangle',
-      info: 'fas fa-info-circle'
-    };
-    return iconos[toastType.value] || 'fas fa-info-circle';
-  })
+ // MÉTODOS DE TOAST
+ const mostrarToast = (mensaje, tipo = 'info') => {
+   toastMessage.value = mensaje
+   toastType.value = tipo
+   showToast.value = true
+   
+   setTimeout(() => {
+     hideToast()
+   }, 5000)
+ }
 
-  // MÉTODOS DE TOAST - SIN CAMBIOS
-  const mostrarToast = (mensaje, tipo = 'info') => {
-    toastMessage.value = mensaje
-    toastType.value = tipo
-    showToast.value = true
-    
-    setTimeout(() => {
-      hideToast()
-    }, 5000)
-  }
+ const hideToast = () => {
+   showToast.value = false
+ }
 
-  const hideToast = () => {
-    showToast.value = false
-  }
+ // COMPUTED PROPERTIES CORREGIDOS
+ const mostrarResultados = computed(() => {
+   return props.serviciosSeleccionados.length > 0
+ })
 
-  // COMPUTED PROPERTIES CORREGIDOS - SIN CAMBIOS HASTA LOS PRECIOS
-  const mostrarResultados = computed(() => {
-    return props.serviciosSeleccionados.length > 0
-  })
+ const fechaActual = computed(() => {
+   return new Date().toLocaleDateString('es-ES', {
+     year: 'numeric',
+     month: 'long',
+     day: 'numeric'
+   })
+ })
 
-  const fechaActual = computed(() => {
-    return new Date().toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  })
+ // Métricas dinámicas por tipo de unidad usando categorías
+ const metricasUnidades = computed(() => {
+   const metricas = new Map()
+   
+   props.serviciosSeleccionados.forEach(item => {
+     const categorias = obtenerCantidadesPorCategoria(item)
+     
+     if (categorias.length > 0) {
+       categorias.forEach(categoria => {
+         const tipoKey = categoria.tipo
+         const actual = metricas.get(tipoKey) || { total: 0, unidad: categoria.abreviacion || 'unidades' }
+         
+         metricas.set(tipoKey, {
+           tipo: tipoKey,
+           label: `Total de ${categoria.nombre}`,
+           valor: actual.total + categoria.cantidad,
+           unidad: categoria.abreviacion || (categoria.tipo === 'usuarios' ? 'usuarios' : 'unidades')
+         })
+       })
+     } else {
+       // Fallback al método tradicional
+       const tipo = obtenerTipoUnidadTradicional(item)
+       const unidad = item.servicio.unidad_medida
+       
+       switch (tipo) {
+         case 'capacidad': {
+           const totalGB = (item.cantidadGB || item.cantidadServidores || 0)
+           if (totalGB > 0) {
+             const actual = metricas.get('capacidad') || { total: 0, unidad: 'GB' }
+             metricas.set('capacidad', {
+               tipo: 'capacidad',
+               label: 'Total de Almacenamiento',
+               valor: actual.total + totalGB,
+               unidad: unidad?.abreviacion || 'GB'
+             })
+           }
+           break
+         }
+         case 'usuarios': {
+           const totalUsuarios = (item.cantidadUsuarios || item.cantidadServidores || 0)
+           if (totalUsuarios > 0) {
+             const actual = metricas.get('usuarios') || { total: 0, unidad: 'usuarios' }
+             metricas.set('usuarios', {
+               tipo: 'usuarios',
+               label: 'Total de Usuarios',
+               valor: actual.total + totalUsuarios,
+               unidad: 'usuarios'
+             })
+           }
+           break
+         }
+         case 'sesiones': {
+           const totalSesiones = (item.cantidadSesiones || item.cantidadServidores || 0)
+           if (totalSesiones > 0) {
+             const actual = metricas.get('sesiones') || { total: 0, unidad: 'sesiones' }
+             metricas.set('sesiones', {
+               tipo: 'sesiones',
+               label: 'Total de Sesiones',
+               valor: actual.total + totalSesiones,
+               unidad: 'sesiones'
+             })
+           }
+           break
+         }
+         case 'tiempo': {
+           const totalTiempo = (item.cantidadTiempo || item.cantidadServidores || 0)
+           if (totalTiempo > 0) {
+             const actual = metricas.get('tiempo') || { total: 0, unidad: 'h' }
+             metricas.set('tiempo', {
+               tipo: 'tiempo',
+               label: 'Total de Tiempo',
+               valor: actual.total + totalTiempo,
+               unidad: unidad?.abreviacion || 'h'
+             })
+           }
+           break
+         }
+         case 'cantidad':
+         default: {
+           const servidores = item.cantidadServidores || 0
+           const equipos = item.cantidadEquipos || 0
+           
+           if (servidores > 0) {
+             const actualServidores = metricas.get('servidores') || { total: 0, unidad: 'unidades' }
+             metricas.set('servidores', {
+               tipo: 'servidores',
+               label: 'Total de Servidores',
+               valor: actualServidores.total + servidores,
+               unidad: 'unidades'
+             })
+           }
+           
+           if (equipos > 0) {
+             const actualEquipos = metricas.get('equipos') || { total: 0, unidad: 'unidades' }
+             metricas.set('equipos', {
+               tipo: 'equipos',
+               label: 'Total de Equipos',
+               valor: actualEquipos.total + equipos,
+               unidad: 'unidades'
+             })
+           }
+           break
+         }
+       }
+     }
+   })
+   
+   return Array.from(metricas.values())
+ })
 
-  // Métricas dinámicas por tipo de unidad usando categorías - SIN CAMBIOS
-  const metricasUnidades = computed(() => {
-    const metricas = new Map()
-    
-    props.serviciosSeleccionados.forEach(item => {
-      const categorias = obtenerCantidadesPorCategoria(item)
-      
-      if (categorias.length > 0) {
-        categorias.forEach(categoria => {
-          const tipoKey = categoria.tipo
-          const actual = metricas.get(tipoKey) || { total: 0, unidad: categoria.abreviacion || 'unidades' }
-          
-          metricas.set(tipoKey, {
-            tipo: tipoKey,
-            label: `Total de ${categoria.nombre}`,
-            valor: actual.total + categoria.cantidad,
-            unidad: categoria.abreviacion || (categoria.tipo === 'usuarios' ? 'usuarios' : 'unidades')
-          })
-        })
-      } else {
-        // Fallback al método tradicional
-        const tipo = obtenerTipoUnidadTradicional(item)
-        const unidad = item.servicio.unidad_medida
-        
-        switch (tipo) {
-          case 'capacidad': {
-            const totalGB = (item.cantidadGB || item.cantidadServidores || 0)
-            if (totalGB > 0) {
-              const actual = metricas.get('capacidad') || { total: 0, unidad: 'GB' }
-              metricas.set('capacidad', {
-                tipo: 'capacidad',
-                label: 'Total de Almacenamiento',
-                valor: actual.total + totalGB,
-                unidad: unidad?.abreviacion || 'GB'
-              })
-            }
-            break
-          }
-          case 'usuarios': {
-            const totalUsuarios = (item.cantidadUsuarios || item.cantidadServidores || 0)
-            if (totalUsuarios > 0) {
-              const actual = metricas.get('usuarios') || { total: 0, unidad: 'usuarios' }
-              metricas.set('usuarios', {
-                tipo: 'usuarios',
-                label: 'Total de Usuarios',
-                valor: actual.total + totalUsuarios,
-                unidad: 'usuarios'
-              })
-            }
-            break
-          }
-          case 'sesiones': {
-            const totalSesiones = (item.cantidadSesiones || item.cantidadServidores || 0)
-            if (totalSesiones > 0) {
-              const actual = metricas.get('sesiones') || { total: 0, unidad: 'sesiones' }
-              metricas.set('sesiones', {
-                tipo: 'sesiones',
-                label: 'Total de Sesiones',
-                valor: actual.total + totalSesiones,
-                unidad: 'sesiones'
-              })
-            }
-            break
-          }
-          case 'tiempo': {
-            const totalTiempo = (item.cantidadTiempo || item.cantidadServidores || 0)
-            if (totalTiempo > 0) {
-              const actual = metricas.get('tiempo') || { total: 0, unidad: 'h' }
-              metricas.set('tiempo', {
-                tipo: 'tiempo',
-                label: 'Total de Tiempo',
-                valor: actual.total + totalTiempo,
-                unidad: unidad?.abreviacion || 'h'
-              })
-            }
-            break
-          }
-          case 'cantidad':
-          default: {
-            const servidores = item.cantidadServidores || 0
-            const equipos = item.cantidadEquipos || 0
-            
-            if (servidores > 0) {
-              const actualServidores = metricas.get('servidores') || { total: 0, unidad: 'unidades' }
-              metricas.set('servidores', {
-                tipo: 'servidores',
-                label: 'Total de Servidores',
-                valor: actualServidores.total + servidores,
-                unidad: 'unidades'
-              })
-            }
-            
-            if (equipos > 0) {
-              const actualEquipos = metricas.get('equipos') || { total: 0, unidad: 'unidades' }
-              metricas.set('equipos', {
-                tipo: 'equipos',
-                label: 'Total de Equipos',
-                valor: actualEquipos.total + equipos,
-                unidad: 'unidades'
-              })
-            }
-            break
-          }
-        }
-      }
-    })
-    
-    return Array.from(metricas.values())
-  })
+ // Computed para precios solo mensual
+ const precioMinimoMensual = computed(() => {
+   return props.serviciosSeleccionados.reduce((total, item) => {
+     const totalUnidadesItem = calcularTotalUnidades(item)
+     return total + (totalUnidadesItem * (item.servicio.precioMinimo || item.servicio.precio_minimo || 0))
+   }, 0)
+ })
 
-  // CAMBIO: Computed para precios solo mensual
-  const precioMinimoMensual = computed(() => {
-    return props.serviciosSeleccionados.reduce((total, item) => {
-      const totalUnidadesItem = calcularTotalUnidades(item)
-      return total + (totalUnidadesItem * (item.servicio.precioMinimo || item.servicio.precio_minimo || 0))
-    }, 0)
-  })
+ const precioVentaMensual = computed(() => {
+   return props.serviciosSeleccionados.reduce((total, item) => {
+     return total + calcularSubtotalMensual(item)
+   }, 0)
+ })
 
-  const precioVentaMensual = computed(() => {
-    return props.serviciosSeleccionados.reduce((total, item) => {
-      return total + calcularSubtotalMensual(item)
-    }, 0)
-  })
+ // Computed para totales del contrato (mensual × meses)
+ const precioMinimoTotal = computed(() => {
+   return precioMinimoMensual.value * props.mesesContrato
+ })
 
-  // CAMBIO: Computed para totales del contrato (mensual × meses)
-  const precioMinimoTotal = computed(() => {
-    return precioMinimoMensual.value * props.mesesContrato
-  })
+ const precioVentaTotal = computed(() => {
+   return precioVentaMensual.value * props.mesesContrato
+ })
 
-  const precioVentaTotal = computed(() => {
-    return precioVentaMensual.value * props.mesesContrato
-  })
+ const gananciaPotencial = computed(() => {
+   return Math.max(0, precioVentaTotal.value - precioMinimoTotal.value)
+ })
 
-  const gananciaPotencial = computed(() => {
-    return Math.max(0, precioVentaTotal.value - precioMinimoTotal.value)
-  })
+ const porcentajeMargenMinimo = computed(() => {
+   if (precioMinimoTotal.value === 0) return 0
+   return Math.round(((precioVentaTotal.value - precioMinimoTotal.value) / precioMinimoTotal.value) * 100)
+ })
 
-  const porcentajeMargenMinimo = computed(() => {
-    if (precioMinimoTotal.value === 0) return 0
-    return Math.round(((precioVentaTotal.value - precioMinimoTotal.value) / precioMinimoTotal.value) * 100)
-  })
+ const hayPreciosPorDebajoMinimo = computed(() => {
+   return props.serviciosSeleccionados.some(item => {
+     const totalUnidadesItem = calcularTotalUnidades(item)
+     const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
+     return totalUnidadesItem > 0 && item.precioVentaFinal < precioMinimo
+   })
+ })
 
-  const hayPreciosPorDebajoMinimo = computed(() => {
-    return props.serviciosSeleccionados.some(item => {
-      const totalUnidadesItem = calcularTotalUnidades(item)
-      const precioMinimo = item.servicio.precioMinimo || item.servicio.precio_minimo || 0
-      return totalUnidadesItem > 0 && item.precioVentaFinal < precioMinimo
-    })
-  })
+ // Resto de métodos
+ const reiniciar = () => {
+   mostrarToast('Iniciando nueva cotización', 'info')
+   emit('reiniciar')
+ }
 
-  // Resto de métodos SIN CAMBIOS
-  const reiniciar = () => {
-    mostrarToast('Iniciando nueva cotización', 'info')
-    emit('reiniciar')
-  }
+ const onLimpiarFormulario = () => {
+   mostrarToast('Formulario limpiado correctamente', 'success')
+   emit('limpiar-formulario')
+ }
 
-  const onLimpiarFormulario = () => {
-    mostrarToast('Formulario limpiado correctamente', 'success')
-    emit('limpiar-formulario')
-  }
+ const cerrarModalConfirmacion = () => {
+   mostrarModalConfirmacion.value = false
+ }
 
-  const cerrarModalConfirmacion = () => {
-    mostrarModalConfirmacion.value = false
-  }
+ const exportarPDF = () => {
+   if (!precioSeleccionadoPDF.value) {
+     mostrarToast('Por favor selecciona un tipo de precio para la cotización', 'warning')
+     return
+   }
+   mostrarToast('Abriendo configuración para generar PDF', 'info')
+   mostrarModalConfirmacion.value = true
+ }
 
-  const exportarPDF = () => {
-    if (!precioSeleccionadoPDF.value) {
-      mostrarToast('Por favor selecciona un tipo de precio para la cotización', 'warning')
-      return
-    }
-    mostrarToast('Abriendo configuración para generar PDF', 'info')
-    mostrarModalConfirmacion.value = true
-  }
+ // Métodos de generación usando meses
+ const onGenerarPDF = async (datosParaPDF) => {
+   try {
+     loading.value = true
+     loadingMessage.value = 'Generando PDF...'
+     
+     mostrarToast('Iniciando generación de PDF...', 'info')
 
-  // CAMBIO: Métodos de generación usando meses
-  const onGenerarPDF = async (datosParaPDF) => {
-    try {
-      loading.value = true
-      loadingMessage.value = 'Generando PDF...'
-      
-      mostrarToast('Iniciando generación de PDF...', 'info')
+     const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+       props.serviciosSeleccionados,
+       datosParaPDF.cliente,
+       props.mesesContrato, // usar meses
+       datosParaPDF.tipoPrecio,
+       datosParaPDF.configuracionPDF,
+       datosParaPDF.comentario || ''
+     )
 
-      const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-        props.serviciosSeleccionados,
-        datosParaPDF.cliente,
-        props.mesesContrato, // CAMBIO: usar meses
-        datosParaPDF.tipoPrecio,
-        datosParaPDF.configuracionPDF,
-        datosParaPDF.comentario || ''
-      )
+     const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
-      const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+     if (!resultado.success) {
+       throw new Error(resultado.message || 'Error al crear la cotización')
+     }
 
-      if (!resultado.success) {
-        throw new Error(resultado.message || 'Error al crear la cotización')
-      }
+     const cotizacionCreada = resultado.cotizacion
 
-      const cotizacionCreada = resultado.cotizacion
+     mostrarToast('Cotización creada, generando PDF...', 'info')
+     
+     const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
 
-      mostrarToast('Cotización creada, generando PDF...', 'info')
-      
-      const resultadoPDF = await crearcotizacionService.generarPDF(cotizacionCreada.cotizaciones_id)
+     if (!resultadoPDF.success) {
+       throw new Error(resultadoPDF.message || 'Error al generar el PDF')
+     }
 
-      if (!resultadoPDF.success) {
-        throw new Error(resultadoPDF.message || 'Error al generar el PDF')
-      }
+     await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
 
-      await crearcotizacionService.marcarPDFGenerado(cotizacionCreada.cotizaciones_id)
+     let mensajeExito = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
+     
+     if (resultado.requiere_aprobacion) {
+       mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+       mostrarToast(mensajeExito, 'warning')
+     } else {
+       mostrarToast(mensajeExito, 'success')
+     }
 
-      let mensajeExito = `PDF generado exitosamente para ${datosParaPDF.cliente.nombreEmpresa}`
-      
-      if (resultado.requiere_aprobacion) {
-        mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
-        mostrarToast(mensajeExito, 'warning')
-      } else {
-        mostrarToast(mensajeExito, 'success')
-      }
+     cerrarModalConfirmacion()
 
-      cerrarModalConfirmacion()
+     setTimeout(() => {
+       onLimpiarFormulario()
+     }, 2000)
 
-      setTimeout(() => {
-        onLimpiarFormulario()
-      }, 2000)
+   } catch (err) {
+     console.error('❌ Error en proceso de PDF:', err)
+     mostrarToast(err.message || 'Error al generar el PDF', 'error')
+   } finally {
+     loading.value = false
+     loadingMessage.value = ''
+   }
+ }
 
-    } catch (err) {
-      console.error('❌ Error en proceso de PDF:', err)
-      mostrarToast(err.message || 'Error al generar el PDF', 'error')
-    } finally {
-      loading.value = false
-      loadingMessage.value = ''
-    }
-  }
+ const onGuardarCotizacion = async (datosCotizacion) => {
+   try {
+     loading.value = true
+     loadingMessage.value = 'Guardando cotización...'
+     
+     mostrarToast('Guardando cotización...', 'info')
+     const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
+       props.serviciosSeleccionados,
+       datosCotizacion.cliente,
+       props.mesesContrato, // usar meses
+       datosCotizacion.tipoPrecio,
+       datosCotizacion.configuracionPDF,
+       datosCotizacion.comentario || ''
+     )
 
-  const onGuardarCotizacion = async (datosCotizacion) => {
-    try {
-      loading.value = true
-      loadingMessage.value = 'Guardando cotización...'
-      
-      mostrarToast('Guardando cotización...', 'info')
-      const cotizacionData = crearcotizacionService.formatCotizacionParaFormulario(
-        props.serviciosSeleccionados,
-        datosCotizacion.cliente,
-        props.mesesContrato, // CAMBIO: usar meses
-        datosCotizacion.tipoPrecio,
-        datosCotizacion.configuracionPDF,
-        datosCotizacion.comentario || ''
-      )
+     const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
 
-      const resultado = await crearcotizacionService.createCotizacion(cotizacionData)
+     if (!resultado.success) {
+       throw new Error(resultado.message || 'Error al guardar la cotización')
+     }
 
-      if (!resultado.success) {
-        throw new Error(resultado.message || 'Error al guardar la cotización')
-      }
+     let mensajeExito = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
+     
+     if (resultado.requiere_aprobacion) {
+       mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
+       mostrarToast(mensajeExito, 'warning')
+     } else {
+       mostrarToast(mensajeExito, 'success')
+     }
 
-      let mensajeExito = `Cotización guardada exitosamente para ${datosCotizacion.cliente.nombreEmpresa}`
-      
-      if (resultado.requiere_aprobacion) {
-        mensajeExito += '. La cotización requiere aprobación administrativa debido a precios especiales.'
-        mostrarToast(mensajeExito, 'warning')
-      } else {
-        mostrarToast(mensajeExito, 'success')
-      }
+     cerrarModalConfirmacion()
 
-      cerrarModalConfirmacion()
+     setTimeout(() => {
+       onLimpiarFormulario()
+     }, 2000)
 
-      setTimeout(() => {
-        onLimpiarFormulario()
-      }, 2000)
+   } catch (err) {
+     console.error('❌ Error guardando cotización:', err)
+     mostrarToast(err.message || 'Error al guardar la cotización', 'error')
+   } finally {
+     loading.value = false
+     loadingMessage.value = ''
+   }
+ }
 
-    } catch (err) {
-      console.error('❌ Error guardando cotización:', err)
-      mostrarToast(err.message || 'Error al guardar la cotización', 'error')
-    } finally {
-      loading.value = false
-      loadingMessage.value = ''
-    }
-  }
-
-  return {
-    // Estados
-    precioSeleccionadoPDF,
-    mostrarModalConfirmacion,
-    loading,
-    loadingMessage,
-    
-    // TOAST STATES
-    showToast,
-    toastMessage,
-    toastType,
-    
-    // Computed
-    mostrarResultados,
-    fechaActual,
-    metricasUnidades,
-    
-    // CAMBIO: Computed mensuales
-    precioMinimoMensual,
-    precioVentaMensual,
-    
-    // CAMBIO: Computed totales
-    precioMinimoTotal,
-    precioVentaTotal,
-    gananciaPotencial,
-    porcentajeMargenMinimo,
-    hayPreciosPorDebajoMinimo,
-    toastIcon,
-    
-    // MÉTODOS HELPER PARA CATEGORÍAS
-    obtenerUnidadesUnicasDelServicio,
-    obtenerCantidadesPorCategoria,
-    formatearCantidadCategoria,
-    obtenerIconoTipo,
-    
-    // CAMBIO: Métodos de formateo de cálculos
-    formatearCalculoMensual,
-    formatearCalculoTotal,
-    
-    // MÉTODOS TRADICIONALES COMO FALLBACK
-    obtenerTipoUnidadTradicional,
-    obtenerIconoUnidadTradicional,
-    obtenerEtiquetaPrincipalTradicional,
-    formatearCantidadPrincipalTradicional,
-    formatearCalculoMensualTradicional,
-    calcularTotalUnidades,
-    
-    // CAMBIO: Métodos de cálculo corregidos
-    calcularSubtotalMensual,
-    calcularSubtotalTotal,
-    
-    // Métodos existentes
-    formatCurrency,
-    reiniciar,
-    onLimpiarFormulario,
-    cerrarModalConfirmacion,
-    exportarPDF,
-    onGenerarPDF,
-    onGuardarCotizacion,
-    
-    // TOAST METHODS
-    mostrarToast,
-    hideToast
-  }
+ return {
+   // Estados
+   precioSeleccionadoPDF,
+   mostrarModalConfirmacion,
+   loading,
+   loadingMessage,
+   
+   // TOAST STATES
+   showToast,
+   toastMessage,
+   toastType,
+   
+   // Computed
+   mostrarResultados,
+   fechaActual,
+   metricasUnidades,
+   
+   // Computed mensuales
+   precioMinimoMensual,
+   precioVentaMensual,
+   
+   // Computed totales
+   precioMinimoTotal,
+   precioVentaTotal,
+   gananciaPotencial,
+   porcentajeMargenMinimo,
+   hayPreciosPorDebajoMinimo,
+   toastIcon,
+   
+   // MÉTODOS HELPER PARA CATEGORÍAS
+   obtenerUnidadesUnicasDelServicio,
+   obtenerCantidadesPorCategoria,
+   formatearCantidadCategoria,
+   obtenerIconoTipo,
+   
+   // Métodos de formateo de cálculos
+   formatearCalculoMensual,
+   formatearCalculoTotal,
+   
+   // MÉTODOS TRADICIONALES COMO FALLBACK
+   obtenerTipoUnidadTradicional,
+   obtenerIconoUnidadTradicional,
+   obtenerEtiquetaPrincipalTradicional,
+   formatearCantidadPrincipalTradicional,
+   formatearCalculoMensualTradicional,
+   calcularTotalUnidades,
+   
+   // Métodos de cálculo corregidos
+   calcularSubtotalMensual,
+   calcularSubtotalTotal,
+   
+   // 🔧 ACTUALIZADO: Método de formateo
+   formatCurrency,
+   reiniciar,
+   onLimpiarFormulario,
+   cerrarModalConfirmacion,
+   exportarPDF,
+   onGenerarPDF,
+   onGuardarCotizacion,
+   
+   // TOAST METHODS
+   mostrarToast,
+   hideToast
+ }
 }
 }
 </script>

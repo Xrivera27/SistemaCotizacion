@@ -1,4 +1,3 @@
-// services/reportes.js
 import api from './api';
 
 class ReportesService {
@@ -8,7 +7,6 @@ class ReportesService {
   // Obtener tipos de reporte disponibles
   async getTiposReporte() {
     try {
-      
       const response = await api.get('/reportes/tipos');
       
       if (response.data.success) {
@@ -35,7 +33,6 @@ class ReportesService {
   // Obtener opciones para filtros (vendedores, servicios, clientes)
   async getOpcionesReporte() {
     try {
-      
       const response = await api.get('/reportes/opciones');
       
       if (response.data.success) {
@@ -64,7 +61,6 @@ class ReportesService {
   // Generar reporte dinámico (POST)
   async generarReporte(tipo, filtros = {}) {
     try {
-      
       const response = await api.post('/reportes/generar', {
         tipo,
         filtros
@@ -94,7 +90,6 @@ class ReportesService {
   // Exportar reporte
   async exportarReporte(tipo, formato = 'pdf', filtros = {}, datos = {}) {
     try {
-      
       const response = await api.post('/reportes/exportar', {
         tipo,
         formato,
@@ -128,7 +123,6 @@ class ReportesService {
   // Reporte de Cotizaciones
   async getReporteCotizaciones(filtros = {}) {
     try {
-      
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/cotizaciones', { params });
       
@@ -156,7 +150,6 @@ class ReportesService {
   // Reporte de Vendedores
   async getReporteVendedores(filtros = {}) {
     try {
-      
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/vendedores', { params });
       
@@ -184,7 +177,6 @@ class ReportesService {
   // Reporte de Servicios
   async getReporteServicios(filtros = {}) {
     try {
-      
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/servicios', { params });
       
@@ -212,7 +204,6 @@ class ReportesService {
   // Reporte de Clientes
   async getReporteClientes(filtros = {}) {
     try {
-      
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/clientes', { params });
       
@@ -240,7 +231,6 @@ class ReportesService {
   // Reporte Financiero
   async getReporteFinanciero(filtros = {}) {
     try {
-      
       const params = this.construirParametros(filtros);
       const response = await api.get('/reportes/financiero', { params });
       
@@ -268,41 +258,39 @@ class ReportesService {
   // ===== MÉTODOS AUXILIARES =====
 
   // Construir parámetros de query desde objeto filtros
- // En services/reportes.js - REEMPLAZAR el método construirParametros:
-
-construirParametros(filtros) {
-  const params = {};
-  
-  // Filtros comunes
-  if (filtros.periodo) params.periodo = filtros.periodo;
-  if (filtros.fechaInicio) params.fechaInicio = filtros.fechaInicio;
-  if (filtros.fechaFin) params.fechaFin = filtros.fechaFin;
-  
-  // ✅ CORRECCIÓN: Cambiar estas validaciones para ser más estrictas
-  if (filtros.vendedor && filtros.vendedor !== '' && filtros.vendedor !== null && filtros.vendedor !== undefined) {
-    params.vendedor = filtros.vendedor;
+  construirParametros(filtros) {
+    const params = {};
+    
+    // Filtros comunes
+    if (filtros.periodo) params.periodo = filtros.periodo;
+    if (filtros.fechaInicio) params.fechaInicio = filtros.fechaInicio;
+    if (filtros.fechaFin) params.fechaFin = filtros.fechaFin;
+    
+    // Validaciones más estrictas
+    if (filtros.vendedor && filtros.vendedor !== '' && filtros.vendedor !== null && filtros.vendedor !== undefined) {
+      params.vendedor = filtros.vendedor;
+    }
+    
+    if (filtros.servicio && filtros.servicio !== '' && filtros.servicio !== null && filtros.servicio !== undefined) {
+      params.servicio = filtros.servicio;
+    }
+    
+    if (filtros.cliente && filtros.cliente !== '' && filtros.cliente !== null && filtros.cliente !== undefined) {
+      params.cliente = filtros.cliente;
+    }
+    
+    if (filtros.categoria && filtros.categoria !== '' && filtros.categoria !== null && filtros.categoria !== undefined) {
+      params.categoria = filtros.categoria;
+    }
+    
+    if (filtros.estado && filtros.estado !== '' && filtros.estado !== null && filtros.estado !== undefined) {
+      params.estado = filtros.estado;
+    }
+    
+    if (filtros.agrupacion) params.agrupacion = filtros.agrupacion;
+    
+    return params;
   }
-  
-  if (filtros.servicio && filtros.servicio !== '' && filtros.servicio !== null && filtros.servicio !== undefined) {
-    params.servicio = filtros.servicio;
-  }
-  
-  if (filtros.cliente && filtros.cliente !== '' && filtros.cliente !== null && filtros.cliente !== undefined) {
-    params.cliente = filtros.cliente;
-  }
-  
-  if (filtros.categoria && filtros.categoria !== '' && filtros.categoria !== null && filtros.categoria !== undefined) {
-    params.categoria = filtros.categoria;
-  }
-  
-  if (filtros.estado && filtros.estado !== '' && filtros.estado !== null && filtros.estado !== undefined) {
-    params.estado = filtros.estado;
-  }
-  
-  if (filtros.agrupacion) params.agrupacion = filtros.agrupacion;
-  
-  return params;
-}
 
   // Validar filtros antes de enviar
   validarFiltros(filtros) {
@@ -442,15 +430,14 @@ construirParametros(filtros) {
   // ===== UTILIDADES DE FORMATO =====
 
   // Formatear moneda
- // REEMPLAZAR el método formatearMoneda:
-formatearMoneda(valor) {
-  if (!valor && valor !== 0) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(valor);
-}
+  formatearMoneda(valor) {
+    if (!valor && valor !== 0) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(valor);
+  }
 
   // Formatear fecha
   formatearFecha(fecha) {
@@ -543,44 +530,38 @@ formatearMoneda(valor) {
     return `reporte-${tipo}-${fecha}.${formato}`;
   }
 
-  // Agregar este método:
-
-// Generar PDF desde backend
-async generarPDF(tipo, filtros = {}) {
-  try {
-    
-    const response = await api.post('/reportes/generar-pdf', {
-      tipo,
-      filtros
-    }, {
-      responseType: 'blob' // Importante para recibir el PDF
-    });
-    
-    // Crear URL para descargar
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `reporte-${tipo}-${new Date().toISOString().split('T')[0]}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    
-    
-    return {
-      success: true,
-      message: 'PDF generado y descargado exitosamente'
-    };
-    
-  } catch (error) {
-    console.error('❌ Error generando PDF:', error);
-    return {
-      success: false,
-      message: error.response?.data?.message || 'Error generando PDF'
-    };
+  // Generar PDF desde backend
+  async generarPDF(tipo, filtros = {}) {
+    try {
+      const response = await api.post('/reportes/generar-pdf', {
+        tipo,
+        filtros
+      }, {
+        responseType: 'blob' // Importante para recibir el PDF
+      });
+      
+      // Crear URL para descargar
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reporte-${tipo}-${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      return {
+        success: true,
+        message: 'PDF generado y descargado exitosamente'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error generando PDF:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error generando PDF'
+      };
+    }
   }
-}
-
-
 }
 
 // Exportar instancia única
