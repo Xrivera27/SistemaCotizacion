@@ -4,7 +4,7 @@
     <div class="dashboard-header">
       <div class="header-content">
         <h1>
-         Bienvenido, {{ nombreSuper }}
+         Bienvenido
         </h1>
       </div>
       <div class="header-date">
@@ -170,10 +170,6 @@
           <i class="fas fa-clipboard-check"></i>
           Cotizaciones Pendientes de Aprobación
         </h3>
-        <button @click="actualizarCotizacionesPendientes" class="refresh-btn" :disabled="isLoading">
-          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-          Actualizar
-        </button>
       </div>
       
       <div class="quotes-list" v-if="cotizacionesPendientesAprobacion.length > 0">

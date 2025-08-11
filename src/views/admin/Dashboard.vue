@@ -4,7 +4,7 @@
     <div class="dashboard-header">
       <div class="header-content">
         <h1>
-          Bienvenido, {{ nombreAdmin }}
+          Bienvenido
         </h1>
       </div>
       <div class="header-date">
@@ -78,9 +78,6 @@
           <h3>
             Cotizaciones Efectivas por Colaborador
           </h3>
-          <button @click="actualizarDatosColaboradores" class="refresh-btn" :disabled="isLoading">
-            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="colaboradoresChart"></canvas>
@@ -92,9 +89,6 @@
           <h3>
             Servicios Más Cotizados
           </h3>
-          <button @click="actualizarDatosServicios" class="refresh-btn" :disabled="isLoading">
-            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-          </button>
         </div>
         <div class="chart-wrapper">
           <canvas ref="serviciosChart"></canvas>
@@ -152,10 +146,6 @@
           <i class="fas fa-file-invoice-dollar"></i>
           Últimas Cotizaciones Creadas (Todos los usuarios)
         </h3>
-        <button @click="actualizarCotizaciones" class="refresh-btn" :disabled="isLoading">
-          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-          Actualizar
-        </button>
       </div>
       <div class="quotes-list" v-if="ultimasCotizaciones.length > 0">
         <div v-for="cotizacion in ultimasCotizaciones" :key="cotizacion.id" class="quote-item">
