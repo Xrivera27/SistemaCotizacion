@@ -280,19 +280,6 @@
  </div>
 
 <div class="form-actions">
-  <button @click="calcularCotizacion" 
-          class="btn-calcular" 
-          :disabled="!hayServiciosAcumulados || loading || tieneErroresGlobales">
-    <i class="fas fa-eye"></i>
-    Ver Cotización Final
-    <span v-if="tieneErroresGlobales" class="btn-error-badge">
-      <i class="fas fa-exclamation-circle"></i>
-    </span>
-  </button>
-  <button @click="limpiarFormulario" class="btn-limpiar" :disabled="loading">
-    <i class="fas fa-trash-alt"></i>
-    Limpiar Todo
-  </button>
 </div>
 
  <ResultadoCotizacion
@@ -345,7 +332,7 @@ setup() {
  const formularioKey = ref(0)
  
  const serviciosSeleccionados = ref([])
- const mesesContrato = ref(1)
+ const mesesContrato = ref(12)
  
  // ===== NUEVOS ESTADOS PARA ACUMULACIÓN DE SERVICIOS =====
  const serviciosSeleccionadosAcumulados = ref([])
@@ -604,7 +591,7 @@ const precargarFormulario = async (datos) => {
  try {
    // Cargar meses en lugar de años
    if (datos.servicios && datos.servicios.length > 0) {
-     mesesContrato.value = datos.servicios[0].cantidadMeses || datos.servicios[0].cantidadAnos || 1 // Mantener compatibilidad
+mesesContrato.value = datos.servicios[0].cantidadMeses || datos.servicios[0].cantidadAnos || 12
    }
    
    // Verificar que los servicios estén cargados
@@ -1165,7 +1152,7 @@ const validarMeses = (event) => {
    
    // Si es menor a 1 o no es un número válido, resetear a 1
    if (isNaN(meses) || meses < 1) {
-     mesesContrato.value = 1
+     mesesContrato.value = 12
    } else {
      mesesContrato.value = meses
    }
@@ -1241,7 +1228,7 @@ servicios.value.forEach(servicio => {
 // Limpiar servicios acumulados
 limpiarServiciosAcumulados()
 
-mesesContrato.value = 1
+mesesContrato.value = 12
 esDuplicacion.value = false
 cotizacionOrigen.value = null
 
