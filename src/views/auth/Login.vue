@@ -96,25 +96,6 @@
           </button>
         </div>
       </form>
-
-      <!-- Usuarios de prueba -->
-      <div class="demo-users">
-        <h3 class="demo-title">Usuarios de Prueba</h3>
-        <div class="demo-grid">
-          <div class="demo-user">
-            <span class="demo-label">Admin:</span>
-            <span class="demo-credentials">admin / Admin123.</span>
-          </div>
-          <div class="demo-user">
-            <span class="demo-label">Vendedor:</span>
-            <span class="demo-credentials">juan.perez / 123456</span>
-          </div>
-          <div class="demo-user">
-            <span class="demo-label">SuperUser:</span>
-            <span class="demo-credentials">roberto.super / super123</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Formulario de Recuperación -->
@@ -718,46 +699,6 @@ export default {
   text-decoration: underline;
 }
 
-/* Usuarios de prueba */
-.demo-users {
-  padding: 1.5rem;
-  background: rgba(26, 26, 26, 0.5);
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.1);
-}
-
-.demo-title {
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.demo-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.demo-user {
-  background: rgba(58, 58, 58, 0.5);
-  border-radius: 6px;
-  padding: 0.75rem;
-  text-align: center;
-  font-size: 0.8rem;
-}
-
-.demo-label {
-  color: #d4af37;
-  font-weight: 600;
-}
-
-.demo-credentials {
-  color: #b0b0b0;
-  margin-left: 0.5rem;
-}
-
 /* Footer */
 .footer {
   position: relative;
@@ -806,10 +747,6 @@ export default {
   
   .brand-subtitle {
     font-size: 1rem;
-  }
-  
-  .demo-users {
-    padding: 1rem;
   }
 }
 </style>
