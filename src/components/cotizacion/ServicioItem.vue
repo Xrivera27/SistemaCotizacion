@@ -191,17 +191,18 @@ setup(props, { emit }) {
   const cantidadesPorCategoria = reactive({})
 
   // Computed para obtener TODAS las categorías del servicio
-  const categoriasDelServicio = computed(() => {
-    const categorias = []
-    
-    // Obtener todas las categorías del servicio
-    let categoriasData = []
-    
-    if (servicio.value.categorias_completas && Array.isArray(servicio.value.categorias_completas)) {
-      categoriasData = servicio.value.categorias_completas
-    } else if (servicio.value.categoria) {
-      categoriasData = [servicio.value.categoria]
-    }
+const categoriasDelServicio = computed(() => {
+  const categorias = []
+  
+  // Obtener todas las categorías del servicio
+  let categoriasData = []
+  
+  // ✅ CAMBIO: Priorizar categoria principal SIEMPRE
+  if (servicio.value.categoria) {
+    categoriasData = [servicio.value.categoria]
+  } else if (servicio.value.categorias_completas && Array.isArray(servicio.value.categorias_completas)) {
+    categoriasData = servicio.value.categorias_completas
+  }
       
     // Mapear cada categoría individual
     categoriasData.forEach((categoria, index) => {
