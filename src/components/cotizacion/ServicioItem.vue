@@ -62,17 +62,17 @@
   <div class="precio-venta-container">
     <label>Precio de Venta Mensual (opcional):</label>
     <input 
-  v-model.number="precioVentaLocal" 
-  type="number" 
-  :min="servicio.precio_minimo || servicio.precioMinimo || 0" 
-  step="0.01"
-  lang="en-US"
-  :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}/mes`"
-  class="input-precio-venta"
-  :class="{ 'precio-bajo-minimo': esPrecioBajoMinimo }"
-  @input="actualizarPrecioVenta"
-  @blur="validarPrecioMinimo"
->
+      v-model.number="precioVentaLocal" 
+      type="number" 
+      :min="servicio.precio_minimo || servicio.precioMinimo || 0" 
+      step="0.01"
+      lang="en-US"
+      :placeholder="`Mínimo: ${formatCurrency(servicio.precio_minimo || servicio.precioMinimo)}/mes`"
+      class="input-precio-venta"
+      :class="{ 'precio-bajo-minimo': esPrecioBajoMinimo }"
+      @input="actualizarPrecioVenta"
+      @blur="validarPrecioMinimo"
+    >
     <small v-if="!precioVentaLocal || precioVentaLocal === 0" class="precio-defecto">
       Se usará precio recomendado: {{ formatCurrency(servicio.precio_recomendado || servicio.precioRecomendado) }}/mes
     </small>
@@ -81,10 +81,13 @@
     </small>
   </div>
   
-  <!-- Controles en fila horizontal - SIN CAMBIOS -->
-  <div class="cantidades-container-horizontal" :data-categorias="categoriasDelServicio.length">
+  <!-- ✅ CAMBIO: Controles condicionalmente renderizados -->
+  <div v-if="categoriasDelServicio.length > 0" 
+       class="cantidades-container-horizontal" 
+       :data-categorias="categoriasDelServicio.length">
     
-    <div v-for="categoria in categoriasDelServicio" :key="categoria.id" 
+    <div v-for="categoria in categoriasDelServicio" 
+         :key="`cat-${categoria.id}-${servicio.servicios_id}`"
          class="servicio-controls-horizontal" 
          :class="[
            `control-${categoria.unidad_tipo}`,
@@ -141,9 +144,15 @@
     </div>
 
   </div>
+
+  <!-- ✅ NUEVO: Loading state mientras cargan categorías -->
+  <div v-else class="categorias-loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    Cargando opciones...
+  </div>
+
 </div>
 </template>
-
 <script>
 import { ref, computed, watch, toRefs, reactive, nextTick, onMounted, onUnmounted } from 'vue'
 
@@ -488,15 +497,15 @@ setup(props, { emit }) {
      totalUnidades: totalUnidadesPorTipo.value,
      categoriasDetalle: categoriasDelServicio.value.map(cat => ({
       
-  id: cat.id, // ← ESTE ID DEBE EXISTIR Y SER VÁLIDO
-  categorias_id: cat.id, // También como backup
-  nombre: cat.nombre,
-  unidad_id: cat.unidad_id,
-  unidad_nombre: cat.unidad_nombre,
-  unidad_tipo: cat.unidad_tipo,
-  unidad_abreviacion: cat.unidad_abreviacion,
-  cantidad: cantidadesPorCategoria[cat.id] || 0
-})),
+      id: cat.id, // ← ESTE ID DEBE EXISTIR Y SER VÁLIDO
+      categorias_id: cat.id, // También como backup
+      nombre: cat.nombre,
+      unidad_id: cat.unidad_id,
+      unidad_nombre: cat.unidad_nombre,
+      unidad_tipo: cat.unidad_tipo,
+      unidad_abreviacion: cat.unidad_abreviacion,
+      cantidad: cantidadesPorCategoria[cat.id] || 0
+    })),
      validacion: {
        tieneErrores: tieneErroresLimites.value,
        errores: validacionLimites.value
@@ -529,10 +538,23 @@ setup(props, { emit }) {
    precioVentaLocal.value = newVal || 0
  })
 
- watch(categoriasDelServicio, (newCategorias) => {
+ // ✅ WATCHER ACTUALIZADO con forzado de re-render
+ watch(categoriasDelServicio, (newCategorias, oldCategorias) => {
    console.log('🔄 Categorías del servicio actualizadas:', newCategorias)
-   inicializarCantidades()
- }, { immediate: true })
+   
+   if (newCategorias.length > 0 && (!oldCategorias || oldCategorias.length === 0)) {
+     // ✅ Llegaron las categorías, forzar re-render
+     console.log('🚀 Forzando re-render por llegada de categorías')
+     inicializarCantidades()
+     
+     nextTick(() => {
+       // Emitir evento para que el padre también se actualice
+       emit('update:modelValue', 0)
+     })
+   } else {
+     inicializarCantidades()
+   }
+ }, { immediate: true, deep: true })
 
  watch(() => props.modelValue, (newVal) => {
    if (newVal > 0) {
@@ -545,16 +567,16 @@ setup(props, { emit }) {
  }, { immediate: true })
 
  // En ServicioItem.vue, agregar este watcher en setup()
-watch(precioVentaLocal, (nuevoPrecio) => {
-  emit('update:precioVenta', nuevoPrecio || 0)
-  
-  // Si hay cantidades válidas, triggear actualización automática
-  const tieneCantidades = Object.values(cantidadesPorCategoria).some(cantidad => cantidad > 0)
-  if (tieneCantidades) {
-    // Simular actualización para triggear el método automático
-    actualizarCantidad(Object.keys(cantidadesPorCategoria)[0])
-  }
-}, { immediate: false })
+ watch(precioVentaLocal, (nuevoPrecio) => {
+   emit('update:precioVenta', nuevoPrecio || 0)
+   
+   // Si hay cantidades válidas, triggear actualización automática
+   const tieneCantidades = Object.values(cantidadesPorCategoria).some(cantidad => cantidad > 0)
+   if (tieneCantidades) {
+     // Simular actualización para triggear el método automático
+     actualizarCantidad(Object.keys(cantidadesPorCategoria)[0])
+   }
+ }, { immediate: false })
 
  // Watcher para datos globales de duplicación
  watch(() => {
@@ -657,9 +679,24 @@ watch(precioVentaLocal, (nuevoPrecio) => {
 </script>
 
 
-
-
 <style scoped>
+
+.categorias-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #ced4da;
+}
+
+.categorias-loading i {
+  color: #007bff;
+}
 /* ✅ NUEVOS ESTILOS para validación de límites */
 /* CAMBIO: Estilos para contrato-meses en lugar de contrato-años */
 .contrato-info {
